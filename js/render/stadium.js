@@ -80,9 +80,15 @@ export function drawGoals(ctx) {
     for (let x = x0 + 12; x < x1; x += 14) { ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, GROUND); ctx.stroke(); }
     ctx.fillStyle = '#F4F7FA';
     ctx.fillRect(x0, top - FIELD.BAR_T, d, FIELD.BAR_T);                      // 크로스바(지붕)
-    const postX = side === 'L' ? d - 8 : W - d;                              // 골라인 쪽 포스트(장식)
-    ctx.fillRect(postX, top - FIELD.BAR_T, 8, FIELD.GOAL_H + FIELD.BAR_T);
   }
+}
+
+// 골라인 쪽 포스트(장식). 공·선수 위에 그려서 공이 포스트 뒤로 들어가 보이게 한다.
+export function drawPosts(ctx) {
+  const top = GROUND - FIELD.GOAL_H, d = FIELD.GOAL_DEPTH;
+  ctx.fillStyle = '#F4F7FA';
+  ctx.fillRect(d - 8, top - FIELD.BAR_T, 8, FIELD.GOAL_H + FIELD.BAR_T);
+  ctx.fillRect(W - d, top - FIELD.BAR_T, 8, FIELD.GOAL_H + FIELD.BAR_T);
 }
 
 export function drawStadium(ctx, t) {

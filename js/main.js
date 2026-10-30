@@ -108,9 +108,7 @@ async function boot() {
   layout();
   window.addEventListener('resize', layout);
   window.addEventListener('orientationchange', () => setTimeout(layout, 50));
-  game.input = createInput(stage);
-  stage.addEventListener('keydown', () => layout(), { once: true });
-  window.addEventListener('keydown', () => { if (stage.classList.contains('kb')) layout(); }, { once: true });
+  game.input = createInput(stage, { onKeyboard: layout });   // 키보드를 쓰기 시작하면 패드를 숨기고 캔버스를 넓힌다
   game.imgs = await loadImages();
   pauseOnHide();
 

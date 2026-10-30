@@ -1,7 +1,7 @@
 // 한 프레임을 그린다: 경기장 → 필살기 바닥 표시 → 선수 → 공 → 효과 → HUD → 글자 팝.
 import { FIELD, PHYS } from '../sim/constants.js';
 import { headCenter, footPoint } from '../sim/physics.js';
-import { drawStadium, drawGoals } from './stadium.js';
+import { drawStadium, drawGoals, drawPosts } from './stadium.js';
 import { drawPlayer, drawBall } from './characters.js';
 import { byNumber } from '../data/players.js';
 
@@ -59,7 +59,7 @@ export function updateFx(fx, match, dt) {
     } else if (p.active.id === 'train') {
       if (Math.random() < 0.5) fx.particles.push({ x: p.x - p.facing * 30 * p.scale, y: p.y - 110 * p.scale, vx: (Math.random() - .5) * 40, vy: -100, r: 5 + Math.random() * 5, life: 0.8, age: 0 });
     }
-    if (p.active.id === 'sprint') fx.ghosts.push({ x: p.x, y: p.y, scale: p.scale, facing: p.facing, def: p.def, age: 0, life: 0.25, side });
+    if (p.active.id === 'sprint') { fx.ghostTick = (fx.ghostTick || 0) + 1; if (fx.ghostTick % 8 === 0) fx.ghosts.push({ x: p.x, y: p.y, scale: p.scale, facing: p.facing, def: p.def, age: 0, life: 0.3, side }); }
     if (p.active.id === 'slide' && p.onGround) fx.particles.push({ x: p.x - p.facing * 20, y: p.y, vx: -p.facing * 80, vy: -140 - Math.random() * 80, r: 3, life: 0.4, age: 0, color: '#3E9A3E' });
     // 높이뛰기: 땅을 박차는 순간 발밑 먼지
     if (p.active.id === 'highjump' && !p.onGround && p.vy < -600 && Math.random() < 0.6) {
@@ -197,6 +197,7 @@ export function drawFrame(ctx, match, imgs, fx, t) {
     ctx.save(); ctx.globalAlpha = 0.8 * (1 - q.age / q.life); ctx.fillStyle = q.color || '#FFFFFF';
     ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   }
+  drawPosts(ctx);
   drawHud(ctx, match, t);
   if (fx.subBoard) drawSubBoard(ctx, fx.subBoard);
   // 글자 팝

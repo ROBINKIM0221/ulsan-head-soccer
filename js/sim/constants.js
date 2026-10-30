@@ -17,10 +17,14 @@ export const MATCH = { LEN: 60, GOLDEN: 30, GOAL_PAUSE: 1, AI_SUB_AFTER: 30 };  
 
 export const DT = 1 / 120;
 
+// 난이도 5단계 (2026-10-31 형준). 반응 지연(초), 예측 오차(±px), 이동 속도 배율
 export const DIFFICULTY = {
-  youth:  { reaction: 0.35, error: 120, speed: 0.85 },
-  first:  { reaction: 0.18, error: 50,  speed: 1.0 },
-  legend: { reaction: 0.08, error: 15,  speed: 1.05 },
+  youth:   { name: '유스',   reaction: 0.40, error: 140, speed: 0.80 },
+  reserve: { name: '2군',    reaction: 0.28, error: 90,  speed: 0.90 },
+  first:   { name: '1군',    reaction: 0.18, error: 50,  speed: 1.00 },
+  ace:     { name: '에이스', reaction: 0.12, error: 30,  speed: 1.05 },
+  legend:  { name: '레전드', reaction: 0.08, error: 15,  speed: 1.10 },
 };
+export const DIFFICULTY_ORDER = ['youth', 'reserve', 'first', 'ace', 'legend'];
 
 export const NO_INPUT = Object.freeze({ left: false, right: false, jump: false, kick: false, special: false, sub: false });

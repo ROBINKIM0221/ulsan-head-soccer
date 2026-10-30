@@ -7,7 +7,7 @@ const KEYS = {
   KeyZ: 'kick', KeyK: 'kick',
 };
 
-export function createInput(root) {
+export function createInput(root, { onKeyboard } = {}) {
   const held = { left: false, right: false, jump: false };
   const edges = { kick: false, special: false, sub: false, jump: false };   // jump 도 눌림을 기억: 프레임 사이의 짧은 탭을 놓치지 않게
   const pointers = new Map();
@@ -41,9 +41,12 @@ export function createInput(root) {
     const name = KEYS[e.code];
     if (!name) return;
     if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+    if (!enabled) return;                       // 선택·결과 화면 위에서는 Space/Enter 가 버튼을 누르게 둔다
     e.preventDefault();
-    if (down) { if (!e.repeat) press(name); root.classList.add('kb'); }
-    else release(name);
+    if (down) {
+      if (!e.repeat) press(name);
+      if (!root.classList.contains('kb')) { root.classList.add('kb'); onKeyboard?.(); }
+    } else release(name);
   };
   window.addEventListener('keydown', e => onKey(e, true));
   window.addEventListener('keyup', e => onKey(e, false));

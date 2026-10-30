@@ -49,7 +49,7 @@ export const SPECIALS = {
     onBallTouch(m, s, info) { if (info.part === 'head') { const d = me(m, s).active.data; d.headT = m.world.t; d.hit = false; } },
   },
 
-  // 반지름 220 안의 자유로운 공을 머리 쪽으로 끌어당긴다 (가까울수록 세게, 최대 1800px/s²)
+  // 반지름 400 안의 자유로운 공을 발 앞으로 끌어당긴다 (가까울수록 세게, 최대 4000px/s²)
   magnet: {
     update(m, s, dt) {
       const p = me(m, s), b = m.world.ball;
@@ -66,7 +66,7 @@ export const SPECIALS = {
   },
 
   // ── 다음 한 방형 ──
-  // 다음 킥: 1500 직선, 0.8초 중력 없음, 상대를 통과
+  // 다음 킥: 1200 직선(20° 위), 0.8초 중력 없음, 상대를 통과
   laser: {
     onKick(m, s) {
       const p = me(m, s), b = m.world.ball;
@@ -85,7 +85,7 @@ export const SPECIALS = {
     end(m, s) { const b = m.world.ball; if (b.flight === 'laser') { b.flight = null; b.passThrough = null; b.noGravityT = 0; } },
   },
 
-  // 다음 킥: 62°·1000 으로 띄우고 상대 골문 쪽으로 가로 가속 900
+  // 다음 킥: 55°·1050 으로 띄우고 상대 골문 쪽으로 가로 가속 900, 처음 0.35초만 상대 통과
   curve: {
     onKick(m, s) {
       const p = me(m, s), b = m.world.ball;
@@ -148,7 +148,7 @@ export const SPECIALS = {
     end(m, s) { const b = m.world.ball; if (b.held && b.held.side === s) b.held = null; },
   },
 
-  // 기관차: 3초 동안 1.4배 크기·1.5배 속도·점프 불가. 공이 앞면에 닿으면 붙여서 0.75초(≈525px) 돌진,
+  // 기관차: 2.5초 동안 1.25배 크기·1.2배 속도·점프 불가. 공이 앞면에 닿으면 붙여서 0.4초(≈280px) 돌진,
   // 길에 있는 바닥의 상대는 공 앞에 붙어 함께 밀린다. 돌진이 끝나면 공을 놓는다.
   train: {
     activate(m, s) { const p = me(m, s); p.scale = 1.25; p.active.data = { charging: false, done: false, chargeT: 0 }; },   // 밸런스 2026-10-31: 크기 1.4→1.25

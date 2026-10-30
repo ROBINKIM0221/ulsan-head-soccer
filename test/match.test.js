@@ -62,7 +62,7 @@ test('a goal in golden goal ends the match immediately', () => {
   assert.equal(m.phase, 'over'); assert.equal(m.result, 'win'); assert.deepEqual(m.scores, { L: 1, R: 0 });
 });
 
-test('a goal pauses 1s, scores, gives the conceding side +15 gauge, then resets kickoff', () => {
+test('a goal pauses 1s, scores, gives the conceding side the CONCEDE gauge bonus, then resets kickoff', () => {
   const m = mk(); toPlay(m);
   shootRight(m);
   const ev = run(m, 0.3);

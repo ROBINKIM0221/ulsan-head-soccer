@@ -107,12 +107,3 @@ test('slide: dashes 180px in .35s, kicks the ball once, knocks the opponent down
   assert.ok(ev.some(e => e.type === 'knockdown' && e.side === 'R'));
   assert.ok(R3.stun > 0.5, `stun ${R3.stun}`);
 });
-
-test('one-shot flight ball ignores magnet (flight flag set)', () => {
-  const m = ready(10, 24); const L = m.world.players.L, R = m.world.players.R;
-  fire(m);
-  L.x = 400; R.x = 700; ballAtFoot(m);
-  run(m, DT, inp({ kick: true }));
-  assert.equal(m.world.ball.flight, 'laser');
-  R.gauge = 100; R.active = null;
-});

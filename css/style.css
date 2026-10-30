@@ -37,6 +37,8 @@ body {
 }
 .pad.left { left: 0; padding-left: max(0px, env(safe-area-inset-left)); }
 .pad.right { right: 0; padding-right: max(0px, env(safe-area-inset-right)); }
+#stage[data-rotated="1"] .pad.left { padding-left: max(0px, env(safe-area-inset-top)); }      /* 눕힌 상태: 무대 왼쪽이 화면 위(노치) */
+#stage[data-rotated="1"] .pad.right { padding-right: max(0px, env(safe-area-inset-bottom)); }
 .pad.left { flex-direction: row; align-items: flex-end; justify-content: center; gap: 6px; }
 .pad.left .ctl { width: 64px; height: 64px; flex: none; }   /* 두 개가 110~144px 열에 들어가되 64px 밑으로는 안 줄어든다 */
 
@@ -141,9 +143,9 @@ body {
 .thumb:focus-visible { outline: 3px solid var(--white); outline-offset: 2px; }
 
 /* 난이도 트랙 (메모리 게임과 같은 모양) */
-.pick { width: 100%; max-width: 320px; }
+.pick { width: 100%; max-width: 420px; }
 .pick-label { margin: 0 0 6px; font-size: 13px; font-weight: 700; }
-.levels { display: grid; grid-template-columns: repeat(3, 1fr); }
+.levels { display: grid; grid-template-columns: repeat(5, 1fr); }
 .level { all: unset; position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 5px 0 3px; cursor: pointer; touch-action: manipulation; }
 .level::before { content: ''; position: absolute; top: 10px; left: -50%; width: 100%; height: 2px; background: rgba(255,255,255,.25); }
 .level:first-child::before { display: none; }

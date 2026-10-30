@@ -3,9 +3,10 @@ import { PLAYERS, byNumber } from '../data/players.js';
 import { createPlayer } from '../sim/physics.js';
 import { drawPlayer } from '../render/characters.js';
 import { shareText } from './text.js';
+import { DIFFICULTY, DIFFICULTY_ORDER } from '../sim/constants.js';
 
 const overlay = document.getElementById('overlay');
-const LEVELS = [{ id: 'youth', name: '유스' }, { id: 'first', name: '1군' }, { id: 'legend', name: '레전드' }];
+const LEVELS = DIFFICULTY_ORDER.map(id => ({ id, name: DIFFICULTY[id].name }));
 const STORE = 'uhd11.select';
 
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
@@ -70,9 +71,9 @@ function buildCarousel({ players, imgs, initial, onChange }) {
   card.addEventListener('pointerdown', e => { start = along(e); });
   card.addEventListener('pointerup', e => { if (start === null) return; const dx = along(e) - start; start = null; if (dx > 40) go(idx - 1); else if (dx < -40) go(idx + 1); });
   card.addEventListener('pointercancel', () => { start = null; });
-  root.addEventListener('keydown', e => { if (e.key === 'ArrowLeft') go(idx - 1); if (e.key === 'ArrowRight') go(idx + 1); });
   go(idx);
-  return { root, current: () => players[idx], refresh: () => go(idx) };
+  const onKey = e => { if (e.key === 'ArrowLeft') { e.preventDefault(); go(idx - 1); } if (e.key === 'ArrowRight') { e.preventDefault(); go(idx + 1); } };
+  return { root, current: () => players[idx], refresh: () => go(idx), onKey };
 }
 
 function buildLevels(initial, onChange) {
@@ -104,6 +105,7 @@ export function showSelect({ imgs, initialNumber, difficulty, onStart }) {
   start.addEventListener('click', () => onStart(picker.current(), diff));
   right.appendChild(start);
   sheet.append(left, right);
+  sheet.addEventListener('keydown', picker.onKey);
   show(sheet);
   start.focus({ preventScroll: true });
 }
@@ -132,6 +134,7 @@ export function showSubSelect({ imgs, exclude, onPick, onCancel }) {
   const cancel = el('button', 'action ghost', '닫기'); cancel.type = 'button'; cancel.addEventListener('click', onCancel);
   row.append(ok, cancel); right.appendChild(row);
   sheet.append(left, right);
+  sheet.addEventListener('keydown', picker.onKey);
   show(sheet);
   ok.focus({ preventScroll: true });
 }
