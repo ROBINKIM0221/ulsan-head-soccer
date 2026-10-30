@@ -20,14 +20,15 @@ const save = v => { try { localStorage.setItem(STORE, JSON.stringify(v)); } catc
 function paintCard(canvas, def, imgs) {
   const ctx = canvas.getContext('2d');
   const dpr = Math.min(3, window.devicePixelRatio || 1);
-  const W = 220, H = 250;
+  const k = document.getElementById('stage').dataset.tiny === '1' ? 0.72 : 1;   // 320px 폭 폰
+  const W = Math.round(220 * k), H = Math.round(250 * k);
   canvas.width = W * dpr; canvas.height = H * dpr; canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = 'rgba(255,255,255,.08)'; ctx.beginPath(); ctx.ellipse(W / 2, H - 14, 70, 10, 0, 0, Math.PI * 2); ctx.fill();
   const body = createPlayer(def, 'L');
-  body.x = W / 2 / 1.25; body.y = (H - 20) / 1.25;
-  ctx.save(); ctx.scale(1.25, 1.25);
+  body.x = W / 2 / (1.25 * k); body.y = (H - 20 * k) / (1.25 * k);
+  ctx.save(); ctx.scale(1.25 * k, 1.25 * k);
   drawPlayer(ctx, body, imgs[def.number], { away: false, circle: true });
   ctx.restore();
 }

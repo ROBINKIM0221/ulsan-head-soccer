@@ -194,14 +194,36 @@ body {
 #stage[data-compact="1"] .verdict { font-size: 34px; }
 #stage[data-compact="1"] .score { font-size: 56px; }
 
-/* 아주 낮은 무대(320px 폭 폰을 눕힌 경우): 썸네일 한 줄, 설명 숨김 */
-#stage[data-tiny="1"] .thumbs { grid-template-columns: repeat(12, 26px); gap: 4px; }
+/* 아주 낮은 무대(320px 폭 폰을 눕힌 경우): 모든 것을 한 단계 줄이고 썸네일은 6×2 작게 */
+#stage[data-tiny="1"] .sheet.select { gap: 10px; width: 96%; }
+#stage[data-tiny="1"] .sheet.select .col.right { max-width: 250px; gap: 5px; }
+#stage[data-tiny="1"] .arrow { width: 26px; height: 48px; font-size: 30px; }
+#stage[data-tiny="1"] .who .name { font-size: 18px; }
+#stage[data-tiny="1"] .who .num { font-size: 22px; }
+#stage[data-tiny="1"] .thumbs { grid-template-columns: repeat(6, 26px); gap: 4px; }
 #stage[data-tiny="1"] .thumb { width: 26px; height: 26px; border-width: 1.5px; }
 #stage[data-tiny="1"] .thumb[aria-selected="true"] { border-width: 2px; }
 #stage[data-tiny="1"] .skill p:last-child { display: none; }
-#stage[data-tiny="1"] .skill { padding: 5px 10px; }
-#stage[data-tiny="1"] .sheet.select .col.right { gap: 6px; }
-#stage[data-tiny="1"] .brand h1 { font-size: 16px; }
-#stage[data-tiny="1"] .brand .emblem { width: 30px; height: 39px; }
-#stage[data-tiny="1"] .pick-label { margin-bottom: 2px; }
-#stage[data-tiny="1"] .action { padding: 8px 18px; font-size: 14px; }
+#stage[data-tiny="1"] .skill { padding: 4px 10px; }
+#stage[data-tiny="1"] .skill b { font-size: 15px; }
+#stage[data-tiny="1"] .brand h1 { font-size: 15px; }
+#stage[data-tiny="1"] .brand .emblem { width: 26px; height: 34px; }
+#stage[data-tiny="1"] .pick { max-width: 100%; }
+#stage[data-tiny="1"] .pick-label { margin-bottom: 0; font-size: 12px; }
+#stage[data-tiny="1"] .level { padding: 3px 0 2px; gap: 3px; }
+#stage[data-tiny="1"] .level span { font-size: 10px; letter-spacing: -.02em; }
+#stage[data-tiny="1"] .action { padding: 7px 14px; font-size: 13px; min-width: 0; width: 100%; }
+#stage[data-tiny="1"] .sub-note { font-size: 11px; }
+#stage[data-tiny="1"] .sheet.result { gap: 6px; }
+#stage[data-tiny="1"] .sheet.result .emblem { display: none; }
+#stage[data-tiny="1"] .verdict { font-size: 26px; }
+#stage[data-tiny="1"] .score { font-size: 44px; }
+#stage[data-tiny="1"] .score em { font-size: 30px; }
+#stage[data-tiny="1"] .lineup { gap: 24px; }
+#stage[data-tiny="1"] .lineup .side img { width: 40px; height: 40px; border-width: 2px; }
+#stage[data-tiny="1"] .lineup .side b { font-size: 12px; }
+#stage[data-tiny="1"] .sheet.result .row { gap: 6px; flex-wrap: nowrap; }
+#stage[data-tiny="1"] .sheet.result .action { width: auto; min-width: 0; padding: 7px 12px; font-size: 13px; }
+#stage[data-tiny="1"] .face img { width: 70px; height: 70px; }
+#stage[data-tiny="1"] .face b { font-size: 16px; }
+#stage[data-tiny="1"] .vs-mark { font-size: 56px; }
