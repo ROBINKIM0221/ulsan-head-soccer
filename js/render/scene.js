@@ -177,7 +177,7 @@ export function drawFrame(ctx, match, imgs, fx, t) {
   }
   // 선수 (공에 가까운 쪽을 위에)
   const order = Math.abs(b.x - w.players.L.x) < Math.abs(b.x - w.players.R.x) ? ['R', 'L'] : ['L', 'R'];
-  for (const side of order) { const p = w.players[side]; drawPlayer(ctx, p, imgs[p.def.number], { away: side === 'R' }); }
+  for (const side of order) { const p = w.players[side]; drawPlayer(ctx, p, imgs[p.def.number], { away: side === 'R', t }); }
   // 레이저 빛줄기
   if (b.flight === 'laser') {
     const sp = Math.hypot(b.vx, b.vy) || 1;
