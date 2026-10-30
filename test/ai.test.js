@@ -12,7 +12,7 @@ const world = () => { const w = createWorld(P10, P99); w.players.L.x = 200; retu
 test('predictLanding returns the ground point within the horizon', () => {
   const w = world(); w.ball.x = 640; w.ball.y = 300; w.ball.vx = 300; w.ball.vy = 0;
   const p = predictLanding(w.ball, 1);
-  const tFall = Math.sqrt(2 * (FIELD.GROUND - PHYS.BALL_R - 300) / PHYS.GRAVITY);   // ≈ 0.54s
+  const tFall = Math.sqrt(2 * (FIELD.GROUND - PHYS.BALL_R - 300) / PHYS.BALL_GRAVITY);
   assert.ok(Math.abs(p.y - (FIELD.GROUND - PHYS.BALL_R)) < 2, `y ${p.y}`);
   assert.ok(Math.abs(p.x - (640 + 300 * tFall)) < 25, `x ${p.x}`);
 });
@@ -53,15 +53,6 @@ test('AI jumps when the ball is above its head', () => {
   assert.equal(decide(w, 'R', ai, DT).jump, false);
 });
 
-test('AI holds a buff special until the ball is within 350px; one-shots fire anytime', () => {
-  const w = createWorld(P10, byNumber(19)); w.players.R.gauge = 100;      // 김영권 거인(지속형)
-  const ai = createAiState('first', mulberry32(21));
-  w.ball.x = 200; assert.equal(decide(w, 'R', ai, DT).special, false);
-  w.ball.x = 700; assert.equal(decide(w, 'R', ai, DT).special, true);
-  const w2 = createWorld(P10, byNumber(10)); w2.players.R.gauge = 100;    // 이동경 레이저(한 방형)
-  w2.ball.x = 200; assert.equal(decide(w2, 'R', createAiState('first', mulberry32(22)), DT).special, true);
-});
-
 test('AI kicks when the ball is in front within kick range', () => {
   const w = world(); const ai = createAiState('first', mulberry32(3));
   const f = footPoint(w.players.R);
@@ -69,29 +60,6 @@ test('AI kicks when the ball is in front within kick range', () => {
   assert.equal(decide(w, 'R', ai, DT).kick, true);
   w.ball.x = w.players.R.x + 60;                                        // 등 뒤
   assert.equal(decide(w, 'R', ai, DT).kick, false);
-});
-
-test('AI uses its special at gauge 100: first immediately, youth after 3s', () => {
-  const w = world(); w.players.R.gauge = 100;
-  const first = createAiState('first', mulberry32(4));
-  assert.equal(decide(w, 'R', first, DT).special, true);
-  const youth = createAiState('youth', mulberry32(5));
-  let fired = -1;
-  for (let i = 0; i < 400; i++) { if (decide(w, 'R', youth, DT).special) { fired = i * DT; break; } }
-  assert.ok(fired >= 2.9 && fired <= 3.1, `youth fired at ${fired}`);
-  w.players.R.gauge = 50;
-  assert.equal(decide(w, 'R', createAiState('first', mulberry32(6)), DT).special, false);
-});
-
-test('legend fires attacking specials only inside the final 40%, defensive ones only with the ball in its half', () => {
-  const w = world(); w.players.R.gauge = 100;                 // R 의 선수는 야고(공격형 대포 헤딩)
-  const ai = createAiState('legend', mulberry32(7));
-  w.players.R.x = 900; assert.equal(decide(w, 'R', ai, DT).special, false);
-  w.players.R.x = 400; assert.equal(decide(w, 'R', ai, DT).special, true);
-  const w2 = createWorld(P10, byNumber(19)); w2.players.R.gauge = 100;   // 김영권(수비형)
-  const ai2 = createAiState('legend', mulberry32(8));
-  w2.ball.x = 300; assert.equal(decide(w2, 'R', ai2, DT).special, false);
-  w2.ball.x = 900; assert.equal(decide(w2, 'R', ai2, DT).special, true);
 });
 
 test('shouldSubstitute after 45s, once, with the ball far from its own goal; pickSubstitute by score', () => {

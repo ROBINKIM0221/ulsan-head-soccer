@@ -19,8 +19,8 @@ export const PLAYERS = [
     desc: '5초 동안 머리 위로 넘어가는 공을 손으로 잡아 멀리 던진다' }),
   P(24, '이규성', 'MF', 'defend', { id: 'magnet', name: '공 자석', kind: 'buff', duration: 8, gaugeRate: 2.0,   // 밸런스 2026-10-31
     desc: '8초 동안 가까운 공이 자기 쪽으로 끌려온다' }),
-  P(26, '조현택', 'DF', 'attack', { id: 'longthrow', name: '롱스로인', kind: 'oneshot', duration: 6,
-    desc: '다음 터치 때 공을 집어 상대 골문 앞으로 높고 멀리 던진다' }),
+  P(26, '조현택', 'DF', 'attack', { id: 'spirit', name: '투지 폭발', kind: 'buff', duration: 5,   // 2026-10-31 형준: 롱스로인 → 투지
+    desc: '5초 동안 더 빠르고 높이 뛰며 넘어지지 않고, 부딪힌 상대를 튕겨낸다' }),
   P(38, '박용우', 'MF', 'defend', { id: 'press', name: '압박', kind: 'buff', duration: 5,
     desc: '5초 동안 상대의 이동 속도와 점프가 60%로 떨어진다' }),
   P(55, '토마스', 'DF', 'defend', { id: 'train', name: '기관차 모드', kind: 'buff', duration: 2.5,

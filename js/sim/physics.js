@@ -118,7 +118,7 @@ function collidePlayer(world, p, ball, events, hooks) {
       if (vn < 0) { ball.vx -= 2 * vn * nx; ball.vy -= 2 * vn * ny; }
       ball.vx += p.vx * PHYS.HEAD_CARRY; ball.vy += p.vy * PHYS.HEAD_CARRY;
       const outN = ball.vx * nx + ball.vy * ny;
-      if (outN < 150) { ball.vx += (150 - outN) * nx; ball.vy += (150 - outN) * ny; }
+      if (outN < PHYS.HEAD_MIN_OUT) { ball.vx += (PHYS.HEAD_MIN_OUT - outN) * nx; ball.vy += (PHYS.HEAD_MIN_OUT - outN) * ny; }
       const mult = p.mods.headPow * (perfect ? PHYS.PERFECT_MULT : 1);
       ball.vx *= mult; ball.vy *= mult;
       touch(world, p, ball, perfect, 'head', events, hooks);
@@ -126,6 +126,7 @@ function collidePlayer(world, p, ball, events, hooks) {
     return true;
   }
   if (collideBox(ball, bodyRect(p), PHYS.BOUNCE_BODY, p.vx * 0.5)) {
+    ball.vy = Math.min(ball.vy, -PHYS.BODY_POP);   // 몸에 맞으면 통통 위로 튄다
     touch(world, p, ball, false, 'body', events, hooks);
     return true;
   }
@@ -186,7 +187,7 @@ export function stepPhysics(world, inputs, dt, hooks = {}) {
   // 3~5. 공
   if (ballFree(ball)) {
     if (ball.noGravityT > 0) ball.noGravityT = Math.max(0, ball.noGravityT - dt);
-    else ball.vy += PHYS.GRAVITY * dt;
+    else ball.vy += PHYS.BALL_GRAVITY * dt;
     ball.vx += ball.curveAx * dt;
     ball.vx *= PHYS.DRAG; ball.vy *= PHYS.DRAG;
     ball.x += ball.vx * dt; ball.y += ball.vy * dt;
@@ -201,7 +202,7 @@ export function stepPhysics(world, inputs, dt, hooks = {}) {
     collideStatic(ball);
   }
 
-  // 6. 킥 (공 이동 뒤에 처리해 속도가 정확히 남는다). 둘 다 닿으면 발이 더 가까운 쪽만 공을 찬다.
+  // 6. 킥(슛 버튼). 공 이동 뒤에 처리해 속도가 정확히 남는다. 둘 다 닿으면 발이 더 가까운 쪽만 공을 찬다.
   const kickers = [];
   for (const side of ['L', 'R']) {
     const p = world.players[side];

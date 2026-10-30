@@ -56,17 +56,8 @@ body {
 .ctl:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 .ctl.kick { background: rgba(255,199,44,.25); border-color: var(--gold); }
 
-/* 필살기 버튼: 링이 게이지(--gauge 0~1), 다 차면 골드로 맥동 */
-.ctl.special { width: 80px; height: 80px; }
-.ctl.special .ring {
-  position: absolute; inset: -6px; border-radius: 50%;
-  background: conic-gradient(var(--gold) calc(var(--gauge) * 360deg), rgba(255,255,255,.18) 0);
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
-}
-.ctl.special.ready { background: rgba(255,199,44,.35); border-color: var(--gold); animation: pulse 1s ease-in-out infinite; }
-.ctl.special.ready span { color: var(--gold); }
-@keyframes pulse { 50% { transform: scale(1.06); } }
+/* 점프는 가장 자주 누르니 조금 더 크게 */
+.ctl.jump { width: 84px; height: 84px; font-size: 17px; }
 
 /* 교체 버튼: 위 가운데 점수판 옆 */
 .sub {
@@ -80,8 +71,8 @@ body {
 .sub:disabled { opacity: .35; cursor: default; }
 .sub:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 
-/* 키보드를 쓰기 시작하면 버튼은 흐려지고 캔버스가 넓어진다 */
-#stage.kb .pad, #stage.kb .sub { opacity: .25; }
+/* 키보드를 쓰기 시작하면 터치 버튼은 숨기고 캔버스가 넓어진다 */
+#stage.kb .pad { display: none; }
 
 /* ---------- 안내·오버레이 ---------- */
 #hint {
@@ -101,9 +92,6 @@ body {
 }
 #overlay[hidden] { display: none; }
 
-@media (prefers-reduced-motion: reduce) {
-  .ctl.special.ready { animation: none; }
-}
 
 /* ---------- 시트 공통 ---------- */
 .sheet { width: min(94%, 900px); max-height: 96%; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }

@@ -1,13 +1,11 @@
-// 컴퓨터 상대. 규칙 기반 (설계서 10절). 매 틱 decide() 가 Inputs 를 돌려준다.
+// 컴퓨터 상대. 규칙 기반 (설계서 10절). 매 틱 decide() 가 Inputs 를 돌려준다. 필살기는 자동이라 판단하지 않는다.
 import { FIELD, PHYS, MATCH, DIFFICULTY, NO_INPUT } from './constants.js';
 import { headCenter, footPoint } from './physics.js';
 import { PLAYERS } from '../data/players.js';
 
-const ATTACK_SPECIALS = new Set(['laser', 'curve', 'longthrow', 'cannon', 'sprint', 'train', 'slide']);
-
 export function createAiState(difficulty, rng) {
   const cfg = DIFFICULTY[difficulty];
-  return { difficulty, cfg, rng, reactT: cfg.reaction, target: null, specialHoldT: 0, subDone: false };
+  return { difficulty, cfg, rng, reactT: cfg.reaction, target: null };
 }
 
 // 공의 1초 뒤 위치(또는 그 전에 바닥에 닿는 지점). 중력·바닥·벽만 본다.
@@ -15,7 +13,7 @@ export function predictLanding(ball, horizon) {
   let { x, y, vx, vy } = ball;
   const r = ball.r, dt = 1 / 60;
   for (let t = 0; t < horizon; t += dt) {
-    if (ball.noGravityT <= t) vy += PHYS.GRAVITY * dt;
+    if (ball.noGravityT <= t) vy += PHYS.BALL_GRAVITY * dt;
     x += vx * dt; y += vy * dt;
     if (x - r < 0) { x = r; vx = -vx * PHYS.BOUNCE_WALL; }
     if (x + r > FIELD.W) { x = FIELD.W - r; vx = -vx * PHYS.BOUNCE_WALL; }
@@ -25,16 +23,6 @@ export function predictLanding(ball, horizon) {
 }
 
 const ownGoalX = side => (side === 'L' ? FIELD.GOAL_DEPTH : FIELD.W - FIELD.GOAL_DEPTH);
-
-function smartOk(me, ball, side) {
-  const id = me.def.special.id;
-  if (ATTACK_SPECIALS.has(id)) {
-    // 상대 골문 쪽 40% 안에서만
-    return side === 'R' ? me.x < FIELD.W * 0.4 : me.x > FIELD.W * 0.6;
-  }
-  // 수비형: 공이 내 진영에 있을 때만
-  return side === 'R' ? ball.x > FIELD.W / 2 : ball.x < FIELD.W / 2;
-}
 
 export function decide(world, side, ai, dt) {
   const me = world.players[side], ball = world.ball, cfg = ai.cfg;
@@ -68,13 +56,6 @@ export function decide(world, side, ai, dt) {
   const f = footPoint(me);
   const inFront = (ball.x - me.x) * dir > -10;
   if (inFront && me.kickCooldown <= 0 && Math.hypot(ball.x - f.x, ball.y - f.y) <= PHYS.KICK_RANGE) out.kick = true;
-
-  if (me.gauge >= 100 && !me.active) {
-    ai.specialHoldT += dt;
-    // 한 방형은 6초 동안 장전되므로 아무 때나, 지속·즉발형은 공이 350 안에 있을 때 쓴다
-    const ready = me.def.special.kind === 'oneshot' || Math.abs(ball.x - me.x) < 350;
-    if (ready && ai.specialHoldT >= cfg.specialDelay - 1e-9 && (!cfg.smart || smartOk(me, ball, side))) out.special = true;
-  } else ai.specialHoldT = 0;
 
   return out;
 }

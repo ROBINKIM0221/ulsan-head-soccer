@@ -84,21 +84,6 @@ test('curve: next kick leaves at 55deg/1050, passes through the opponent briefly
   assert.equal(b.flight, null); assert.equal(b.curveAx, 0); assert.equal(b.passThrough, null);
 });
 
-test('longthrow: next touch holds the ball .3s then lands it near the far goal line', () => {
-  const m = ready(26); const L = m.world.players.L; const b = m.world.ball;
-  L.x = 400; m.world.players.R.x = 300;                 // 상대를 낙하 지점에서 치운다
-  fire(m);
-  const h = headCenter(L);
-  Object.assign(b, { held: null, x: h.x, y: h.y - h.r - PHYS.BALL_R - 10, vx: 0, vy: 100 });
-  run(m, 0.1);
-  assert.ok(b.held && b.held.side === 'L', 'ball is held after the touch');
-  let landed = null;
-  run(m, 2.5, NO_INPUT, (m) => { const bb = m.world.ball; if (!landed && !bb.held && bb.y + bb.r >= FIELD.GROUND - 0.5 && bb.x > 600) landed = bb.x; });
-  const target = FIELD.W - FIELD.GOAL_DEPTH - 140;
-  assert.ok(landed !== null, 'ball landed');
-  assert.ok(Math.abs(landed - target) < 40, `landed at ${landed}, target ${target}`);
-});
-
 test('slide: dashes 180px in .35s, kicks the ball once, knocks the opponent down for 1s', () => {
   const m = ready(96); const L = m.world.players.L, R = m.world.players.R; const b = m.world.ball;
   L.x = 400; R.x = 1160;

@@ -62,6 +62,7 @@ const setHidden = (page, hidden) => page.evaluate(h => { Object.defineProperty(d
     const page = await ctx.newPage();
     await page.goto(BASE + '?debug=1');
     await page.waitForFunction(() => window.__debug && window.__debug.match.phase === 'play', null, { timeout: 8000 });
+    await page.evaluate(() => { window.__debug.world.ball.held = { side: 'R', t: 999 }; });   // 검사 중 골이 나서 킥오프(입력 무시)로 가지 않게 공을 세워 둔다
     await page.waitForTimeout(400);
     await page.screenshot({ path: `${OUT}/iphone-portrait.png` });
     const rotated = await page.evaluate(() => document.getElementById('stage').dataset.rotated);
@@ -70,16 +71,19 @@ const setHidden = (page, hidden) => page.evaluate(h => { Object.defineProperty(d
     check('jump button has a hit box', !!box && box.width > 40, JSON.stringify(box));
     const sizes = await page.evaluate(() => [...document.querySelectorAll('.pad .ctl')].map(b => { const r = b.getBoundingClientRect(); return [b.dataset.btn, Math.round(r.width), Math.round(r.height)]; }));
     check('every control button is at least 64px', sizes.every(s => s[1] >= 64 && s[2] >= 64), JSON.stringify(sizes));
-    await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+    // 모든 터치는 같은 CDP 세션으로 보낸다 (page.touchscreen 과 섞으면 다음 터치 id 가 꼬인다)
+    const client = await ctx.newCDPSession(page);
+    const pt = (b) => ({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
+    const pJ = pt(box);
+    await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...pJ, id: 1 }] });
+    await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await page.waitForTimeout(150);
     check('rotated tap hits jump button', await page.evaluate(() => !window.__debug.world.players.L.onGround));
     await page.waitForFunction(() => window.__debug.world.players.L.onGround, null, { timeout: 3000 });   // 앞 점프가 끝난 뒤
     await page.waitForTimeout(200);
     // 멀티터치: ◀ 를 누른 채 점프를 탭
     const left = await page.locator('[data-btn="left"]').boundingBox();
-    const client = await ctx.newCDPSession(page);
-    const pt = (b) => ({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
-    const pL = pt(left), pJ = pt(box);
+    const pL = pt(left);
     await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...pL, id: 1 }] });
     await page.waitForTimeout(250);
     await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...pL, id: 1 }, { ...pJ, id: 2 }] });

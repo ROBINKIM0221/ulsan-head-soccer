@@ -38,14 +38,14 @@ function paintStatic(ctx) {
     ctx.fillStyle = c < .55 ? 'rgba(255,255,255,.55)' : c < .8 ? 'rgba(255,199,44,.6)' : 'rgba(10,30,90,.7)';
     ctx.fillRect(x, y, 3, 3);
   }
-  // "울산" 글자 좌석: 작은 캔버스에 쓴 뒤 픽셀 느낌으로 키운다
-  const small = document.createElement('canvas'); small.width = 96; small.height = 32;
+  // "ULSAN" 글자 좌석: 작은 캔버스에 쓴 뒤 픽셀 느낌으로 키운다 (2026-10-31 형준: 울산 → ULSAN)
+  const small = document.createElement('canvas'); small.width = 128; small.height = 32;
   const sc = small.getContext('2d');
-  sc.fillStyle = '#fff'; sc.font = 'bold 28px "Pretendard Variable", Pretendard, sans-serif';
-  sc.textAlign = 'center'; sc.textBaseline = 'middle'; sc.fillText('울산', 48, 17);
+  sc.fillStyle = '#fff'; sc.font = '800 27px "Pretendard Variable", Pretendard, sans-serif';
+  sc.textAlign = 'center'; sc.textBaseline = 'middle'; sc.fillText('ULSAN', 64, 17);
   ctx.imageSmoothingEnabled = false;
   ctx.globalAlpha = .9;
-  ctx.drawImage(small, 0, 0, 96, 32, W / 2 - 240, STAND_TOP + 60, 480, 160);
+  ctx.drawImage(small, 0, 0, 128, 32, W / 2 - 300, STAND_TOP + 62, 600, 150);
   ctx.globalAlpha = 1; ctx.imageSmoothingEnabled = true;
   // 관중석 아래 난간
   ctx.fillStyle = '#E8EEF5'; ctx.fillRect(0, STAND_BOTTOM - 6, W, 6);

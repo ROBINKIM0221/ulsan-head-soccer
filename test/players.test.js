@@ -28,6 +28,7 @@ test('roles and special ids match spec', () => {
   assert.equal(byNumber(55).special.id, 'train');
   assert.equal(byNumber(55).special.duration, 2.5);
   assert.equal(byNumber(38).special.id, 'press');
+  assert.equal(byNumber(26).special.id, 'spirit');
   assert.equal(byNumber(96).special.kind, 'instant');
   assert.equal(byNumber(10).special.kind, 'oneshot');
   assert.equal(byNumber(10).special.duration, 6);

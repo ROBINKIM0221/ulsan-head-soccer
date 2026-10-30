@@ -77,7 +77,7 @@ test('a goal pauses 1s, scores, gives the conceding side +15 gauge, then resets 
   assert.equal(m.clock, clockAtGoal, 'clock frozen during goal pause');
 });
 
-test('gauge: +10 per touch, +35 per perfect header, capped at 100', () => {
+test('gauge: +TOUCH per touch, +PERFECT per perfect header, fires at 100', () => {
   const m = mk(); toPlay(m);
   const L = m.world.players.L, h = headCenter(L);
   m.world.players.R.x = 1160; m.world.players.R.y = FIELD.GROUND;
@@ -97,7 +97,7 @@ test('gauge: +10 per touch, +35 per perfect header, capped at 100', () => {
   L.gauge = GAUGE.MAX - 2; L.lastTouchT = -1;
   Object.assign(m.world.ball, { x: h.x, y: h.y - h.r - PHYS.BALL_R - 5, vx: 0, vy: 200 });
   run(m, 0.1);
-  assert.equal(L.gauge, GAUGE.MAX);
+  assert.ok(L.active !== null && L.gauge === 0, 'capped at 100 and fired automatically');
 });
 
 test('gauge gain scales with the player\'s special.gaugeRate', () => {
@@ -110,17 +110,17 @@ test('gauge gain scales with the player\'s special.gaugeRate', () => {
   assert.equal(L.gauge, GAUGE.TOUCH * 0.45);
 });
 
-test('special input is ignored below gauge 100 and consumes the gauge at 100', () => {
+test('the special fires automatically when the gauge reaches 100, never while one is active', () => {
   const m = mk(); toPlay(m); parkBall(m);
   const L = m.world.players.L; L.gauge = 50;
-  let ev = run(m, DT, inp({ special: true }));
+  let ev = run(m, DT);
   assert.equal(ev.filter(e => e.type === 'special').length, 0); assert.equal(L.gauge, 50); assert.equal(L.active, null);
   L.gauge = 100;
-  ev = run(m, DT, inp({ special: true }));
+  ev = run(m, DT);
   assert.deepEqual(ev.filter(e => e.type === 'special'), [{ type: 'special', side: 'L', id: 'laser' }]);
   assert.equal(L.gauge, 0); assert.equal(L.active.id, 'laser');
   L.gauge = 100;
-  ev = run(m, DT, inp({ special: true }));
+  ev = run(m, DT);
   assert.equal(ev.filter(e => e.type === 'special').length, 0, 'cannot re-activate while active');
   assert.equal(L.gauge, 100);
 });

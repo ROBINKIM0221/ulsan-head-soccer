@@ -8,26 +8,6 @@ const me = (m, s) => m.world.players[s];
 const rad = deg => deg * Math.PI / 180;
 const onGround = b => b.y + b.r >= FIELD.GROUND - 0.5;
 
-// 공기 저항·중력을 그대로 넣고 시뮬레이션해서, 각도 angleDeg 로 targetX 에 떨어지는 초속을 찾는다 (최대 vMax)
-function speedToLand(x0, y0, targetX, angleDeg, dirX, vMax) {
-  const landX = v => {
-    let x = x0, y = y0, vx = dirX * v * Math.cos(rad(angleDeg)), vy = -v * Math.sin(rad(angleDeg));
-    const dt = 1 / 120;
-    for (let i = 0; i < 1200; i++) {
-      vy += PHYS.GRAVITY * dt; vx *= PHYS.DRAG; vy *= PHYS.DRAG; x += vx * dt; y += vy * dt;
-      if (y + PHYS.BALL_R >= FIELD.GROUND && vy > 0) return x;
-    }
-    return x;
-  };
-  if ((landX(vMax) - targetX) * dirX < 0) return vMax;   // 최고 속도로도 못 미치면 최고 속도
-  let lo = 100, hi = vMax;
-  for (let i = 0; i < 30; i++) {
-    const mid = (lo + hi) / 2;
-    if ((landX(mid) - targetX) * dirX < 0) lo = mid; else hi = mid;
-  }
-  return (lo + hi) / 2;
-}
-
 // 한 방형이 공을 쏜 뒤, 공이 바닥에 닿거나 되돌아오면 비행 표시를 지운다
 function flightOver(b, data, dirX) {
   if (!data.left && !onGround(b)) data.left = true;
@@ -126,32 +106,20 @@ export const SPECIALS = {
     end(m, s) { const b = m.world.ball; if (b.flight === 'curve') { b.flight = null; b.curveAx = 0; b.passThrough = null; } },
   },
 
-  // 다음 터치: 공을 집어 0.3초 들고, 상대 골라인 앞 60px 에 떨어지게 55° 로 던진다 (최고 1300)
-  longthrow: {
-    onBallTouch(m, s) {
-      const p = me(m, s), b = m.world.ball;
-      if (!p.active.armed) return;
-      p.active.armed = false; p.active.t = 4; p.active.data.phase = 'hold';
-      b.held = { side: s, t: 0.3 }; b.vx = 0; b.vy = 0;
-    },
+  // 투지 폭발 (조현택): 5초간 더 빠르고 높이 뛰며, 넘어지지 않고, 몸싸움에서 상대를 튕겨낸다 (1초에 한 번)
+  spirit: {
+    activate(m, s) { me(m, s).active.data = { cool: 0 }; },
     update(m, s, dt) {
-      const p = me(m, s), b = m.world.ball, d = p.active.data;
-      if (d.phase === 'hold') {
-        const h = headCenter(p);
-        b.x = h.x; b.y = h.y - h.r - b.r - 4;
-        b.held.t -= dt;
-        if (b.held.t <= 0) {
-          const targetX = s === 'L' ? FIELD.W - FIELD.GOAL_DEPTH - 140 : FIELD.GOAL_DEPTH + 140;   // 밸런스 2026-10-31: 60→140 (승률 68%)
-          const v = speedToLand(b.x, b.y, targetX, 55, dir(s), 1300);
-          b.held = null; b.vx = dir(s) * v * Math.cos(rad(55)); b.vy = -v * Math.sin(rad(55));
-          b.flight = 'throw'; d.phase = 'fly'; d.left = false; d.targetX = targetX;
-          return [{ type: 'throw', side: s }];
-        }
-      } else if (d.phase === 'fly') {
-        if (b.flight !== 'throw' || flightOver(b, d, dir(s))) { SPECIALS.longthrow.end(m, s); p.active.t = 0; }
+      const p = me(m, s), o = me(m, opp(s)), d = p.active.data;
+      p.mods.speed *= 1.3; p.mods.jump *= 1.2;
+      p.stun = 0;                                            // 슬라이딩·대포에 넘어지지 않는다
+      d.cool = Math.max(0, d.cool - dt);
+      const touching = Math.abs(o.x - p.x) < (PHYS.BODY_W * (p.scale + o.scale)) / 2 + 6 && o.y > p.y - PHYS.BODY_H * p.scale - 20;
+      if (d.cool === 0 && touching && !o.pinned) {
+        o.vx = 320 * Math.sign(o.x - p.x || dir(s)); o.stun = Math.max(o.stun, 0.35); d.cool = 1;
+        return [{ type: 'knockback', side: opp(s) }];
       }
     },
-    end(m, s) { const b = m.world.ball; if (b.flight === 'throw') b.flight = null; if (b.held && b.held.side === s) b.held = null; },
   },
 
   // 내 골문 쪽으로 오는 공이 머리 위 150 안을 지나면 잡아 0.4초 뒤 40°·1100 으로 던진다

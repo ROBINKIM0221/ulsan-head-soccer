@@ -77,31 +77,46 @@ export function updateFx(fx, match, dt) {
   if (fx.reduceMotion) { fx.shake = 0; fx.particles.length = 0; fx.ghosts.length = 0; fx.trail.length = 0; }   // 움직임 줄이기: 입자·흔들림·궤적 없음
 }
 
-function drawHud(ctx, match) {
+function drawGauge(ctx, x, y, w, value, alignRight, t) {
+  const g = Math.min(1, value / 100), full = g >= 1;
+  const x0 = alignRight ? x - w : x;
+  ctx.fillStyle = 'rgba(0,43,107,.55)'; ctx.fillRect(x0, y, w, 10);
+  const pulse = full ? 0.75 + 0.25 * Math.sin(t * 8) : 1;
+  ctx.globalAlpha = pulse;
+  ctx.fillStyle = full ? GOLD : '#B9CBE8';
+  ctx.fillRect(alignRight ? x - w * g : x0, y, w * g, 10);
+  ctx.globalAlpha = 1;
+  ctx.font = `700 13px ${UI}`; ctx.textBaseline = 'middle'; ctx.textAlign = alignRight ? 'right' : 'left';
+  ctx.fillStyle = full ? GOLD : '#B9CBE8';
+  ctx.fillText(full ? '필살기 발동!' : '필살기', alignRight ? x : x0, y + 24);
+}
+
+function drawHud(ctx, match, t) {
   const defs = { L: match.used.L.at(-1), R: match.used.R.at(-1) };
-  // 점수
+  const L = match.world.players.L, R = match.world.players.R;
+  // 점수판
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillStyle = 'rgba(0,43,107,.75)';
   ctx.beginPath(); ctx.roundRect ? ctx.roundRect(FIELD.W / 2 - 110, 14, 220, 92, 14) : ctx.rect(FIELD.W / 2 - 110, 14, 220, 92); ctx.fill();
   ctx.fillStyle = WHITE; ctx.font = `600 64px ${NUM}`;
   ctx.fillText(`${match.scores.L}  -  ${match.scores.R}`, FIELD.W / 2, 50);
-  // 시간
-  const t = Math.max(0, match.clock);
-  const mm = Math.floor(t / 60), ss = Math.floor(t % 60);
+  const tt = Math.max(0, match.clock);
+  const mm = Math.floor(tt / 60), ss = Math.floor(tt % 60);
   ctx.fillStyle = match.phase === 'golden' ? GOLD : '#B9CBE8'; ctx.font = `600 34px ${NUM}`;
   ctx.fillText(match.phase === 'golden' ? `골든골 ${mm}:${String(ss).padStart(2, '0')}` : `${mm}:${String(ss).padStart(2, '0')}`, FIELD.W / 2, 90);
-  // 이름
+  // 왼쪽: 이름 번호, 아래 게이지
   ctx.font = `700 26px ${UI}`; ctx.textAlign = 'left'; ctx.fillStyle = WHITE;
   ctx.fillText(defs.L.name, 24, 34);
   const nameW = ctx.measureText(defs.L.name).width;
   ctx.font = `600 32px ${NUM}`; ctx.fillStyle = GOLD; ctx.fillText(String(defs.L.number), 24 + nameW + 12, 36);
-  ctx.font = `700 26px ${UI}`; ctx.textAlign = 'right'; ctx.fillStyle = WHITE; ctx.fillText(defs.R.name, FIELD.W - 24, 34);
+  drawGauge(ctx, 24, 56, 200, L.gauge, false, t);
+  // 오른쪽: 번호 이름, 아래 게이지 (오른쪽 정렬)
+  ctx.font = `700 26px ${UI}`; ctx.textAlign = 'right'; ctx.fillStyle = WHITE;
+  ctx.fillText(defs.R.name, FIELD.W - 24, 34);
   const nameWR = ctx.measureText(defs.R.name).width;
-  ctx.font = `600 32px ${NUM}`; ctx.fillStyle = '#B9CBE8'; ctx.fillText(String(defs.R.number), FIELD.W - 24 - nameWR - 12, 36);
-  // AI 게이지 막대
-  const g = match.world.players.R.gauge / 100;
-  ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.fillRect(FIELD.W - 24 - 160, 54, 160, 6);
-  ctx.fillStyle = g >= 1 ? GOLD : '#B9CBE8'; ctx.fillRect(FIELD.W - 24 - 160 * g, 54, 160 * g, 6);
+  ctx.font = `600 32px ${NUM}`; ctx.fillStyle = '#B9CBE8'; ctx.textAlign = 'right';
+  ctx.fillText(String(defs.R.number), FIELD.W - 24 - nameWR - 12, 36);
+  drawGauge(ctx, FIELD.W - 24, 56, 200, R.gauge, true, t);
 }
 
 function drawSubBoard(ctx, board) {
@@ -182,7 +197,7 @@ export function drawFrame(ctx, match, imgs, fx, t) {
     ctx.save(); ctx.globalAlpha = 0.8 * (1 - q.age / q.life); ctx.fillStyle = q.color || '#FFFFFF';
     ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   }
-  drawHud(ctx, match);
+  drawHud(ctx, match, t);
   if (fx.subBoard) drawSubBoard(ctx, fx.subBoard);
   // 글자 팝
   for (const p of fx.pops) {

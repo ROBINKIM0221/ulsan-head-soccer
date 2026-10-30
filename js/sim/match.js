@@ -23,9 +23,10 @@ function finish(match, events) {
   events.push({ type: 'phase', phase: 'over' });
 }
 
-function trySpecial(match, side, pressed, events) {
+// 게이지가 다 찼고 발동 중이 아니면 자동으로 터진다 (2026-10-31 형준: 버튼 없이 자동)
+function autoSpecial(match, side, events) {
   const p = match.world.players[side];
-  if (!pressed || p.gauge < GAUGE.MAX || p.active) return;
+  if (p.gauge < GAUGE.MAX || p.active) return;
   if (activateSpecial(match, side)) {
     p.gauge = 0;
     events.push({ type: 'special', side, id: p.active.id });
@@ -50,8 +51,8 @@ export function stepMatch(match, inputsL, dt) {
   if (inputsL.sub && requestSubstitute(match, 'L')) { events.push({ type: 'phase', phase: 'sub' }); return events; }
   match.clock -= dt;
   const inputsR = decide(world, 'R', match.ai, dt);
-  trySpecial(match, 'L', inputsL.special, events);
-  trySpecial(match, 'R', inputsR.special, events);
+  autoSpecial(match, 'L', events);
+  autoSpecial(match, 'R', events);
   events.push(...updateSpecials(match, dt));
   world.players.R.mods.speed *= DIFFICULTY[match.difficulty].speed;
 

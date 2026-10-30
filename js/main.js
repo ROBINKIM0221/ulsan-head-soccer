@@ -11,17 +11,14 @@ const stage = document.getElementById('stage');
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const hint = document.getElementById('hint');
-const specialBtn = stage.querySelector('[data-btn="special"]');
 const subBtn = stage.querySelector('[data-btn="sub"]');
 const params = new URLSearchParams(location.search);
 
+const loadImage = src => new Promise(res => { const img = new Image(); img.onload = () => res(img); img.onerror = () => res(null); img.src = src; });
+// 선수마다 { photo: 동그란 사진용 원본, cut: 배경 뺀 컷아웃(경기용) }
 function loadImages() {
-  return Promise.all(PLAYERS.map(p => new Promise(res => {
-    const img = new Image();
-    img.onload = () => res([p.number, img]);
-    img.onerror = () => res([p.number, null]);
-    img.src = p.img;
-  }))).then(pairs => Object.fromEntries(pairs));
+  return Promise.all(PLAYERS.map(async p => [p.number, { photo: await loadImage(p.img), cut: await loadImage(p.img.replace(/\.jpg$/, 'c.png')) }]))
+    .then(pairs => Object.fromEntries(pairs));
 }
 
 function layout() {
@@ -60,9 +57,6 @@ export function startMatch(home, away, difficulty, { onSubRequest, onOver, debug
         onOver?.(match);
       }
     }
-    const L = match.world.players.L;
-    specialBtn.style.setProperty('--gauge', String(L.gauge / 100));
-    specialBtn.classList.toggle('ready', L.gauge >= 100 && !L.active);
     subBtn.disabled = match.subUsed.L || !(match.phase === 'play' || match.phase === 'golden');   // 킥오프·골 연출 중엔 눌러도 소용없으니 꺼 둔다
   };
   const render = () => drawFrame(ctx, match, game.imgs, fx, performance.now() / 1000);

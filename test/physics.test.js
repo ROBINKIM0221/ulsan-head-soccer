@@ -33,7 +33,7 @@ test('createWorld places L at 320 facing right and R at 960 facing left', () => 
   assert.deepEqual([w.ball.x, w.ball.y], [640, 300]);
 });
 
-test('ball falls and bounces with restitution 0.72 (minus slight drag)', () => {
+test('ball falls and bounces with restitution 0.82 (minus slight drag)', () => {
   const w = quietWorld(); w.ball.y = 300;
   let bounced = false, peakAfter = Infinity;
   run(w, 2, both(), (w) => {
@@ -42,8 +42,8 @@ test('ball falls and bounces with restitution 0.72 (minus slight drag)', () => {
   });
   const h0 = (FIELD.GROUND - PHYS.BALL_R) - 300;
   const h1 = (FIELD.GROUND - PHYS.BALL_R) - peakAfter;
-  const ratio = h1 / h0;                               // 0.72² = 0.518, 공기 저항으로 조금 덜
-  assert.ok(ratio > 0.40 && ratio < 0.56, `ratio ${ratio}`);
+  const ratio = h1 / h0;                               // 0.82² = 0.672, 공기 저항으로 조금 덜
+  assert.ok(ratio > 0.56 && ratio < 0.72, `ratio ${ratio}`);
   assert.ok(w.ball.y <= FIELD.GROUND - PHYS.BALL_R + 0.01);
 });
 
@@ -61,12 +61,12 @@ test('player cannot leave the pitch or enter the goal mouth', () => {
   assert.equal(w.players.R.x, FIELD.W - FIELD.GOAL_DEPTH - PHYS.BODY_W / 2);
 });
 
-test('jump reaches about 131px and lands within a second', () => {
+test('jump reaches about 164px and lands within a second', () => {
   const w = quietWorld();
   let minY = FIELD.GROUND;
   run(w, 1, i => both(inp({ jump: i === 0 })), w => { minY = Math.min(minY, w.players.L.y); });
   const apex = FIELD.GROUND - minY;
-  assert.ok(Math.abs(apex - 131) < 5, `apex ${apex}`);
+  assert.ok(Math.abs(apex - PHYS.JUMP * PHYS.JUMP / (2 * PHYS.GRAVITY)) < 6, `apex ${apex}`);
   assert.equal(w.players.L.onGround, true);
   assert.equal(w.players.L.y, FIELD.GROUND);
 });
@@ -82,16 +82,33 @@ test('kick launches the ball at 900px/s and 35 degrees', () => {
   assert.ok(ev.some(e => e.type === 'kick' && e.side === 'L'));
 });
 
-test('kick has 0.3s cooldown', () => {
+test('kick has a cooldown', () => {
   const w = quietWorld(); const L = w.players.L;
-  const placeBall = () => { w.ball.x = L.x + 45; w.ball.y = FIELD.GROUND - PHYS.BALL_R; w.ball.vx = 0; w.ball.vy = 0; };
+  const placeBall = () => { w.ball.x = L.x + 60; w.ball.y = FIELD.GROUND - PHYS.BALL_R; w.ball.vx = 0; w.ball.vy = 0; };   // 몸에는 안 닿고 발 범위 안
   placeBall(); run(w, DT, both(inp({ kick: true })));
-  placeBall(); run(w, 0.2);
+  placeBall(); run(w, PHYS.KICK_COOLDOWN - 0.1);
   run(w, DT, both(inp({ kick: true })));
   assert.ok(speed(w.ball) < 50, `second kick within cooldown moved ball: ${speed(w.ball)}`);
   placeBall(); run(w, 0.15);
   run(w, DT, both(inp({ kick: true })));
   assert.ok(speed(w.ball) > 800, 'kick works again after cooldown');
+});
+
+test('no kick without the kick input', () => {
+  const w = quietWorld(); const L = w.players.L;
+  w.ball.x = L.x + 60; w.ball.y = FIELD.GROUND - PHYS.BALL_R; w.ball.vx = 0; w.ball.vy = 0;   // 몸에는 안 닿고 발 범위 안
+  const ev = run(w, 0.3);
+  assert.equal(ev.filter(e => e.type === 'kick').length, 0);
+  assert.ok(speed(w.ball) < 50);
+});
+
+test('ball bouncing off a standing body pops upward', () => {
+  const w = quietWorld(); const L = w.players.L;
+  w.ball.x = L.x + 150; w.ball.y = FIELD.GROUND - PHYS.BODY_H / 2; w.ball.vx = -500; w.ball.vy = 0;  // 몸 높이로 굴러온다
+  let minVy = 0;
+  run(w, 0.3, both(), (w) => { minVy = Math.min(minVy, w.ball.vy); });
+  assert.ok(minVy <= -PHYS.BODY_POP + 1, `pop vy ${minVy}`);
+  assert.ok(w.ball.vx > 0, 'reflected away from the body');
 });
 
 test('head collision reflects the ball upward and emits one touch', () => {

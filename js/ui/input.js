@@ -1,9 +1,10 @@
 // 화면 버튼(포인터, 멀티터치)과 키보드를 Inputs 로 모은다.
 // left/right/jump 는 누르고 있는 동안, kick/special/sub 는 "이번에 눌림"(read 하면 소비).
+// 키는 이동·점프·슛뿐 (2026-10-31 형준: 단순하게). 필살기는 자동, 교체는 화면 버튼으로만.
 const KEYS = {
   ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right',
   ArrowUp: 'jump', KeyW: 'jump', Space: 'jump',
-  KeyZ: 'kick', KeyK: 'kick', KeyX: 'special', KeyL: 'special', KeyC: 'sub',
+  KeyZ: 'kick', KeyK: 'kick',
 };
 
 export function createInput(root) {

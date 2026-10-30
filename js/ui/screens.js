@@ -6,7 +6,6 @@ import { shareText } from './text.js';
 
 const overlay = document.getElementById('overlay');
 const LEVELS = [{ id: 'youth', name: '유스' }, { id: 'first', name: '1군' }, { id: 'legend', name: '레전드' }];
-const POS = { FW: '공격수', MF: '미드필더', DF: '수비수', GK: '골키퍼' };
 const STORE = 'uhd11.select';
 
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
@@ -28,7 +27,7 @@ function paintCard(canvas, def, imgs) {
   const body = createPlayer(def, 'L');
   body.x = W / 2 / 1.25; body.y = (H - 20) / 1.25;
   ctx.save(); ctx.scale(1.25, 1.25);
-  drawPlayer(ctx, body, imgs[def.number], { away: false });
+  drawPlayer(ctx, body, imgs[def.number], { away: false, circle: true });
   ctx.restore();
 }
 
@@ -58,7 +57,7 @@ function buildCarousel({ players, imgs, initial, onChange }) {
     idx = (i + players.length) % players.length;
     const def = players[idx];
     paintCard(canvas, def, imgs);
-    who.innerHTML = `<b class="name">${def.name}</b><span class="num">${def.number}</span><span class="pos">${POS[def.position]}</span>`;
+    who.innerHTML = `<b class="name">${def.name}</b><span class="num">${def.number}</span>`;
     skill.innerHTML = `<p class="skill-label">필살기</p><b>${def.special.name}</b><p>${def.special.desc}</p>`;
     [...thumbs.children].forEach((t, k) => t.setAttribute('aria-selected', k === idx));
     onChange(def);
