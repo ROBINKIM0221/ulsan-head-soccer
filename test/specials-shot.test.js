@@ -26,21 +26,21 @@ const fire = m => { m.world.players.L.gauge = 100; return run(m, DT, inp({ speci
 const ballAtFoot = m => { const L = m.world.players.L; Object.assign(m.world.ball, { held: null, x: L.x + 45, y: FIELD.GROUND - PHYS.BALL_R, vx: 0, vy: 0 }); };
 const speed = b => Math.hypot(b.vx, b.vy);
 
-test('laser: next kick flies straight at 1500 with no gravity for .8s and passes through the opponent, then normal', () => {
+test('laser: next kick flies straight at 1200 with no gravity for .8s and passes through the opponent, then scores from close range', () => {
   const m = ready(10); const L = m.world.players.L, R = m.world.players.R; const b = m.world.ball;
   fire(m);
   assert.equal(L.active.armed, true);
-  L.x = 400; R.x = 700; ballAtFoot(m);
+  L.x = 760; R.x = 920; ballAtFoot(m);
   run(m, DT, inp({ kick: true }));
-  assert.ok(Math.abs(speed(b) - 1500) < 20, `speed ${speed(b)}`);
+  assert.ok(Math.abs(speed(b) - 1200) < 20, `speed ${speed(b)}`);
   assert.equal(b.flight, 'laser'); assert.equal(b.passThrough, 'R'); assert.ok(b.noGravityT > 0.7);
   assert.equal(L.active && L.active.armed, false, 'one-shot consumed');
   const yStart = b.y;
   const ev = run(m, 0.25);
-  assert.ok(Math.abs(b.y - yStart) < 60, `nearly level: ${b.y - yStart}`);
+  assert.ok(yStart - b.y > 60 && yStart - b.y < 130, `rising gently: ${yStart - b.y}`);
   assert.ok(b.x > R.x + 60, 'went through R');
   assert.equal(ev.filter(e => e.type === 'touch' && e.side === 'R').length, 0);
-  // 400 에서 쏜 레이저는 골문까지 닿아 득점한다; 킥오프 재배치 뒤 공 표시는 지워져 있다
+  // 760 에서 쏜 레이저는 크로스바 아래로 들어가 득점한다; 킥오프 재배치 뒤 공 표시는 지워져 있다
   for (let t = 0; t < 3 && m.phase !== 'kickoff'; t += DT) run(m, DT);
   assert.deepEqual(m.scores, { L: 1, R: 0 });
   assert.equal(b.flight, null); assert.equal(b.passThrough, null);
@@ -68,19 +68,20 @@ test('laser: expires unarmed after 6s without a kick', () => {
   assert.ok(Math.abs(speed(m.world.ball) - PHYS.KICK_SPEED) < 10, 'ordinary kick afterwards');
 });
 
-test('curve: next kick leaves at 62deg/1000 and accelerates horizontally toward the goal at 900', () => {
+test('curve: next kick leaves at 55deg/1050, passes through the opponent briefly and accelerates toward the goal at 1100', () => {
   const m = ready(14); const L = m.world.players.L; const b = m.world.ball;
   fire(m);
   L.x = 400; ballAtFoot(m);
   run(m, DT, inp({ kick: true }));
   const deg = Math.atan2(-b.vy, b.vx) * 180 / Math.PI;
-  assert.ok(Math.abs(deg - 62) < 1.5, `angle ${deg}`); assert.ok(Math.abs(speed(b) - 1000) < 10, `speed ${speed(b)}`);
-  assert.equal(b.flight, 'curve'); assert.equal(b.curveAx, 900);
+  assert.ok(Math.abs(deg - 55) < 1.5, `angle ${deg}`); assert.ok(Math.abs(speed(b) - 1050) < 10, `speed ${speed(b)}`);
+  assert.equal(b.flight, 'curve'); assert.equal(b.curveAx, 900); assert.equal(b.passThrough, 'R');
   const vx0 = b.vx;
   run(m, 0.5);
-  assert.ok(b.vx - vx0 > 350, `horizontal gain ${b.vx - vx0}`);    // 900×0.5 minus drag
-  run(m, 3);
-  assert.equal(b.flight, null); assert.equal(b.curveAx, 0);
+  assert.ok(b.vx - vx0 > 300, `horizontal gain ${b.vx - vx0}`);    // 900×0.5 minus drag
+  assert.equal(b.passThrough, null, 'pass-through only for the first .35s');
+  for (let t = 0; t < 4 && b.flight && m.phase !== 'kickoff'; t += DT) run(m, DT);
+  assert.equal(b.flight, null); assert.equal(b.curveAx, 0); assert.equal(b.passThrough, null);
 });
 
 test('longthrow: next touch holds the ball .3s then lands it near the far goal line', () => {
@@ -93,7 +94,7 @@ test('longthrow: next touch holds the ball .3s then lands it near the far goal l
   assert.ok(b.held && b.held.side === 'L', 'ball is held after the touch');
   let landed = null;
   run(m, 2.5, NO_INPUT, (m) => { const bb = m.world.ball; if (!landed && !bb.held && bb.y + bb.r >= FIELD.GROUND - 0.5 && bb.x > 600) landed = bb.x; });
-  const target = FIELD.W - FIELD.GOAL_DEPTH - 60;
+  const target = FIELD.W - FIELD.GOAL_DEPTH - 140;
   assert.ok(landed !== null, 'ball landed');
   assert.ok(Math.abs(landed - target) < 40, `landed at ${landed}, target ${target}`);
 });

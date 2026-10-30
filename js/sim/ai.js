@@ -45,11 +45,11 @@ export function decide(world, side, ai, dt) {
   if (ai.reactT <= 0) {
     ai.reactT = cfg.reaction;
     const land = predictLanding(ball, 1);
-    let tx = land.x + (ai.rng() * 2 - 1) * cfg.error;
-    const towardMyGoal = ball.vx * dir < 0;
-    const ballCloser = Math.abs(ball.x - goalX) < Math.abs(me.x - goalX);
-    if (towardMyGoal && ballCloser) tx = (ball.x + goalX) / 2;   // 공과 골문 사이에 선다
-    ai.target = tx;
+    // 공이 내 앞에 떨어지게 조금 뒤(내 골문 쪽)에 선다. 공이 이미 내 골문 쪽에 있으면 공을 돌아 골문 쪽으로 들어간다.
+    const ballGoalSide = Math.abs(ball.x - goalX) < Math.abs(me.x - goalX);
+    let tx = ballGoalSide ? ball.x - dir * 90 : land.x - dir * 60;
+    if (me.active && me.active.id === 'magnet') tx = ball.x - dir * 40;   // 자석이 켜져 있으면 공에 바짝 붙는다
+    ai.target = tx + (ai.rng() * 2 - 1) * cfg.error;
   }
 
   const out = { ...NO_INPUT };
@@ -61,6 +61,9 @@ export function decide(world, side, ai, dt) {
   const h = headCenter(me);
   const above = h.y - ball.y;
   if (me.onGround && Math.abs(ball.x - h.x) < h.r + ball.r + 20 && above > 0 && above < 220) out.jump = true;
+  // 공이 내 뒤(골문 쪽) 가까이 낮게 있으면 뛰어넘어 골문 쪽으로 돌아간다 (몸으로 밀어 넣는 자책골 방지)
+  const ballBehind = (ball.x - me.x) * dir < -10;
+  if (me.onGround && ballBehind && Math.abs(ball.x - me.x) < 110 && ball.y > h.y) out.jump = true;
 
   const f = footPoint(me);
   const inFront = (ball.x - me.x) * dir > -10;
@@ -68,7 +71,9 @@ export function decide(world, side, ai, dt) {
 
   if (me.gauge >= 100 && !me.active) {
     ai.specialHoldT += dt;
-    if (ai.specialHoldT >= cfg.specialDelay - 1e-9 && (!cfg.smart || smartOk(me, ball, side))) out.special = true;
+    // 한 방형은 6초 동안 장전되므로 아무 때나, 지속·즉발형은 공이 350 안에 있을 때 쓴다
+    const ready = me.def.special.kind === 'oneshot' || Math.abs(ball.x - me.x) < 350;
+    if (ready && ai.specialHoldT >= cfg.specialDelay - 1e-9 && (!cfg.smart || smartOk(me, ball, side))) out.special = true;
   } else ai.specialHoldT = 0;
 
   return out;

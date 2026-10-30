@@ -25,33 +25,33 @@ function run(m, seconds, inputs = NO_INPUT, each) {
 }
 const fire = m => { m.world.players.L.gauge = 100; return run(m, DT, inp({ special: true })); };
 
-test('sprint: speed mod 1.8 for 5s, then back to 1 with a specialEnd event', () => {
+test('sprint: speed mod 2.0 for 6s, then back to 1 with a specialEnd event', () => {
   const m = ready(11); const L = m.world.players.L;
   fire(m);
-  assert.equal(L.active.id, 'sprint'); assert.equal(L.mods.speed, 1.8);
+  assert.equal(L.active.id, 'sprint'); assert.equal(L.mods.speed, 2.0); assert.ok(Math.abs(L.mods.kickPow - 1.35) < 1e-9);
   const x0 = L.x;
   run(m, 0.5, inp({ right: true }));
-  assert.ok(Math.abs((L.x - x0) - PHYS.MOVE * 1.8 * 0.5) < 6, `moved ${L.x - x0}`);
-  const ev = run(m, 4.6);
+  assert.ok(Math.abs((L.x - x0) - PHYS.MOVE * 2.0 * 0.5) < 6, `moved ${L.x - x0}`);
+  const ev = run(m, 5.6);
   assert.equal(L.active, null); assert.equal(L.mods.speed, 1);
   assert.ok(ev.some(e => e.type === 'specialEnd' && e.id === 'sprint'));
 });
 
-test('highjump: jump impulse ×1.5 reaches about 290px', () => {
+test('highjump: jump impulse ×1.35 reaches about 239px and heads harder', () => {
   const m = ready(15); const L = m.world.players.L;
   fire(m);
-  assert.equal(L.mods.jump, 1.5);
+  assert.equal(L.mods.jump, 1.35); assert.ok(Math.abs(L.mods.headPow - 2.0) < 1e-9); assert.ok(Math.abs(L.mods.speed - 1.15) < 1e-9);
   let minY = FIELD.GROUND;
   run(m, 1.5, i => inp({ jump: i === 0 }), m => { minY = Math.min(minY, m.world.players.L.y); });
   const apex = FIELD.GROUND - minY;
-  assert.ok(apex > 285 && apex < 297, `apex ${apex}`);
+  assert.ok(apex > 230 && apex < 243, `apex ${apex}`);
 });
 
-test('giant: scale 1.7, speed .85, head power 1.2, back to normal after 5s', () => {
+test('giant: scale 1.4, speed .8, head power 1.2, back to normal after 3.5s', () => {
   const m = ready(19); const L = m.world.players.L;
   fire(m);
-  assert.equal(L.scale, 1.7); assert.ok(Math.abs(L.mods.speed - 0.85) < 1e-9); assert.ok(Math.abs(L.mods.headPow - 1.2) < 1e-9);
-  run(m, 5.1);
+  assert.equal(L.scale, 1.4); assert.ok(Math.abs(L.mods.speed - 0.8) < 1e-9); assert.ok(Math.abs(L.mods.headPow - 1.2) < 1e-9);
+  run(m, 3.6);
   assert.equal(L.scale, 1); assert.equal(L.active, null); assert.equal(L.mods.headPow, 1);
 });
 
@@ -82,7 +82,7 @@ test('cannon: header speed doubled and the opponent it hits is knocked back and 
   assert.ok(knocked, 'knockback event'); assert.ok(stunSeen, 'opponent stunned'); assert.ok(maxVx >= 300, `knockback vx ${maxVx}`);
 });
 
-test('magnet: a free ball within 220 is pulled toward the head; a laser-flight ball is not', () => {
+test('magnet: a free ball within 400 is pulled toward the head; a laser-flight ball is not', () => {
   const m = ready(24); const L = m.world.players.L; const h = headCenter(L);
   fire(m);
   Object.assign(m.world.ball, { held: null, x: h.x + 150, y: h.y, vx: 0, vy: 0, noGravityT: 1 });
@@ -102,5 +102,5 @@ test('activate while active is ignored and mods do not accumulate across ticks',
   assert.equal(activateSpecial(m, 'L'), true);
   assert.equal(activateSpecial(m, 'L'), false);
   updateSpecials(m, DT); updateSpecials(m, DT);
-  assert.equal(L.mods.speed, 1.8);
+  assert.equal(L.mods.speed, 2.0);
 });

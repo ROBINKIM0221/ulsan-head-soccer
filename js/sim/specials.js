@@ -38,13 +38,15 @@ function flightOver(b, data, dirX) {
 //                  onKick(match, side) -> boolean, onBallTouch(match, side, info) }
 export const SPECIALS = {
   // ── 지속형 ──
-  sprint: { update(m, s) { me(m, s).mods.speed *= 1.8; } },
+  // 밸런스 2026-10-31: 1.8→2.0, 달리는 기세로 킥 1.35배 (승률 15%→21%)
+  sprint: { update(m, s) { const p = me(m, s); p.mods.speed *= 2.0; p.mods.kickPow *= 1.35; } },
 
-  highjump: { update(m, s) { me(m, s).mods.jump *= 1.5; } },
+  // 밸런스 2026-10-31: 점프 1.5→1.35(AI 가 너무 높이 떠서 공을 놓침), 헤딩 ×2.0 (승률 26%→18%→14%→4%)
+  highjump: { update(m, s) { const p = me(m, s); p.mods.jump *= 1.35; p.mods.headPow *= 2.0; p.mods.speed *= 1.15; } },   // 몸이 가벼워져 조금 빨라진다
 
   giant: {
-    activate(m, s) { me(m, s).scale = 1.7; },
-    update(m, s) { const p = me(m, s); p.mods.speed *= 0.85; p.mods.headPow *= 1.2; },
+    activate(m, s) { me(m, s).scale = 1.4; },   // 밸런스 2026-10-31: 1.7→1.5→1.4 (승률 81%→75%)
+    update(m, s) { const p = me(m, s); p.mods.speed *= 0.8; p.mods.headPow *= 1.2; },
     end(m, s) { me(m, s).scale = 1; },
   },
 
@@ -60,7 +62,7 @@ export const SPECIALS = {
       if (d.headT === undefined || d.hit || !b.lastTouch || b.lastTouch.side !== opp(s)) return;
       if (b.lastTouch.t > d.headT && b.lastTouch.t - d.headT <= 0.5) {
         const o = me(m, opp(s));
-        o.vx = 400 * dir(s); o.stun = Math.max(o.stun, 0.4); d.hit = true;
+        o.vx = 400 * dir(s); o.stun = Math.max(o.stun, 0.8); d.hit = true;   // 밸런스 2026-10-31: 비틀거림 0.4→0.8 (승률 26%)
         return [{ type: 'knockback', side: opp(s) }];
       }
     },
@@ -73,10 +75,12 @@ export const SPECIALS = {
       const p = me(m, s), b = m.world.ball;
       p.mods.magnet = true;
       if (b.flight || b.held || b.attached) return;
-      const h = headCenter(p);
-      const dx = h.x - b.x, dy = h.y - b.y, d = Math.hypot(dx, dy);
-      if (d > 220 || d < 1) return;
-      const a = 1800 * (1 - d / 220);
+      // 밸런스 2026-10-31: 머리가 아니라 발 앞(x+40, y-30)으로 끌어와 바로 찰 수 있게; 반지름 400, 가속 4000 (승률 32%→17%)
+      if (b.lastTouch && b.lastTouch.side === s && m.world.t - b.lastTouch.t < 0.4) return;   // 내가 찬 공은 0.4초 동안 놓아준다
+      const tx = p.x + dir(s) * 40, ty = p.y - 30;
+      const dx = tx - b.x, dy = ty - b.y, d = Math.hypot(dx, dy);
+      if (d > 400 || d < 1) return;
+      const a = 4000 * (1 - d / 400);
       b.vx += a * dx / d * dt; b.vy += a * dy / d * dt;
     },
   },
@@ -88,7 +92,8 @@ export const SPECIALS = {
       const p = me(m, s), b = m.world.ball;
       if (!p.active.armed) return false;
       p.active.armed = false; p.active.t = 0.8;
-      b.vx = dir(s) * 1500 * Math.cos(rad(3)); b.vy = -1500 * Math.sin(rad(3));
+      // 밸런스 2026-10-31: 1500·3° → 1200·20°. 골라인에서 약 510px 안에서 쏴야 크로스바 아래로 들어간다 (승률 96%→88%→73%)
+      b.vx = dir(s) * 1200 * Math.cos(rad(20)); b.vy = -1200 * Math.sin(rad(20));
       b.noGravityT = 0.8; b.passThrough = opp(s); b.flight = 'laser';
       return true;
     },
@@ -105,17 +110,20 @@ export const SPECIALS = {
     onKick(m, s) {
       const p = me(m, s), b = m.world.ball;
       if (!p.active.armed) return false;
-      p.active.armed = false; p.active.t = 2.5; p.active.data.left = false;
-      b.vx = dir(s) * 1000 * Math.cos(rad(62)); b.vy = -1000 * Math.sin(rad(62));
-      b.flight = 'curve'; b.curveAx = 900 * dir(s);
+      p.active.armed = false; p.active.t = 2.5; p.active.data.left = false; p.active.data.flightT = 0;
+      // 밸런스 2026-10-31: 62°·1000·900 → 55°·1050·1100, 머리 위를 넘는 처음 0.35초만 상대를 통과한다 (승률 28%→27%→97%)
+      b.vx = dir(s) * 1050 * Math.cos(rad(55)); b.vy = -1050 * Math.sin(rad(55));
+      b.flight = 'curve'; b.curveAx = 900 * dir(s); b.passThrough = opp(s);   // 가속 1100→900: 자기 진영에서 차면 골문 앞에 떨어진다
       return true;
     },
-    update(m, s) {
+    update(m, s, dt) {
       const p = me(m, s), b = m.world.ball;
       if (p.active.armed || b.flight !== 'curve') return;
+      p.active.data.flightT += dt;
+      if (p.active.data.flightT > 0.35) b.passThrough = null;   // 머리 위를 넘긴 뒤에는 골문 앞에서 막을 수 있다 (밸런스 2026-10-31: 통과 상시면 97%)
       if (flightOver(b, p.active.data, dir(s))) { SPECIALS.curve.end(m, s); p.active.t = 0; }
     },
-    end(m, s) { const b = m.world.ball; if (b.flight === 'curve') { b.flight = null; b.curveAx = 0; } },
+    end(m, s) { const b = m.world.ball; if (b.flight === 'curve') { b.flight = null; b.curveAx = 0; b.passThrough = null; } },
   },
 
   // 다음 터치: 공을 집어 0.3초 들고, 상대 골라인 앞 60px 에 떨어지게 55° 로 던진다 (최고 1300)
@@ -133,7 +141,7 @@ export const SPECIALS = {
         b.x = h.x; b.y = h.y - h.r - b.r - 4;
         b.held.t -= dt;
         if (b.held.t <= 0) {
-          const targetX = s === 'L' ? FIELD.W - FIELD.GOAL_DEPTH - 60 : FIELD.GOAL_DEPTH + 60;
+          const targetX = s === 'L' ? FIELD.W - FIELD.GOAL_DEPTH - 140 : FIELD.GOAL_DEPTH + 140;   // 밸런스 2026-10-31: 60→140 (승률 68%)
           const v = speedToLand(b.x, b.y, targetX, 55, dir(s), 1300);
           b.held = null; b.vx = dir(s) * v * Math.cos(rad(55)); b.vy = -v * Math.sin(rad(55));
           b.flight = 'throw'; d.phase = 'fly'; d.left = false; d.targetX = targetX;
@@ -175,10 +183,10 @@ export const SPECIALS = {
   // 기관차: 3초 동안 1.4배 크기·1.5배 속도·점프 불가. 공이 앞면에 닿으면 붙여서 0.75초(≈525px) 돌진,
   // 길에 있는 바닥의 상대는 공 앞에 붙어 함께 밀린다. 돌진이 끝나면 공을 놓는다.
   train: {
-    activate(m, s) { const p = me(m, s); p.scale = 1.4; p.active.data = { charging: false, done: false, chargeT: 0 }; },
+    activate(m, s) { const p = me(m, s); p.scale = 1.25; p.active.data = { charging: false, done: false, chargeT: 0 }; },   // 밸런스 2026-10-31: 크기 1.4→1.25
     update(m, s, dt) {
       const p = me(m, s), o = me(m, opp(s)), b = m.world.ball, d = p.active.data;
-      p.mods.canJump = false; p.mods.speed *= 1.5;
+      p.mods.canJump = false; p.mods.speed *= 1.2;   // 밸런스 2026-10-31: 1.5→1.3→1.2 (승률 81%→79%→78%)
       const half = PHYS.BODY_W * p.scale / 2;
       if (!d.charging) {
         if (d.done || b.held || b.attached || b.flight) return;
@@ -200,7 +208,7 @@ export const SPECIALS = {
       const ahead = (o.x - b.x) * dir(s);
       if (!o.pinned && grounded && ahead > -oHalf && ahead < b.r + oHalf + 4) o.pinned = true;
       if (o.pinned) o.x = b.x + dir(s) * (b.r + oHalf);         // 골라인에서는 physics 가 잘라 세운다
-      if (d.chargeT >= 0.75) {
+      if (d.chargeT >= 0.4) {                                    // 밸런스 2026-10-31: 0.75→0.6→0.5→0.45→0.4초 (승률 81%→79%→78%→67%→67%)
         b.attached = null; o.pinned = false; p.forcedVx = null; p.noSeparate = false;
         d.charging = false; d.done = true;
       }

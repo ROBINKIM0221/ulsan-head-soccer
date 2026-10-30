@@ -3,7 +3,7 @@
 import { FIELD, PHYS, NO_INPUT } from './constants.js';
 
 export function defaultMods() {
-  return { speed: 1, jump: 1, headPow: 1, canJump: true, catchArmed: false, magnet: false, press: false };
+  return { speed: 1, jump: 1, headPow: 1, kickPow: 1, canJump: true, catchArmed: false, magnet: false, press: false };
 }
 
 export function createPlayer(def, side) {
@@ -76,7 +76,7 @@ function collideBox(ball, box, e, carryVx = 0) {
   ball.x += nx * (ball.r - d); ball.y += ny * (ball.r - d);
   const vn = ball.vx * nx + ball.vy * ny;
   if (vn < 0) { ball.vx -= (1 + e) * vn * nx; ball.vy -= (1 + e) * vn * ny; }
-  ball.vx += carryVx;
+  if (carryVx * nx > 0) ball.vx += carryVx;   // 선수가 공 쪽으로 움직일 때만 밀어 준다
   return true;
 }
 
@@ -132,6 +132,12 @@ function collidePlayer(world, p, ball, events, hooks) {
   return false;
 }
 
+// 공에서 먼 선수부터, 가까운 선수를 마지막에
+function byDistance(world, ball) {
+  const d = side => { const h = headCenter(world.players[side]); return Math.hypot(ball.x - h.x, ball.y - h.y); };
+  return d('L') >= d('R') ? ['L', 'R'] : ['R', 'L'];
+}
+
 function separatePlayers(L, R) {
   if (L.noSeparate || R.noSeparate) return;   // 돌진하는 기관차는 공중의 상대 밑을 지나간다
   const halfW = (PHYS.BODY_W * L.scale + PHYS.BODY_W * R.scale) / 2;
@@ -185,16 +191,18 @@ export function stepPhysics(world, inputs, dt, hooks = {}) {
     ball.vx *= PHYS.DRAG; ball.vy *= PHYS.DRAG;
     ball.x += ball.vx * dt; ball.y += ball.vy * dt;
     collideStatic(ball);
+    // 공에 가까운 선수를 나중에 처리해 접촉의 주인이 되게 한다 (항상 L→R 이면 R 이 동시 접촉을 매번 이긴다)
     let pushed = 0;
-    for (const side of ['L', 'R']) {
+    for (const side of byDistance(world, ball)) {
       if (ball.passThrough === side) continue;
       if (collidePlayer(world, world.players[side], ball, events, hooks)) pushed++;
     }
-    if (pushed === 2) ball.vy = Math.min(ball.vy, -350);   // 두 선수 사이에 끼면 위로 빠져나온다
+    if (pushed === 2) { ball.vy = Math.min(ball.vy, -350); ball.vx *= 0.3; }   // 두 선수 사이에 끼면 옆으로 튀지 않고 위로 빠져나온다
     collideStatic(ball);
   }
 
-  // 6. 킥 (공 이동 뒤에 처리해 속도가 정확히 남는다)
+  // 6. 킥 (공 이동 뒤에 처리해 속도가 정확히 남는다). 둘 다 닿으면 발이 더 가까운 쪽만 공을 찬다.
+  const kickers = [];
   for (const side of ['L', 'R']) {
     const p = world.players[side];
     const inp = inputs[side] || NO_INPUT;
@@ -203,14 +211,17 @@ export function stepPhysics(world, inputs, dt, hooks = {}) {
     events.push({ type: 'kick', side });
     const f = footPoint(p);
     const inFront = (ball.x - p.x) * p.facing > -10;
-    if (ballFree(ball) && ball.passThrough !== side && inFront && Math.hypot(ball.x - f.x, ball.y - f.y) <= PHYS.KICK_RANGE) {
-      if (!(hooks.onKick && hooks.onKick(side))) {
-        const a = PHYS.KICK_ANGLE_DEG * Math.PI / 180;
-        ball.vx = p.facing * PHYS.KICK_SPEED * Math.cos(a);
-        ball.vy = -PHYS.KICK_SPEED * Math.sin(a);
-      }
-      touch(world, p, ball, false, 'foot', events, hooks);
+    const dist = Math.hypot(ball.x - f.x, ball.y - f.y);
+    if (ballFree(ball) && ball.passThrough !== side && inFront && dist <= PHYS.KICK_RANGE) kickers.push({ side, p, dist });
+  }
+  if (kickers.length) {
+    const { side, p } = kickers.sort((a, b) => a.dist - b.dist)[0];
+    if (!(hooks.onKick && hooks.onKick(side))) {
+      const a = PHYS.KICK_ANGLE_DEG * Math.PI / 180;
+      ball.vx = p.facing * PHYS.KICK_SPEED * p.mods.kickPow * Math.cos(a);
+      ball.vy = -PHYS.KICK_SPEED * p.mods.kickPow * Math.sin(a);
     }
+    touch(world, p, ball, false, 'foot', events, hooks);
   }
 
   // 7. 속도 상한

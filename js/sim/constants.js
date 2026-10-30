@@ -9,7 +9,8 @@ export const PHYS = {
   HEAD_CARRY: 0.6, PERFECT_MIN_REL: 500, PERFECT_MULT: 1.35, TOUCH_DEBOUNCE: 0.25,
 };
 
-export const GAUGE = { TOUCH: 10, PERFECT: 35, CONCEDE: 15, MAX: 100, ONESHOT_TTL: 6 };
+// 밸런스 2026-10-31: 터치 10→4, 퍼펙트 35→20, 실점 15→20. AI 끼리 한 경기 터치가 300번을 넘어 10이면 필살기가 30번 터졌다.
+export const GAUGE = { TOUCH: 4, PERFECT: 20, CONCEDE: 20, MAX: 100, ONESHOT_TTL: 6 };
 
 export const MATCH = { LEN: 90, GOLDEN: 30, GOAL_PAUSE: 1, AI_SUB_AFTER: 45 };
 

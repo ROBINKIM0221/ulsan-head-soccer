@@ -60,11 +60,11 @@ export function stepMatch(match, inputsL, dt) {
     events.push(e);
     if (e.type === 'touch') {
       const p = world.players[e.side];
-      p.gauge = Math.min(GAUGE.MAX, p.gauge + (e.perfect ? GAUGE.PERFECT : GAUGE.TOUCH));
+      p.gauge = Math.min(GAUGE.MAX, p.gauge + (e.perfect ? GAUGE.PERFECT : GAUGE.TOUCH) * (p.def.special.gaugeRate ?? 1));
     } else if (e.type === 'goal') {
       match.scores[e.scorer]++;
       const c = world.players[other(e.scorer)];
-      c.gauge = Math.min(GAUGE.MAX, c.gauge + GAUGE.CONCEDE);
+      c.gauge = Math.min(GAUGE.MAX, c.gauge + GAUGE.CONCEDE * (c.def.special.gaugeRate ?? 1));
       if (match.phase === 'golden') { finish(match, events); return events; }
       match.phase = 'goal'; match.phaseT = MATCH.GOAL_PAUSE;
       events.push({ type: 'phase', phase: 'goal' });

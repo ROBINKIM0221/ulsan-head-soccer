@@ -17,6 +17,8 @@ test('every player has a special with kind and desc', () => {
     assert.ok(p.special.duration > 0, p.name);
     assert.ok(['attack', 'defend'].includes(p.role), p.name);
     assert.equal(p.img, `img/${p.number}.jpg`);
+    const rate = p.special.gaugeRate ?? 1;
+    assert.ok(rate >= 0.4 && rate <= 2, `${p.name} gaugeRate ${rate}`);
   }
 });
 
@@ -24,7 +26,7 @@ test('roles and special ids match spec', () => {
   const attack = PLAYERS.filter(p => p.role === 'attack').map(p => p.number);
   assert.deepEqual(attack, [10, 11, 14, 26, 99]);
   assert.equal(byNumber(55).special.id, 'train');
-  assert.equal(byNumber(55).special.duration, 3);
+  assert.equal(byNumber(55).special.duration, 2.5);
   assert.equal(byNumber(38).special.id, 'press');
   assert.equal(byNumber(96).special.kind, 'instant');
   assert.equal(byNumber(10).special.kind, 'oneshot');

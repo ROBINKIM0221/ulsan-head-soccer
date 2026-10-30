@@ -53,6 +53,15 @@ test('AI jumps when the ball is above its head', () => {
   assert.equal(decide(w, 'R', ai, DT).jump, false);
 });
 
+test('AI holds a buff special until the ball is within 350px; one-shots fire anytime', () => {
+  const w = createWorld(P10, byNumber(19)); w.players.R.gauge = 100;      // 김영권 거인(지속형)
+  const ai = createAiState('first', mulberry32(21));
+  w.ball.x = 200; assert.equal(decide(w, 'R', ai, DT).special, false);
+  w.ball.x = 700; assert.equal(decide(w, 'R', ai, DT).special, true);
+  const w2 = createWorld(P10, byNumber(10)); w2.players.R.gauge = 100;    // 이동경 레이저(한 방형)
+  w2.ball.x = 200; assert.equal(decide(w2, 'R', createAiState('first', mulberry32(22)), DT).special, true);
+});
+
 test('AI kicks when the ball is in front within kick range', () => {
   const w = world(); const ai = createAiState('first', mulberry32(3));
   const f = footPoint(w.players.R);

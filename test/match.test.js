@@ -94,10 +94,20 @@ test('gauge: +10 per touch, +35 per perfect header, capped at 100', () => {
   run(m2, DT);
   assert.equal(L2.gauge, GAUGE.PERFECT);
 
-  L.gauge = 95; L.lastTouchT = -1;
+  L.gauge = GAUGE.MAX - 2; L.lastTouchT = -1;
   Object.assign(m.world.ball, { x: h.x, y: h.y - h.r - PHYS.BALL_R - 5, vx: 0, vy: 200 });
   run(m, 0.1);
   assert.equal(L.gauge, GAUGE.MAX);
+});
+
+test('gauge gain scales with the player\'s special.gaugeRate', () => {
+  const m = createMatch({ home: byNumber(14), away: P99, difficulty: 'first', rng: mulberry32(1) });   // 이진현 0.5
+  toPlay(m);
+  const L = m.world.players.L, h = headCenter(L);
+  m.world.players.R.x = 1160;
+  Object.assign(m.world.ball, { held: null, x: h.x, y: h.y - h.r - PHYS.BALL_R - 5, vx: 0, vy: 200 });
+  run(m, 0.1);
+  assert.equal(L.gauge, GAUGE.TOUCH * 0.45);
 });
 
 test('special input is ignored below gauge 100 and consumes the gauge at 100', () => {
