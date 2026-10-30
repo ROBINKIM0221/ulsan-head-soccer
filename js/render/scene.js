@@ -118,6 +118,17 @@ function drawSubBoard(ctx, board) {
   ctx.restore();
 }
 
+// 백그라운드에서 돌아왔을 때의 카운트다운 숫자 (루프가 멈춘 채 그리므로 팝이 아니라 직접 그린다)
+export function drawCountdown(ctx, n) {
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,43,107,.45)'; ctx.fillRect(0, 0, FIELD.W, FIELD.H);
+  ctx.font = `600 220px ${NUM}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.lineWidth = 14; ctx.strokeStyle = NAVY; ctx.strokeText(String(n), FIELD.W / 2, FIELD.H / 2 - 20);
+  ctx.fillStyle = GOLD; ctx.fillText(String(n), FIELD.W / 2, FIELD.H / 2 - 20);
+  ctx.font = `700 28px ${UI}`; ctx.fillStyle = WHITE; ctx.fillText('곧 이어집니다', FIELD.W / 2, FIELD.H / 2 + 120);
+  ctx.restore();
+}
+
 export function drawFrame(ctx, match, imgs, fx, t) {
   const w = match.world, b = w.ball;
   ctx.save();

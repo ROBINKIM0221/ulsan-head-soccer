@@ -1,6 +1,6 @@
 // 항상 가로. 뷰포트가 세로면 stage 를 90° 눕혀서 폰을 돌리면 가로 게임이 되게 한다 (인스타 인앱은 세로 고정).
 // 캔버스는 양옆 조작 버튼 자리를 뺀 가운데에 16:9 로 최대 크기.
-const PAD_MIN = 110;   // 버튼 열 최소 폭
+const PAD_MIN = 144;   // 버튼 열 최소 폭: 64px 버튼 둘 + 간격이 들어가는 폭
 
 export function fitStage(stage, canvas, { padsVisible = true } = {}) {
   const vw = window.innerWidth, vh = window.innerHeight;

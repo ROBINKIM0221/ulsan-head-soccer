@@ -1,4 +1,4 @@
-// 화면 확인: 데스크톱과 폰 프로필로 스크린샷을 찍고, 회전된 버튼 탭·멀티터치·키보드가 먹는지 검사한다.
+// 화면 확인: 데스크톱과 폰 프로필로 스크린샷을 찍고, 회전된 버튼 탭·멀티터치·키보드·복귀 카운트다운·스와이프가 먹는지 검사한다.
 // 사용: python -m http.server 8766 을 띄운 뒤  node tools/shots.cjs [out=shots]
 const PW = 'C:/Users/robin/AppData/Local/npm-cache/_npx/9833c18b2d85bc59/node_modules/playwright';
 const { chromium, devices } = require(PW);
@@ -9,19 +9,23 @@ fs.mkdirSync(OUT, { recursive: true });
 
 const results = [];
 const check = (name, ok, info = '') => { results.push({ name, ok, info }); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${info ? '  ' + info : ''}`); };
+const setHidden = (page, hidden) => page.evaluate(h => { Object.defineProperty(document, 'hidden', { get: () => h, configurable: true }); document.dispatchEvent(new Event('visibilitychange')); }, hidden);
 
 (async () => {
   const browser = await chromium.launch({ channel: 'chrome' });
 
-  // (a) 데스크톱 경기 화면
+  // (a) 데스크톱 경기 화면 + 키보드 + 교체 버튼 상태 + 복귀 카운트다운 + 결과 화면 루프 정지
   {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
     const page = await ctx.newPage();
     await page.goto(BASE + '?debug=1');
+    await page.waitForFunction(() => window.__debug && window.__debug.match.phase === 'kickoff', null, { timeout: 8000 });
+    check('sub button disabled during kickoff', await page.evaluate(() => document.querySelector('[data-btn="sub"]').disabled));
     await page.waitForFunction(() => window.__debug && window.__debug.match.phase === 'play', null, { timeout: 8000 });
-    await page.waitForTimeout(600);
+    await page.waitForTimeout(100);
+    check('sub button enabled during play', await page.evaluate(() => !document.querySelector('[data-btn="sub"]').disabled));
+    await page.waitForTimeout(500);
     await page.screenshot({ path: `${OUT}/desktop-play.png` });
-    // (e) 키보드 오른쪽 0.5초 → L.x 증가
     const x0 = await page.evaluate(() => window.__debug.world.players.L.x);
     await page.keyboard.down('ArrowRight'); await page.waitForTimeout(500); await page.keyboard.up('ArrowRight');
     const x1 = await page.evaluate(() => window.__debug.world.players.L.x);
@@ -29,8 +33,25 @@ const check = (name, ok, info = '') => { results.push({ name, ok, info }); conso
     await page.keyboard.press('Space');
     await page.waitForTimeout(120);
     check('keyboard Space jumps', await page.evaluate(() => !window.__debug.world.players.L.onGround));
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(1200);
     await page.screenshot({ path: `${OUT}/desktop-kb.png` });
+    // 백그라운드 → 복귀: 루프가 멈추고, 돌아오면 3초 카운트다운이 보이는 동안 여전히 멈춰 있다가 다시 돈다
+    await setHidden(page, true);
+    await page.waitForTimeout(100);
+    check('loop stops when hidden', await page.evaluate(() => window.__debug.loop && window.__debug.loop.running === false));
+    await setHidden(page, false);
+    await page.waitForTimeout(150);
+    const cd = await page.evaluate(() => ({ n: window.__debug.countdown, running: window.__debug.loop.running }));
+    check('resume shows a countdown while the loop is still stopped', cd.n === 3 && cd.running === false, JSON.stringify(cd));
+    await page.screenshot({ path: `${OUT}/desktop-countdown.png` });
+    await page.waitForTimeout(3200);
+    const cd2 = await page.evaluate(() => ({ n: window.__debug.countdown, running: window.__debug.loop.running }));
+    check('after the countdown the loop runs again', cd2.n == null && cd2.running === true, JSON.stringify(cd2));
+    // 결과 화면에서는 루프가 멈춘다
+    await page.goto(BASE + '?debug=result');
+    await page.waitForSelector('.sheet.result');
+    await page.waitForTimeout(1600);
+    check('loop stops on the result screen', await page.evaluate(() => window.__debug.loop.running === false));
     await ctx.close();
   }
 
@@ -45,13 +66,15 @@ const check = (name, ok, info = '') => { results.push({ name, ok, info }); conso
     await page.screenshot({ path: `${OUT}/iphone-portrait.png` });
     const rotated = await page.evaluate(() => document.getElementById('stage').dataset.rotated);
     check('stage rotated in portrait viewport', rotated === '1');
-    // 회전된 점프 버튼의 화면 좌표를 탭
     const box = await page.locator('[data-btn="jump"]').boundingBox();
     check('jump button has a hit box', !!box && box.width > 40, JSON.stringify(box));
+    const sizes = await page.evaluate(() => [...document.querySelectorAll('.pad .ctl')].map(b => { const r = b.getBoundingClientRect(); return [b.dataset.btn, Math.round(r.width), Math.round(r.height)]; }));
+    check('every control button is at least 64px', sizes.every(s => s[1] >= 64 && s[2] >= 64), JSON.stringify(sizes));
     await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
     await page.waitForTimeout(150);
     check('rotated tap hits jump button', await page.evaluate(() => !window.__debug.world.players.L.onGround));
-    await page.waitForTimeout(900);
+    await page.waitForFunction(() => window.__debug.world.players.L.onGround, null, { timeout: 3000 });   // 앞 점프가 끝난 뒤
+    await page.waitForTimeout(200);
     // 멀티터치: ◀ 를 누른 채 점프를 탭
     const left = await page.locator('[data-btn="left"]').boundingBox();
     const client = await ctx.newCDPSession(page);
@@ -60,11 +83,24 @@ const check = (name, ok, info = '') => { results.push({ name, ok, info }); conso
     await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...pL, id: 1 }] });
     await page.waitForTimeout(250);
     await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...pL, id: 1 }, { ...pJ, id: 2 }] });
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(120);
     const st = await page.evaluate(() => ({ vx: window.__debug.world.players.L.vx, air: !window.__debug.world.players.L.onGround }));
     check('multitouch move+jump', st.vx < 0 && st.air, JSON.stringify(st));
     await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await page.screenshot({ path: `${OUT}/iphone-play.png` });
+
+    // 회전된 선택 화면에서 카드 스와이프(물리적 좌우 = 화면 세로)로 선수가 바뀐다
+    await page.goto(BASE);
+    await page.waitForSelector('.sheet.select');
+    const before = await page.textContent('.who .name');
+    const card = await page.locator('.card').boundingBox();
+    const cx = card.x + card.width / 2, cy = card.y + card.height / 2;
+    await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: cx, y: cy, id: 1 }] });
+    for (let i = 1; i <= 6; i++) await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: cx, y: cy + i * 25, id: 1 }] });
+    await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await page.waitForTimeout(150);
+    const after = await page.textContent('.who .name');
+    check('rotated swipe changes the player', before !== after, `${before} → ${after}`);
     await ctx.close();
   }
 

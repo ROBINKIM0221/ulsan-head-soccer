@@ -2,7 +2,7 @@
 import { MATCH, GAUGE, DIFFICULTY, NO_INPUT } from './constants.js';
 import { createWorld, createPlayer, stepPhysics, resetKickoff } from './physics.js';
 import { createAiState, decide, shouldSubstitute, pickSubstitute } from './ai.js';
-import { activateSpecial, updateSpecials, specialHooks } from './specials.js';
+import { activateSpecial, updateSpecials, specialHooks, endSpecial } from './specials.js';
 
 export function createMatch({ home, away, difficulty = 'first', rng = Math.random }) {
   return {
@@ -105,6 +105,7 @@ export function resumeFromSub(match, newDef) {
 export function substitute(match, side, newDef) {
   const { world } = match;
   const old = world.players[side];
+  endSpecial(match, side);                      // 비행 중인 레이저·커브 표시, 기관차 붙임 등을 먼저 지운다
   const n = createPlayer(newDef, side);
   Object.assign(n, { x: old.x, y: old.y, vx: old.vx, vy: old.vy, onGround: old.onGround, gauge: old.gauge, lastTouchT: old.lastTouchT });
   world.players[side] = n;

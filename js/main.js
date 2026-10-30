@@ -3,7 +3,7 @@ import { PLAYERS, byNumber } from './data/players.js';
 import { createMatch, stepMatch, requestSubstitute, resumeFromSub } from './sim/match.js';
 import { mulberry32 } from './sim/rng.js';
 import { createLoop } from './loop.js';
-import { createFx, pushEvents, updateFx, drawFrame } from './render/scene.js';
+import { createFx, pushEvents, updateFx, drawFrame, drawCountdown } from './render/scene.js';
 import { createInput } from './ui/input.js';
 import { fitStage } from './ui/orientation.js';
 
@@ -34,7 +34,7 @@ function layout() {
   return r;
 }
 
-const game = { match: null, fx: null, loop: null, input: null, imgs: null, paused: false };
+const game = { match: null, fx: null, loop: null, input: null, imgs: null, paused: false, countdown: null, countdownTimer: null };
 
 export function startMatch(home, away, difficulty, { onSubRequest, onOver, debugSpecial } = {}) {
   if (game.loop) game.loop.stop();
@@ -53,18 +53,22 @@ export function startMatch(home, away, difficulty, { onSubRequest, onOver, debug
     pushEvents(fx, events, match);
     updateFx(fx, match, dt);
     for (const e of events) {
-      if (e.type === 'phase' && e.phase === 'sub') { game.input.setEnabled(false); onSubRequest?.(match); }
-      if (e.type === 'phase' && e.phase === 'over' && !overNotified) { overNotified = true; game.input.setEnabled(false); onOver?.(match); }
+      if (e.type === 'phase' && e.phase === 'sub') { game.input.setEnabled(false); game.loop.stop(); onSubRequest?.(match); }   // 선택하는 동안 루프도 쉰다
+      if (e.type === 'phase' && e.phase === 'over' && !overNotified) {
+        overNotified = true; game.input.setEnabled(false);
+        setTimeout(() => { if (game.match === match) game.loop.stop(); }, 1300);   // GOAL 연출이 끝나면 멈춘다 (결과 화면 뒤에서 돌지 않게)
+        onOver?.(match);
+      }
     }
     const L = match.world.players.L;
     specialBtn.style.setProperty('--gauge', String(L.gauge / 100));
     specialBtn.classList.toggle('ready', L.gauge >= 100 && !L.active);
-    subBtn.disabled = match.subUsed.L || (match.phase !== 'play' && match.phase !== 'golden' && match.phase !== 'kickoff' && match.phase !== 'goal');
+    subBtn.disabled = match.subUsed.L || !(match.phase === 'play' || match.phase === 'golden');   // 킥오프·골 연출 중엔 눌러도 소용없으니 꺼 둔다
   };
   const render = () => drawFrame(ctx, match, game.imgs, fx, performance.now() / 1000);
   game.loop = createLoop({ step, render });
   game.loop.start();
-  window.__debug = { match, get world() { return match.world; }, fx };   // 콘솔·검사 스크립트용
+  window.__debug = { match, get world() { return match.world; }, fx, get loop() { return game.loop; }, get countdown() { return game.countdown; } };   // 콘솔·검사 스크립트용
   return match;
 }
 
@@ -73,24 +77,35 @@ export function finishSubstitution(newDef) {
   const ev = resumeFromSub(game.match, newDef);
   if (ev) pushEvents(game.fx, [ev], game.match);
   game.input.setEnabled(true);
+  if (!document.hidden) game.loop.start();
+}
+
+// 복귀 카운트다운: 루프는 멈춘 채 3·2·1 을 직접 그리고, 끝나면 재개. 도중에 다시 숨겨지면 취소.
+function startCountdown() {
+  let n = 3;
+  const tick = () => {
+    game.countdownTimer = null;
+    if (document.hidden || !game.match) { game.countdown = null; return; }
+    if (game.match.phase === 'over' || n === 0) { game.countdown = null; game.loop.start(); return; }
+    game.countdown = n;
+    drawFrame(ctx, game.match, game.imgs, game.fx, performance.now() / 1000);
+    drawCountdown(ctx, n);
+    n--;
+    game.countdownTimer = setTimeout(tick, 900);
+  };
+  tick();
 }
 
 // 탭이 숨겨지면 멈추고, 돌아오면 3초 세고 재개
 function pauseOnHide() {
   document.addEventListener('visibilitychange', () => {
     if (!game.loop) return;
-    if (document.hidden) { game.loop.stop(); game.paused = true; }
-    else if (game.paused) {
+    if (document.hidden) {
+      if (game.countdownTimer) { clearTimeout(game.countdownTimer); game.countdownTimer = null; game.countdown = null; game.paused = true; }
+      if (game.loop.running) { game.loop.stop(); game.paused = true; }
+    } else if (game.paused) {
       game.paused = false;
-      let n = 3;
-      const tick = () => {
-        if (!game.match || game.match.phase === 'over') { game.loop.start(); return; }
-        if (n === 0) { game.loop.start(); return; }
-        game.fx.pops.push({ text: String(n), x: 640, y: 300, size: 120, color: '#FFC72C', life: 0.9, age: 0, rise: 10 });
-        drawFrame(ctx, game.match, game.imgs, game.fx, performance.now() / 1000);
-        n--; setTimeout(tick, 900);
-      };
-      tick();
+      startCountdown();
     }
   });
 }

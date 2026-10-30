@@ -251,6 +251,15 @@ export function activateSpecial(match, side) {
   return true;
 }
 
+// 발동 중인 필살기를 즉시 끝낸다 (교체 등). 공에 남긴 표시(비행·통과·붙음)도 end() 가 지운다.
+export function endSpecial(match, side) {
+  const p = match.world.players[side];
+  if (!p.active) return false;
+  defOf(p).end?.(match, side);
+  p.active = null;
+  return true;
+}
+
 // 매 틱: mods 를 기본값으로 되돌린 뒤 발동 중인 필살기가 다시 채운다 (누적 금지). 끝나면 specialEnd.
 export function updateSpecials(match, dt) {
   const events = [];

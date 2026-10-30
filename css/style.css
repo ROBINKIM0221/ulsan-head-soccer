@@ -37,7 +37,8 @@ body {
 }
 .pad.left { left: 0; padding-left: max(0px, env(safe-area-inset-left)); }
 .pad.right { right: 0; padding-right: max(0px, env(safe-area-inset-right)); }
-.pad.left { flex-direction: row; align-items: flex-end; justify-content: center; gap: 10px; }
+.pad.left { flex-direction: row; align-items: flex-end; justify-content: center; gap: 6px; }
+.pad.left .ctl { width: 64px; height: 64px; flex: none; }   /* 두 개가 110~144px 열에 들어가되 64px 밑으로는 안 줄어든다 */
 
 .ctl {
   all: unset;
@@ -132,7 +133,7 @@ body {
 }
 .arrow:active { opacity: 1; transform: scale(1.1); }
 .arrow:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; border-radius: 8px; }
-.card { display: flex; flex-direction: column; align-items: center; gap: 4px; touch-action: pan-y; }
+.card { display: flex; flex-direction: column; align-items: center; gap: 4px; touch-action: none; }   /* 스와이프를 브라우저가 가져가지 않게 */
 .card canvas { display: block; }
 .who { display: flex; align-items: baseline; gap: 8px; }
 .who .name { font-size: 24px; font-weight: 800; }

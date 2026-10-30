@@ -2,6 +2,7 @@
 import { PLAYERS, byNumber } from '../data/players.js';
 import { createPlayer } from '../sim/physics.js';
 import { drawPlayer } from '../render/characters.js';
+import { shareText } from './text.js';
 
 const overlay = document.getElementById('overlay');
 const LEVELS = [{ id: 'youth', name: '유스' }, { id: 'first', name: '1군' }, { id: 'legend', name: '레전드' }];
@@ -64,10 +65,12 @@ function buildCarousel({ players, imgs, initial, onChange }) {
   }
   prev.addEventListener('click', () => go(idx - 1));
   next.addEventListener('click', () => go(idx + 1));
-  // 스와이프
-  let sx = null;
-  card.addEventListener('pointerdown', e => { sx = e.clientX; });
-  card.addEventListener('pointerup', e => { if (sx === null) return; const dx = e.clientX - sx; sx = null; if (dx > 40) go(idx - 1); else if (dx < -40) go(idx + 1); });
+  // 스와이프. 무대가 90° 눕혀져 있으면 물리적 좌우 = 뷰포트 세로(무대 x = 화면 y) 라 clientY 로 잰다
+  let start = null;
+  const along = e => (document.getElementById('stage').dataset.rotated === '1' ? e.clientY : e.clientX);
+  card.addEventListener('pointerdown', e => { start = along(e); });
+  card.addEventListener('pointerup', e => { if (start === null) return; const dx = along(e) - start; start = null; if (dx > 40) go(idx - 1); else if (dx < -40) go(idx + 1); });
+  card.addEventListener('pointercancel', () => { start = null; });
   root.addEventListener('keydown', e => { if (e.key === 'ArrowLeft') go(idx - 1); if (e.key === 'ArrowRight') go(idx + 1); });
   go(idx);
   return { root, current: () => players[idx], refresh: () => go(idx) };
@@ -154,9 +157,8 @@ export function showResult({ match, onAgain, onChange }) {
   if (navigator.share) {
     share.hidden = false;
     share.addEventListener('click', () => {
-      const me = match.used.L.at(-1).name, them = match.used.R.at(-1).name;
-      const tail = match.result === 'win' ? '이겼다!' : match.result === 'lose' ? '졌다…' : '비겼다!';
-      navigator.share({ text: `ULSAN HD FC 일대일축구에서 ${me}(으)로 ${them}를 ${match.scores.L}:${match.scores.R}로 ${tail}`, url: location.href }).catch(() => {});
+      const text = shareText({ me: match.used.L.at(-1).name, them: match.used.R.at(-1).name, L: match.scores.L, R: match.scores.R, result: match.result });
+      navigator.share({ text, url: location.href }).catch(() => {});
     });
   }
   show(sheet);

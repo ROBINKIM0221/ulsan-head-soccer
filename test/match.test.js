@@ -149,6 +149,18 @@ test('substitute keeps gauge and position, clears the active special, marks used
   assert.deepEqual(currentDefs(m), { L: P19, R: P99 });
 });
 
+test('substituting a player whose laser is in flight clears the ball flags', () => {
+  const m = mk(); toPlay(m);
+  const L = m.world.players.L; L.x = 760; m.world.players.R.x = 1160;
+  L.gauge = 100; run(m, DT, inp({ special: true }));
+  Object.assign(m.world.ball, { held: null, x: L.x + 45, y: FIELD.GROUND - PHYS.BALL_R, vx: 0, vy: 0 });
+  run(m, DT, inp({ kick: true }));
+  assert.equal(m.world.ball.flight, 'laser'); assert.equal(m.world.ball.passThrough, 'R');
+  substitute(m, 'L', P19);
+  assert.equal(m.world.ball.flight, null); assert.equal(m.world.ball.passThrough, null); assert.equal(m.world.ball.noGravityT, 0);
+  assert.equal(m.world.players.L.active, null);
+});
+
 test('a second substitution request is ignored', () => {
   const m = mk(); toPlay(m);
   requestSubstitute(m, 'L'); resumeFromSub(m, P19);
