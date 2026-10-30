@@ -1,9 +1,38 @@
 // 필살기. 공통 뼈대(발동·지속·종료)는 아래쪽, 각 필살기의 효과는 SPECIALS 표. 수치는 설계서 9절.
+import { FIELD, PHYS } from './constants.js';
 import { defaultMods, headCenter } from './physics.js';
 
 const dir = side => (side === 'L' ? 1 : -1);          // 상대 골문 방향
 const opp = side => (side === 'L' ? 'R' : 'L');
 const me = (m, s) => m.world.players[s];
+const rad = deg => deg * Math.PI / 180;
+const onGround = b => b.y + b.r >= FIELD.GROUND - 0.5;
+
+// 공기 저항·중력을 그대로 넣고 시뮬레이션해서, 각도 angleDeg 로 targetX 에 떨어지는 초속을 찾는다 (최대 vMax)
+function speedToLand(x0, y0, targetX, angleDeg, dirX, vMax) {
+  const landX = v => {
+    let x = x0, y = y0, vx = dirX * v * Math.cos(rad(angleDeg)), vy = -v * Math.sin(rad(angleDeg));
+    const dt = 1 / 120;
+    for (let i = 0; i < 1200; i++) {
+      vy += PHYS.GRAVITY * dt; vx *= PHYS.DRAG; vy *= PHYS.DRAG; x += vx * dt; y += vy * dt;
+      if (y + PHYS.BALL_R >= FIELD.GROUND && vy > 0) return x;
+    }
+    return x;
+  };
+  if ((landX(vMax) - targetX) * dirX < 0) return vMax;   // 최고 속도로도 못 미치면 최고 속도
+  let lo = 100, hi = vMax;
+  for (let i = 0; i < 30; i++) {
+    const mid = (lo + hi) / 2;
+    if ((landX(mid) - targetX) * dirX < 0) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+// 한 방형이 공을 쏜 뒤, 공이 바닥에 닿거나 되돌아오면 비행 표시를 지운다
+function flightOver(b, data, dirX) {
+  if (!data.left && !onGround(b)) data.left = true;
+  return (data.left && onGround(b)) || Math.sign(b.vx) === -dirX;
+}
 
 // SPECIALS[id] = { activate(match, side), update(match, side, dt) -> Event[]|undefined, end(match, side),
 //                  onKick(match, side) -> boolean, onBallTouch(match, side, info) }
@@ -50,6 +79,89 @@ export const SPECIALS = {
       const a = 1800 * (1 - d / 220);
       b.vx += a * dx / d * dt; b.vy += a * dy / d * dt;
     },
+  },
+
+  // ── 다음 한 방형 ──
+  // 다음 킥: 1500 직선, 0.8초 중력 없음, 상대를 통과
+  laser: {
+    onKick(m, s) {
+      const p = me(m, s), b = m.world.ball;
+      if (!p.active.armed) return false;
+      p.active.armed = false; p.active.t = 0.8;
+      b.vx = dir(s) * 1500 * Math.cos(rad(3)); b.vy = -1500 * Math.sin(rad(3));
+      b.noGravityT = 0.8; b.passThrough = opp(s); b.flight = 'laser';
+      return true;
+    },
+    update(m, s) {
+      const p = me(m, s), b = m.world.ball;
+      if (p.active.armed || b.flight !== 'laser') return;
+      if (b.noGravityT <= 0 || Math.sign(b.vx) !== dir(s)) { SPECIALS.laser.end(m, s); p.active.t = 0; }
+    },
+    end(m, s) { const b = m.world.ball; if (b.flight === 'laser') { b.flight = null; b.passThrough = null; b.noGravityT = 0; } },
+  },
+
+  // 다음 킥: 62°·1000 으로 띄우고 상대 골문 쪽으로 가로 가속 900
+  curve: {
+    onKick(m, s) {
+      const p = me(m, s), b = m.world.ball;
+      if (!p.active.armed) return false;
+      p.active.armed = false; p.active.t = 2.5; p.active.data.left = false;
+      b.vx = dir(s) * 1000 * Math.cos(rad(62)); b.vy = -1000 * Math.sin(rad(62));
+      b.flight = 'curve'; b.curveAx = 900 * dir(s);
+      return true;
+    },
+    update(m, s) {
+      const p = me(m, s), b = m.world.ball;
+      if (p.active.armed || b.flight !== 'curve') return;
+      if (flightOver(b, p.active.data, dir(s))) { SPECIALS.curve.end(m, s); p.active.t = 0; }
+    },
+    end(m, s) { const b = m.world.ball; if (b.flight === 'curve') { b.flight = null; b.curveAx = 0; } },
+  },
+
+  // 다음 터치: 공을 집어 0.3초 들고, 상대 골라인 앞 60px 에 떨어지게 55° 로 던진다 (최고 1300)
+  longthrow: {
+    onBallTouch(m, s) {
+      const p = me(m, s), b = m.world.ball;
+      if (!p.active.armed) return;
+      p.active.armed = false; p.active.t = 4; p.active.data.phase = 'hold';
+      b.held = { side: s, t: 0.3 }; b.vx = 0; b.vy = 0;
+    },
+    update(m, s, dt) {
+      const p = me(m, s), b = m.world.ball, d = p.active.data;
+      if (d.phase === 'hold') {
+        const h = headCenter(p);
+        b.x = h.x; b.y = h.y - h.r - b.r - 4;
+        b.held.t -= dt;
+        if (b.held.t <= 0) {
+          const targetX = s === 'L' ? FIELD.W - FIELD.GOAL_DEPTH - 60 : FIELD.GOAL_DEPTH + 60;
+          const v = speedToLand(b.x, b.y, targetX, 55, dir(s), 1300);
+          b.held = null; b.vx = dir(s) * v * Math.cos(rad(55)); b.vy = -v * Math.sin(rad(55));
+          b.flight = 'throw'; d.phase = 'fly'; d.left = false; d.targetX = targetX;
+          return [{ type: 'throw', side: s }];
+        }
+      } else if (d.phase === 'fly') {
+        if (b.flight !== 'throw' || flightOver(b, d, dir(s))) { SPECIALS.longthrow.end(m, s); p.active.t = 0; }
+      }
+    },
+    end(m, s) { const b = m.world.ball; if (b.flight === 'throw') b.flight = null; if (b.held && b.held.side === s) b.held = null; },
+  },
+
+  // ── 즉발 ──
+  // 0.35초 동안 180px 미끄러진다. 공은 1000 으로 걷어내고, 상대는 1초 넘어진다 (각 1회)
+  slide: {
+    activate(m, s) { const p = me(m, s); p.forcedVx = dir(s) * 180 / 0.35; p.active.data = { kicked: false, hit: false }; },
+    update(m, s) {
+      const p = me(m, s), d = p.active.data, b = m.world.ball, o = me(m, opp(s));
+      const ev = [];
+      if (!d.kicked && !b.held && !b.attached && Math.hypot(b.x - (p.x + dir(s) * 30), b.y - (p.y - 20)) < 60) {
+        b.vx = dir(s) * 1000 * Math.cos(rad(35)); b.vy = -1000 * Math.sin(rad(35)); d.kicked = true;
+      }
+      if (!d.hit && Math.abs(o.x - p.x) < PHYS.BODY_W + 10 && o.y > FIELD.GROUND - PHYS.BODY_H) {
+        o.stun = Math.max(o.stun, 1); d.hit = true; ev.push({ type: 'knockdown', side: opp(s) });
+      }
+      return ev;
+    },
+    end(m, s) { me(m, s).forcedVx = null; },
   },
 };
 

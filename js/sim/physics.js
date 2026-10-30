@@ -11,7 +11,7 @@ export function createPlayer(def, side) {
     side, def,
     x: side === 'L' ? 320 : 960, y: FIELD.GROUND, vx: 0, vy: 0, onGround: true,
     facing: side === 'L' ? 1 : -1, scale: 1,
-    kickCooldown: 0, kickAnim: 0, stun: 0, pinned: false, lastTouchT: -1,
+    kickCooldown: 0, kickAnim: 0, stun: 0, pinned: false, forcedVx: null, lastTouchT: -1,
     gauge: 0, active: null, mods: defaultMods(),
   };
 }
@@ -160,6 +160,7 @@ export function stepPhysics(world, inputs, dt, hooks = {}) {
     p.kickAnim = Math.max(0, p.kickAnim - dt);
     p.stun = Math.max(0, p.stun - dt);
     if (p.pinned) { p.vx = 0; }
+    else if (p.forcedVx !== null) { p.vx = p.forcedVx; } // 슬라이딩·기관차 돌진: 입력 무시
     else if (p.stun > 0) { p.vx *= 0.9; }               // 넘어진 동안은 밀린 속도만 잦아든다
     else {
       p.vx = ((inp.right ? 1 : 0) - (inp.left ? 1 : 0)) * PHYS.MOVE * p.mods.speed;
@@ -201,7 +202,7 @@ export function stepPhysics(world, inputs, dt, hooks = {}) {
     events.push({ type: 'kick', side });
     const f = footPoint(p);
     const inFront = (ball.x - p.x) * p.facing > -10;
-    if (ballFree(ball) && inFront && Math.hypot(ball.x - f.x, ball.y - f.y) <= PHYS.KICK_RANGE) {
+    if (ballFree(ball) && ball.passThrough !== side && inFront && Math.hypot(ball.x - f.x, ball.y - f.y) <= PHYS.KICK_RANGE) {
       if (!(hooks.onKick && hooks.onKick(side))) {
         const a = PHYS.KICK_ANGLE_DEG * Math.PI / 180;
         ball.vx = p.facing * PHYS.KICK_SPEED * Math.cos(a);
