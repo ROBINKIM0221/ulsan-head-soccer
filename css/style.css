@@ -1,0 +1,105 @@
+:root {
+  --blue:  #004098;
+  --navy:  #002B6B;
+  --gold:  #FFC72C;
+  --white: #FFFFFF;
+  --muted: #B9CBE8;
+  --ui:  "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --num: Teko, "Arial Narrow", sans-serif;
+  --pad: 110px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--blue); overflow: hidden; }
+body {
+  font-family: var(--ui);
+  color: var(--white);
+  touch-action: manipulation;
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* 항상 가로인 무대. 세로 뷰포트면 JS 가 90° 눕힌다 */
+#stage {
+  position: fixed; left: 0; top: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--blue);
+  overflow: hidden;
+}
+#game { display: block; background: #5FB8F5; border-radius: 6px; }
+
+/* ---------- 조작 버튼 ---------- */
+.pad {
+  position: absolute; top: 0; bottom: 0; width: var(--pad);
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  gap: 14px; padding: 0 0 max(18px, env(safe-area-inset-bottom));
+}
+.pad.left { left: 0; padding-left: max(0px, env(safe-area-inset-left)); }
+.pad.right { right: 0; padding-right: max(0px, env(safe-area-inset-right)); }
+.pad.left { flex-direction: row; align-items: flex-end; justify-content: center; gap: 10px; }
+
+.ctl {
+  all: unset;
+  position: relative;
+  width: 72px; height: 72px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(255,255,255,.12);
+  border: 2px solid rgba(255,255,255,.55);
+  color: var(--white); font: 700 15px var(--ui);
+  touch-action: none; cursor: pointer;
+  transition: transform .06s, background .06s;
+}
+.ctl .glyph { font-size: 22px; }
+.ctl.down, .ctl:active { background: rgba(255,255,255,.3); transform: scale(.94); }
+.ctl:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.ctl.kick { background: rgba(255,199,44,.25); border-color: var(--gold); }
+
+/* 필살기 버튼: 링이 게이지(--gauge 0~1), 다 차면 골드로 맥동 */
+.ctl.special { width: 80px; height: 80px; }
+.ctl.special .ring {
+  position: absolute; inset: -6px; border-radius: 50%;
+  background: conic-gradient(var(--gold) calc(var(--gauge) * 360deg), rgba(255,255,255,.18) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+}
+.ctl.special.ready { background: rgba(255,199,44,.35); border-color: var(--gold); animation: pulse 1s ease-in-out infinite; }
+.ctl.special.ready span { color: var(--gold); }
+@keyframes pulse { 50% { transform: scale(1.06); } }
+
+/* 교체 버튼: 위 가운데 점수판 옆 */
+.sub {
+  all: unset;
+  position: absolute; top: 14px; left: calc(50% + 120px);
+  padding: 8px 14px; border-radius: 999px;
+  background: rgba(0,43,107,.75); border: 1.5px solid rgba(255,255,255,.5);
+  color: var(--white); font: 700 14px var(--ui);
+  touch-action: manipulation; cursor: pointer;
+}
+.sub:disabled { opacity: .35; cursor: default; }
+.sub:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+
+/* 키보드를 쓰기 시작하면 버튼은 흐려지고 캔버스가 넓어진다 */
+#stage.kb .pad, #stage.kb .sub { opacity: .25; }
+
+/* ---------- 안내·오버레이 ---------- */
+#hint {
+  position: absolute; left: 50%; top: 18px; transform: translateX(-50%);
+  padding: 8px 16px; border-radius: 999px;
+  background: rgba(0,43,107,.85); color: var(--white); font: 700 14px var(--ui);
+  pointer-events: none; transition: opacity .4s;
+}
+#hint[hidden] { display: none; }
+
+#overlay {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  background: rgba(0,43,107,.86);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  overflow-y: auto;
+}
+#overlay[hidden] { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ctl.special.ready { animation: none; }
+}
