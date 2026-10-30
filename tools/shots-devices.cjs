@@ -65,8 +65,8 @@ const check = (name, ok, info = '') => { results.push(ok); console.log(`${ok ? '
     await page.goto(BASE + '?debug=1&special=1&home=55');
     await page.waitForFunction(() => window.__debug && window.__debug.match.phase === 'play', null, { timeout: 8000 });
     await page.keyboard.press('KeyX'); await page.waitForTimeout(600);
-    const st = await page.evaluate(() => ({ reduce: window.__debug.fx.reduceMotion, particles: window.__debug.fx.particles.length, anim: getComputedStyle(document.querySelector('.ctl.special')).animationName }));
-    check('reduced motion: no particles, no pulse animation', st.reduce === true && st.particles === 0 && (st.anim === 'none' || st.anim === ''), JSON.stringify(st));
+    const st = await page.evaluate(() => ({ reduce: window.__debug.fx.reduceMotion, particles: window.__debug.fx.particles.length, ghosts: window.__debug.fx.ghosts.length }));
+    check('reduced motion: no particles or ghosts', st.reduce === true && st.particles === 0 && st.ghosts === 0, JSON.stringify(st));
     await ctx.close();
   }
   // aria-label 전수

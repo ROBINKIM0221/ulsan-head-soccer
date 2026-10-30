@@ -38,6 +38,10 @@ export function pushEvents(fx, events, match) {
       case 'catch': pop(fx, 'CATCH', headCenter(w.players[e.side]).x, 380, { size: 40, color: WHITE }); break;
       case 'knockdown': case 'knockback': { const h = headCenter(w.players[e.side]); pop(fx, '!', h.x, h.y - h.r - 20, { size: 56, color: WHITE, life: 0.6 }); break; }
       case 'sub': fx.subBoard = { out: e.out, in: e.in, t: 0.8 }; break;
+      case 'phase':
+        if (e.phase === 'play' && match.clock >= 59.9) pop(fx, 'KICK OFF', FIELD.W / 2, 300, { size: 72, color: WHITE, life: 0.9, rise: 20 });
+        if (e.phase === 'golden') pop(fx, '골든골!', FIELD.W / 2, 300, { size: 64, color: GOLD, life: 1.2, rise: 20 });
+        break;
     }
   }
 }
