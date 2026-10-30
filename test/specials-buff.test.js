@@ -40,18 +40,18 @@ test('sprint: speed mod 2.0 for 6s, then back to 1 with a specialEnd event', () 
 test('highjump: jump impulse ×1.35 reaches the expected apex and heads harder', () => {
   const m = ready(15); const L = m.world.players.L;
   fire(m);
-  assert.equal(L.mods.jump, 1.35); assert.ok(Math.abs(L.mods.headPow - 2.0) < 1e-9); assert.ok(Math.abs(L.mods.speed - 1.15) < 1e-9);
+  assert.ok(Math.abs(L.mods.jump - 1.4) < 1e-9); assert.ok(Math.abs(L.mods.headPow - 2.2) < 1e-9); assert.ok(Math.abs(L.mods.speed - 1.2) < 1e-9);
   let minY = FIELD.GROUND;
   run(m, 1.5, i => inp({ jump: i === 0 }), m => { minY = Math.min(minY, m.world.players.L.y); });
   const apex = FIELD.GROUND - minY;
-  const expected = (PHYS.JUMP * 1.35) ** 2 / (2 * PHYS.GRAVITY);
+  const expected = (PHYS.JUMP * 1.4) ** 2 / (2 * PHYS.GRAVITY);
   assert.ok(Math.abs(apex - expected) < 8, `apex ${apex} vs ${expected}`);
 });
 
-test('giant: scale 1.4, speed .8, head power 1.2, back to normal after 3.5s', () => {
+test('giant: scale 1.3, speed .8, head power 1.2, back to normal after 3.5s', () => {
   const m = ready(19); const L = m.world.players.L;
   fire(m);
-  assert.equal(L.scale, 1.4); assert.ok(Math.abs(L.mods.speed - 0.8) < 1e-9); assert.ok(Math.abs(L.mods.headPow - 1.2) < 1e-9);
+  assert.equal(L.scale, 1.3); assert.ok(Math.abs(L.mods.speed - 0.8) < 1e-9); assert.ok(Math.abs(L.mods.headPow - 1.2) < 1e-9);
   run(m, 3.6);
   assert.equal(L.scale, 1); assert.equal(L.active, null); assert.equal(L.mods.headPow, 1);
 });

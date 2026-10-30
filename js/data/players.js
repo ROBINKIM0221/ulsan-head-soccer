@@ -11,7 +11,7 @@ export const PLAYERS = [
     desc: '6초 동안 두 배로 빨라지고 달리는 기세로 킥이 세진다' }),
   P(14, '이진현', 'MF', 'attack', { id: 'curve', name: '커브 슛', kind: 'oneshot', duration: 6, gaugeRate: 0.45,   // 밸런스 2026-10-31: 커브는 거의 확정골이라 절반 속도로 찬다
     desc: '다음 킥이 상대 머리 위로 휘어 넘어가 골문 구석으로 떨어진다' }),
-  P(15, '정승현', 'DF', 'defend', { id: 'highjump', name: '높이뛰기', kind: 'buff', duration: 8, gaugeRate: 2.0,   // 밸런스 2026-10-31
+  P(15, '정승현', 'DF', 'defend', { id: 'highjump', name: '높이뛰기', kind: 'buff', duration: 8, gaugeRate: 2.6,   // 밸런스 2026-10-31 (AI 끼리 20%)
     desc: '8초 동안 몸이 가벼워져 더 높이 뛰고 헤딩이 두 배로 세진다' }),
   P(19, '김영권', 'DF', 'defend', { id: 'giant', name: '거인 수비', kind: 'buff', duration: 3.5,
     desc: '3.5초 동안 몸이 커져 골문 앞을 막는다' }),
@@ -23,7 +23,7 @@ export const PLAYERS = [
     desc: '5초 동안 더 빠르고 높이 뛰며 넘어지지 않고, 부딪힌 상대를 튕겨낸다' }),
   P(38, '박용우', 'MF', 'defend', { id: 'press', name: '압박', kind: 'buff', duration: 5,
     desc: '5초 동안 상대의 이동 속도와 점프가 60%로 떨어진다' }),
-  P(55, '토마스', 'DF', 'defend', { id: 'train', name: '기관차 모드', kind: 'buff', duration: 2.5,
+  P(55, '토마스', 'DF', 'defend', { id: 'train', name: '기관차 모드', kind: 'buff', duration: 2.0, gaugeRate: 0.75,   // 밸런스 2026-10-31: 새 물리에서 70%라 빈도로 조절
     desc: '증기기관차가 되어 공과 상대를 한꺼번에 골문으로 밀어 넣는다' }),
   P(96, '최석현', 'DF', 'defend', { id: 'slide', name: '슬라이딩', kind: 'instant', duration: 0.35,
     desc: '앞으로 미끄러지며 공을 걷어내고 부딪힌 상대를 넘어뜨린다' }),

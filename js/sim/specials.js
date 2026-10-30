@@ -22,10 +22,10 @@ export const SPECIALS = {
   sprint: { update(m, s) { const p = me(m, s); p.mods.speed *= 2.0; p.mods.kickPow *= 1.35; } },
 
   // 밸런스 2026-10-31: 점프 1.5→1.35(AI 가 너무 높이 떠서 공을 놓침), 헤딩 ×2.0 (승률 26%→18%→14%→4%)
-  highjump: { update(m, s) { const p = me(m, s); p.mods.jump *= 1.35; p.mods.headPow *= 2.0; p.mods.speed *= 1.15; } },   // 몸이 가벼워져 조금 빨라진다
+  highjump: { update(m, s) { const p = me(m, s); p.mods.jump *= 1.4; p.mods.headPow *= 2.2; p.mods.speed *= 1.2; } },   // 몸이 가벼워져 조금 빨라진다 (새 물리에서 25%)
 
   giant: {
-    activate(m, s) { me(m, s).scale = 1.4; },   // 밸런스 2026-10-31: 1.7→1.5→1.4 (승률 81%→75%)
+    activate(m, s) { me(m, s).scale = 1.3; },   // 밸런스 2026-10-31: 1.7→1.5→1.4→1.3 (새 물리에서 66%)
     update(m, s) { const p = me(m, s); p.mods.speed *= 0.8; p.mods.headPow *= 1.2; },
     end(m, s) { me(m, s).scale = 1; },
   },
@@ -154,7 +154,7 @@ export const SPECIALS = {
     activate(m, s) { const p = me(m, s); p.scale = 1.25; p.active.data = { charging: false, done: false, chargeT: 0 }; },   // 밸런스 2026-10-31: 크기 1.4→1.25
     update(m, s, dt) {
       const p = me(m, s), o = me(m, opp(s)), b = m.world.ball, d = p.active.data;
-      p.mods.canJump = false; p.mods.speed *= 1.2;   // 밸런스 2026-10-31: 1.5→1.3→1.2 (승률 81%→79%→78%)
+      p.mods.canJump = false; p.mods.speed *= 1.1;   // 밸런스 2026-10-31: 1.5→1.3→1.2→1.1 (새 물리에서 75%)
       const half = PHYS.BODY_W * p.scale / 2;
       if (!d.charging) {
         if (d.done || b.held || b.attached || b.flight) return;
@@ -176,7 +176,7 @@ export const SPECIALS = {
       const ahead = (o.x - b.x) * dir(s);
       if (!o.pinned && grounded && ahead > -oHalf && ahead < b.r + oHalf + 4) o.pinned = true;
       if (o.pinned) o.x = b.x + dir(s) * (b.r + oHalf);         // 골라인에서는 physics 가 잘라 세운다
-      if (d.chargeT >= 0.4) {                                    // 밸런스 2026-10-31: 0.75→0.6→0.5→0.45→0.4초 (승률 81%→79%→78%→67%→67%)
+      if (d.chargeT >= 0.35) {                                   // 밸런스 2026-10-31: 0.75→…→0.4→0.35초 (새 물리에서 72%)
         b.attached = null; o.pinned = false; p.forcedVx = null; p.noSeparate = false;
         d.charging = false; d.done = true;
       }

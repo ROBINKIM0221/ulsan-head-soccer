@@ -57,13 +57,13 @@ test('catch ignores a laser-flight ball', () => {
   assert.equal(b.held, null);
 });
 
-test('train: scale 1.25, cannot jump, speed 1.2, back to normal after 2.5s', () => {
+test('train: scale 1.25, cannot jump, speed 1.1, back to normal after 2s', () => {
   const m = ready(55); const L = m.world.players.L;
   fire(m);
-  assert.equal(L.scale, 1.25); assert.equal(L.mods.canJump, false); assert.ok(Math.abs(L.mods.speed - 1.2) < 1e-9);
+  assert.equal(L.scale, 1.25); assert.equal(L.mods.canJump, false); assert.ok(Math.abs(L.mods.speed - 1.1) < 1e-9);
   run(m, 0.5, inp({ jump: true }));
   assert.equal(L.y, FIELD.GROUND, 'jump ignored');
-  run(m, 2.2);
+  run(m, 1.7);
   assert.equal(L.scale, 1); assert.equal(L.active, null); assert.equal(L.mods.canJump, true);
 });
 
@@ -73,8 +73,8 @@ test('train: a ball touching the front attaches and the train charges at 700 tow
   run(m, DT);
   assert.equal(b.attached, 'L'); assert.equal(L.forcedVx, 700);
   const x0 = L.x;
-  run(m, 0.35);
-  assert.ok(Math.abs((L.x - x0) - 245) < 12, `charged ${L.x - x0}`);
+  run(m, 0.3);
+  assert.ok(Math.abs((L.x - x0) - 210) < 12, `charged ${L.x - x0}`);
   assert.ok(b.x > L.x, 'ball stays in front');
 });
 
@@ -85,7 +85,7 @@ test('train: a grounded opponent in the path is pinned and carried; an airborne 
   let pinnedSeen = false;
   run(m, 0.6, NO_INPUT, (m) => { if (m.world.players.R.pinned) pinnedSeen = true; });
   assert.equal(pinnedSeen, true, 'opponent was pinned during the charge');
-  assert.ok(R.x > 660, `carried to ${R.x}`);
+  assert.ok(R.x > 630, `carried to ${R.x}`);
   assert.ok(R.x > b.x, 'opponent ahead of the ball');
 
   const m2 = ready(55); const L2 = m2.world.players.L, R2 = m2.world.players.R;
@@ -107,11 +107,11 @@ test('train: scores when the ball crosses the line even with the pinned opponent
   assert.ok(R.x <= FIELD.W - FIELD.GOAL_DEPTH - PHYS.BODY_W / 2 + 1e-6, 'opponent never enters the goal mouth');
 });
 
-test('train: the charge lasts at most .4s (about 280px) and everything resets after 2.5s', () => {
+test('train: the charge lasts at most .35s (about 245px) and everything resets after 2s', () => {
   const m = ready(55); const L = m.world.players.L, R = m.world.players.R; const b = m.world.ball;
   L.x = 300; freeze(R, 1160);
   fire(m); ballAtFront(m);
-  const ev = run(m, 2.6);
+  const ev = run(m, 2.1);
   assert.equal(ev.filter(e => e.type === 'goal').length, 0, 'from the own half the train runs out of steam');
   assert.ok(L.x < 900, `train stopped at ${L.x}`);
   assert.equal(b.attached, null); assert.equal(L.forcedVx, null); assert.equal(L.scale, 1); assert.equal(L.active, null); assert.equal(R.pinned, false);
@@ -121,11 +121,11 @@ test('train push ignores the opponent\'s giant scale and overrides its slide', (
   const m = ready(55, 19); const L = m.world.players.L, R = m.world.players.R;
   L.x = 400; freeze(R, 600);
   activateSpecial(m, 'R'); run(m, DT);                       // 김영권 거인 (1.7)
-  assert.equal(R.scale, 1.4);
+  assert.equal(R.scale, 1.3);
   fire(m); ballAtFront(m);
   R.forcedVx = -500;                                        // 슬라이딩처럼 반대로 돌진 중이어도
   let pinned3 = false;
   run(m, 0.6, NO_INPUT, (m) => { if (m.world.players.R.pinned) pinned3 = true; });
   assert.equal(pinned3, true);
-  assert.ok(R.x > 660, `giant carried to ${R.x}`);
+  assert.ok(R.x > 630, `giant carried to ${R.x}`);
 });
