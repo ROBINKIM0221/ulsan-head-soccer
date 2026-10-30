@@ -11,7 +11,7 @@ export function createPlayer(def, side) {
     side, def,
     x: side === 'L' ? 320 : 960, y: FIELD.GROUND, vx: 0, vy: 0, onGround: true,
     facing: side === 'L' ? 1 : -1, scale: 1,
-    kickCooldown: 0, kickAnim: 0, stun: 0, pinned: false, forcedVx: null, lastTouchT: -1,
+    kickCooldown: 0, kickAnim: 0, stun: 0, pinned: false, forcedVx: null, noSeparate: false, lastTouchT: -1,
     gauge: 0, active: null, mods: defaultMods(),
   };
 }
@@ -31,7 +31,7 @@ export function resetKickoff(world) {
   for (const side of ['L', 'R']) {
     const p = world.players[side];
     p.x = side === 'L' ? 320 : 960; p.y = FIELD.GROUND; p.vx = 0; p.vy = 0; p.onGround = true;
-    p.kickCooldown = 0; p.kickAnim = 0; p.stun = 0; p.pinned = false;
+    p.kickCooldown = 0; p.kickAnim = 0; p.stun = 0; p.pinned = false; p.forcedVx = null; p.noSeparate = false;
   }
   Object.assign(world.ball, createBall());
   world.goalLatch = false;
@@ -133,6 +133,7 @@ function collidePlayer(world, p, ball, events, hooks) {
 }
 
 function separatePlayers(L, R) {
+  if (L.noSeparate || R.noSeparate) return;   // 돌진하는 기관차는 공중의 상대 밑을 지나간다
   const halfW = (PHYS.BODY_W * L.scale + PHYS.BODY_W * R.scale) / 2;
   const vertOverlap = L.y > R.y - fullHeight(R) && R.y > L.y - fullHeight(L);
   const dx = R.x - L.x;

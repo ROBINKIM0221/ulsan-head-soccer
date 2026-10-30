@@ -146,6 +146,72 @@ export const SPECIALS = {
     end(m, s) { const b = m.world.ball; if (b.flight === 'throw') b.flight = null; if (b.held && b.held.side === s) b.held = null; },
   },
 
+  // 내 골문 쪽으로 오는 공이 머리 위 150 안을 지나면 잡아 0.4초 뒤 40°·1100 으로 던진다
+  catch: {
+    update(m, s, dt) {
+      const p = me(m, s), b = m.world.ball, d = p.active.data;
+      p.mods.catchArmed = true;
+      const h = headCenter(p);
+      if (d.holding) {
+        b.x = h.x; b.y = h.y - h.r - b.r - 4; b.held.t -= dt;
+        if (b.held.t <= 0) {
+          b.held = null; d.holding = false;
+          b.vx = dir(s) * 1100 * Math.cos(rad(40)); b.vy = -1100 * Math.sin(rad(40));
+          return [{ type: 'throw', side: s }];
+        }
+        return;
+      }
+      if (b.held || b.attached || b.flight) return;
+      const towardMyGoal = b.vx * dir(s) < 0;
+      const inZone = Math.abs(b.x - h.x) <= h.r + b.r + 40 && b.y < h.y && b.y > h.y - h.r - 150;
+      if (towardMyGoal && inZone) {
+        b.held = { side: s, t: 0.4 }; b.vx = 0; b.vy = 0; d.holding = true;
+        return [{ type: 'catch', side: s }];
+      }
+    },
+    end(m, s) { const b = m.world.ball; if (b.held && b.held.side === s) b.held = null; },
+  },
+
+  // 기관차: 3초 동안 1.4배 크기·1.5배 속도·점프 불가. 공이 앞면에 닿으면 붙여서 0.75초(≈525px) 돌진,
+  // 길에 있는 바닥의 상대는 공 앞에 붙어 함께 밀린다. 돌진이 끝나면 공을 놓는다.
+  train: {
+    activate(m, s) { const p = me(m, s); p.scale = 1.4; p.active.data = { charging: false, done: false, chargeT: 0 }; },
+    update(m, s, dt) {
+      const p = me(m, s), o = me(m, opp(s)), b = m.world.ball, d = p.active.data;
+      p.mods.canJump = false; p.mods.speed *= 1.5;
+      const half = PHYS.BODY_W * p.scale / 2;
+      if (!d.charging) {
+        if (d.done || b.held || b.attached || b.flight) return;
+        const dx = (b.x - p.x) * dir(s);
+        const inFront = dx > 0 && dx <= half + b.r + 8;
+        const vertical = b.y > p.y - (PHYS.BODY_H + 2 * PHYS.HEAD_R) * p.scale - b.r && b.y <= p.y + b.r;
+        if (inFront && vertical) { b.attached = s; d.charging = true; d.chargeT = 0; p.forcedVx = 700 * dir(s); p.noSeparate = true; }
+        return;
+      }
+      if (b.attached !== s) { p.active.t = 0; return; }        // 득점 뒤 킥오프 등으로 공이 떨어졌으면 끝
+      d.chargeT += dt;
+      // 공은 기관차 앞에 붙어 가고, 기관차가 골라인에 막혀도 공은 계속 굴러 들어간다
+      const front = p.x + dir(s) * half;
+      const rolled = b.x + 700 * dir(s) * dt;
+      b.x = dir(s) > 0 ? Math.max(rolled, front + b.r) : Math.min(rolled, front - b.r);
+      b.y = FIELD.GROUND - b.r; b.vx = 700 * dir(s); b.vy = 0;
+      const oHalf = PHYS.BODY_W * o.scale / 2;
+      const grounded = o.y > FIELD.GROUND - PHYS.BODY_H * 1.4;
+      const ahead = (o.x - b.x) * dir(s);
+      if (!o.pinned && grounded && ahead > -oHalf && ahead < b.r + oHalf + 4) o.pinned = true;
+      if (o.pinned) o.x = b.x + dir(s) * (b.r + oHalf);         // 골라인에서는 physics 가 잘라 세운다
+      if (d.chargeT >= 0.75) {
+        b.attached = null; o.pinned = false; p.forcedVx = null; p.noSeparate = false;
+        d.charging = false; d.done = true;
+      }
+    },
+    end(m, s) {
+      const p = me(m, s), o = me(m, opp(s)), b = m.world.ball;
+      p.scale = 1; p.forcedVx = null; p.noSeparate = false; o.pinned = false;
+      if (b.attached === s) { b.attached = null; b.vx = 0; b.vy = 0; }
+    },
+  },
+
   // ── 즉발 ──
   // 0.35초 동안 180px 미끄러진다. 공은 1000 으로 걷어내고, 상대는 1초 넘어진다 (각 1회)
   slide: {
