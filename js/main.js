@@ -104,15 +104,23 @@ async function boot() {
   game.imgs = await loadImages();
   pauseOnHide();
 
-  if (params.get('debug')) {
+  const { runFlow, showResult, showSubSelect, hideOverlay } = await import('./ui/screens.js');
+  const dbg = params.get('debug');
+  if (dbg === '1' || dbg === 'result' || dbg === 'sub') {
     // 선택 화면 없이 바로: 이동경 vs 야고 (1군). ?special=1 이면 L 게이지 100 으로 시작
-    startMatch(byNumber(Number(params.get('home') || 10)), byNumber(Number(params.get('away') || 99)), params.get('difficulty') || 'first', {
+    const home = byNumber(Number(params.get('home') || 10)), away = byNumber(Number(params.get('away') || 99));
+    const match = startMatch(home, away, params.get('difficulty') || 'first', {
       debugSpecial: params.get('special') === '1',
-      onSubRequest: () => finishSubstitution(null),
+      onSubRequest: m => showSubSelect({ imgs: game.imgs, exclude: [m.used.L.at(-1).number, m.used.R.at(-1).number],
+        onPick: d => { hideOverlay(); finishSubstitution(d); }, onCancel: () => { hideOverlay(); finishSubstitution(null); } }),
+      onOver: m => showResult({ match: m, onAgain: () => location.reload(), onChange: () => location.reload() }),
     });
+    if (dbg === 'result') { match.scores.L = 3; match.scores.R = 1; match.phase = 'over'; match.result = 'win'; game.loop.stop();
+      showResult({ match, onAgain: () => location.reload(), onChange: () => location.reload() }); }
+    if (dbg === 'sub') setTimeout(() => { requestSubstitute(match, 'L'); game.input.setEnabled(false);
+      showSubSelect({ imgs: game.imgs, exclude: [10, 99], onPick: d => { hideOverlay(); finishSubstitution(d); }, onCancel: () => { hideOverlay(); finishSubstitution(null); } }); }, 1500);
     return;
   }
-  const { runFlow } = await import('./ui/screens.js');
   runFlow({ startMatch, finishSubstitution, imgs: game.imgs, stage });
 }
 

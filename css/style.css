@@ -103,3 +103,102 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .ctl.special.ready { animation: none; }
 }
+
+/* ---------- 시트 공통 ---------- */
+.sheet { width: min(94%, 900px); max-height: 96%; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.emblem { display: block; width: 44px; height: 57px; background: url(../img/emblem.png) center / contain no-repeat; flex: none; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand h1 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+.action {
+  all: unset; box-sizing: border-box;
+  min-width: 150px; padding: 13px 26px; border-radius: 999px;
+  background: var(--gold); color: var(--navy);
+  text-align: center; font: 800 17px var(--ui); cursor: pointer; touch-action: manipulation;
+  transition: transform .1s;
+}
+.action:active { transform: scale(.97); }
+.action:focus-visible { outline: 3px solid var(--white); outline-offset: 3px; }
+.action.ghost { background: transparent; color: var(--white); border: 2px solid rgba(255,255,255,.55); }
+.row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+/* ---------- 선수 선택 ---------- */
+.sheet.select { flex-direction: row; align-items: center; justify-content: center; gap: 28px; text-align: left; }
+.sheet.select .col.left { flex: none; }
+.sheet.select .col.right { display: flex; flex-direction: column; gap: 10px; min-width: 0; flex: 1 1 auto; max-width: 520px; }
+.carousel { display: flex; align-items: center; gap: 6px; }
+.arrow {
+  all: unset; width: 40px; height: 64px; display: grid; place-items: center;
+  color: var(--white); font: 800 40px var(--ui); cursor: pointer; opacity: .8; touch-action: manipulation;
+}
+.arrow:active { opacity: 1; transform: scale(1.1); }
+.arrow:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; border-radius: 8px; }
+.card { display: flex; flex-direction: column; align-items: center; gap: 4px; touch-action: pan-y; }
+.card canvas { display: block; }
+.who { display: flex; align-items: baseline; gap: 8px; }
+.who .name { font-size: 24px; font-weight: 800; }
+.who .num { font: 600 30px var(--num); color: var(--gold); line-height: .9; }
+.who .pos { font-size: 13px; color: var(--muted); font-weight: 600; }
+.skill { background: rgba(255,255,255,.08); border-radius: 12px; padding: 10px 14px; }
+.skill .skill-label { margin: 0 0 2px; font-size: 12px; color: var(--muted); font-weight: 600; }
+.skill b { font-size: 18px; color: var(--gold); font-weight: 800; }
+.skill p:last-child { margin: 3px 0 0; font-size: 13px; line-height: 1.45; color: var(--white); word-break: keep-all; }
+.thumbs { display: grid; grid-template-columns: repeat(6, 42px); gap: 8px; }
+.thumb {
+  all: unset; width: 42px; height: 42px; border-radius: 50%; overflow: hidden; cursor: pointer;
+  border: 2px solid rgba(255,255,255,.35); box-sizing: border-box; touch-action: manipulation;
+}
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb[aria-selected="true"] { border: 3px solid var(--gold); }
+.thumb:focus-visible { outline: 3px solid var(--white); outline-offset: 2px; }
+
+/* 난이도 트랙 (메모리 게임과 같은 모양) */
+.pick { width: 100%; max-width: 320px; }
+.pick-label { margin: 0 0 6px; font-size: 13px; font-weight: 700; }
+.levels { display: grid; grid-template-columns: repeat(3, 1fr); }
+.level { all: unset; position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 5px 0 3px; cursor: pointer; touch-action: manipulation; }
+.level::before { content: ''; position: absolute; top: 10px; left: -50%; width: 100%; height: 2px; background: rgba(255,255,255,.25); }
+.level:first-child::before { display: none; }
+.level.on::before { background: var(--gold); }
+.dot { position: relative; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--muted); background: var(--blue); transition: transform .15s, background .15s; }
+.level.on .dot { background: var(--gold); border-color: var(--gold); }
+.level[aria-pressed="true"] .dot { transform: scale(1.5); box-shadow: 0 0 0 3px rgba(255,199,44,.3); }
+.level:focus-visible .dot { outline: 3px solid var(--white); outline-offset: 4px; }
+.level span { font-size: 12px; font-weight: 600; color: var(--muted); }
+.level[aria-pressed="true"] span { color: var(--white); font-weight: 800; }
+.sub-note { margin: 0; font-size: 13px; color: var(--muted); }
+
+/* ---------- VS ---------- */
+.sheet.vs { flex-direction: row; justify-content: center; gap: 40px; }
+.face { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.face img { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid var(--white); }
+.face.away img { border-color: var(--muted); }
+.face b { font-size: 22px; font-weight: 800; }
+.face span { font: 600 28px var(--num); color: var(--gold); line-height: .9; }
+.vs-mark { font: 600 96px var(--num); color: var(--gold); line-height: .8; }
+
+/* ---------- 결과 ---------- */
+.sheet.result { gap: 10px; }
+.verdict { margin: 0; font-size: 44px; font-weight: 800; letter-spacing: -.02em; }
+.verdict.win { color: var(--gold); }
+.verdict.lose, .verdict.draw { color: var(--white); }
+.score { margin: 0; display: flex; align-items: baseline; gap: 14px; font: 600 72px var(--num); line-height: .8; }
+.score em { font-style: normal; color: var(--muted); font-size: 48px; }
+.lineup { display: flex; gap: 40px; align-items: flex-start; }
+.lineup .side { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.lineup .side img { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 3px solid var(--white); margin: 0 -8px; }
+.lineup .side.away img { border-color: var(--muted); }
+.lineup .side b { font-size: 14px; font-weight: 700; color: var(--muted); }
+.lineup .side:not(.away) b { color: var(--white); }
+
+/* 낮은 가로 화면(폰): 여백을 줄인다. 회전 상태에서는 뷰포트 높이가 아니라 무대 높이가 기준이라 JS 가 data-compact 를 단다 */
+#stage[data-compact="1"] .sheet.select { gap: 16px; }
+#stage[data-compact="1"] .brand h1 { font-size: 18px; }
+#stage[data-compact="1"] .skill { padding: 7px 12px; }
+#stage[data-compact="1"] .skill p:last-child { font-size: 12px; }
+#stage[data-compact="1"] .thumbs { grid-template-columns: repeat(6, 36px); gap: 6px; }
+#stage[data-compact="1"] .thumb { width: 36px; height: 36px; }
+#stage[data-compact="1"] .action { padding: 10px 22px; font-size: 15px; min-width: 130px; }
+#stage[data-compact="1"] .face img { width: 90px; height: 90px; }
+#stage[data-compact="1"] .vs-mark { font-size: 72px; }
+#stage[data-compact="1"] .verdict { font-size: 34px; }
+#stage[data-compact="1"] .score { font-size: 56px; }
