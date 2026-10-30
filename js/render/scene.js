@@ -10,7 +10,7 @@ const UI = '"Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Malgun Go
 const NUM = 'Teko, "Arial Narrow", sans-serif';
 
 export function createFx() {
-  return { particles: [], pops: [], shake: 0, ballRot: 0, lastBallX: null, subBoard: null, ghosts: [] };
+  return { particles: [], pops: [], shake: 0, ballRot: 0, lastBallX: null, subBoard: null, ghosts: [], trail: [] };
 }
 
 function pop(fx, text, x, y, { size = 48, color = GOLD, life = 0.8, rise = 40 } = {}) {
@@ -61,7 +61,15 @@ export function updateFx(fx, match, dt) {
     }
     if (p.active.id === 'sprint') fx.ghosts.push({ x: p.x, y: p.y, scale: p.scale, facing: p.facing, def: p.def, age: 0, life: 0.25, side });
     if (p.active.id === 'slide' && p.onGround) fx.particles.push({ x: p.x - p.facing * 20, y: p.y, vx: -p.facing * 80, vy: -140 - Math.random() * 80, r: 3, life: 0.4, age: 0, color: '#3E9A3E' });
+    // 높이뛰기: 땅을 박차는 순간 발밑 먼지
+    if (p.active.id === 'highjump' && !p.onGround && p.vy < -600 && Math.random() < 0.6) {
+      fx.particles.push({ x: p.x + (Math.random() - .5) * 40, y: FIELD.GROUND - 4, vx: (Math.random() - .5) * 120, vy: -40 - Math.random() * 60, r: 4 + Math.random() * 4, life: 0.5, age: 0, color: 'rgba(220,210,180,.9)' });
+    }
   }
+  // 커브 슛 궤적 점선
+  if (b.flight === 'curve') fx.trail.push({ x: b.x, y: b.y, age: 0, life: 0.6 });
+  for (const q of fx.trail) q.age += dt;
+  fx.trail = fx.trail.filter(q => q.age < q.life);
   for (const q of fx.particles) { q.age += dt; q.x += q.vx * dt; q.y += q.vy * dt; q.r += 8 * dt; }
   fx.particles = fx.particles.filter(q => q.age < q.life);
   for (const g of fx.ghosts) g.age += dt;
@@ -150,6 +158,11 @@ export function drawFrame(ctx, match, imgs, fx, t) {
     grad.addColorStop(0, 'rgba(255,199,44,.95)'); grad.addColorStop(1, 'rgba(255,199,44,0)');
     ctx.save(); ctx.strokeStyle = grad; ctx.lineWidth = 16; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx / sp * 220, b.y - b.vy / sp * 220); ctx.stroke(); ctx.restore();
+  }
+  for (let i = 0; i < fx.trail.length; i += 3) {   // 커브 궤적
+    const q = fx.trail[i];
+    ctx.save(); ctx.globalAlpha = 0.6 * (1 - q.age / q.life); ctx.fillStyle = GOLD;
+    ctx.beginPath(); ctx.arc(q.x, q.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   }
   drawBall(ctx, b, fx.ballRot);
   // 증기·잔디 입자
