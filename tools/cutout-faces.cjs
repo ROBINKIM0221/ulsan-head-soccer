@@ -17,7 +17,7 @@ const NUMBERS = [10, 11, 14, 15, 19, 21, 24, 26, 38, 55, 96, 99];
       const c = document.createElement('canvas'); c.width = w; c.height = h;
       const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0);
       const d = ctx.getImageData(0, 0, w, h), px = d.data;
-      const isBg = i => { const r = px[i], g = px[i + 1], b = px[i + 2]; const mx = Math.max(r, g, b), mn = Math.min(r, g, b); return mx > 135 && mx - mn < 55; };
+      const isBg = i => { const r = px[i], g = px[i + 1], b = px[i + 2]; const mx = Math.max(r, g, b), mn = Math.min(r, g, b); return mx > 150 && mx - mn < 30 && r - b < 25; };   // 회색/흰색만: 피부는 붉은 기(r-b)가 커서 제외
       // 머리가 들어가는 타원: 중심 (0.5w, 0.55h), 반지름 (0.42w, 0.5h). 밖은 무조건 배경.
       const cx = 0.5 * w, cy = 0.55 * h, rx = 0.42 * w, ry = 0.5 * h;
       const outside = (x, y) => ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 > 1;
