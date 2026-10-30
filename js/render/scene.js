@@ -74,6 +74,7 @@ export function updateFx(fx, match, dt) {
   fx.particles = fx.particles.filter(q => q.age < q.life);
   for (const g of fx.ghosts) g.age += dt;
   fx.ghosts = fx.ghosts.filter(g => g.age < g.life);
+  if (fx.reduceMotion) { fx.shake = 0; fx.particles.length = 0; fx.ghosts.length = 0; fx.trail.length = 0; }   // 움직임 줄이기: 입자·흔들림·궤적 없음
 }
 
 function drawHud(ctx, match) {

@@ -202,3 +202,15 @@ body {
 #stage[data-compact="1"] .vs-mark { font-size: 72px; }
 #stage[data-compact="1"] .verdict { font-size: 34px; }
 #stage[data-compact="1"] .score { font-size: 56px; }
+
+/* 아주 낮은 무대(320px 폭 폰을 눕힌 경우): 썸네일 한 줄, 설명 숨김 */
+#stage[data-tiny="1"] .thumbs { grid-template-columns: repeat(12, 26px); gap: 4px; }
+#stage[data-tiny="1"] .thumb { width: 26px; height: 26px; border-width: 1.5px; }
+#stage[data-tiny="1"] .thumb[aria-selected="true"] { border-width: 2px; }
+#stage[data-tiny="1"] .skill p:last-child { display: none; }
+#stage[data-tiny="1"] .skill { padding: 5px 10px; }
+#stage[data-tiny="1"] .sheet.select .col.right { gap: 6px; }
+#stage[data-tiny="1"] .brand h1 { font-size: 16px; }
+#stage[data-tiny="1"] .brand .emblem { width: 30px; height: 39px; }
+#stage[data-tiny="1"] .pick-label { margin-bottom: 2px; }
+#stage[data-tiny="1"] .action { padding: 8px 18px; font-size: 14px; }

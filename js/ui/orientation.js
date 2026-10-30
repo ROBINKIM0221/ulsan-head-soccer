@@ -16,6 +16,7 @@ export function fitStage(stage, canvas, { padsVisible = true } = {}) {
   }
   stage.dataset.rotated = rotated ? '1' : '0';
   stage.dataset.compact = h < 420 ? '1' : '0';   // 폰 가로 높이에서는 시트 여백을 줄인다
+  stage.dataset.tiny = h < 340 ? '1' : '0';      // 320px 폭 폰: 썸네일 한 줄, 설명 숨김
 
   const pad = padsVisible ? Math.max(PAD_MIN, (w - h * 16 / 9) / 2) : 0;
   stage.style.setProperty('--pad', pad + 'px');

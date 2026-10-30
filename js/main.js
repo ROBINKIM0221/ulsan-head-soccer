@@ -41,6 +41,7 @@ export function startMatch(home, away, difficulty, { onSubRequest, onOver, debug
   const match = createMatch({ home, away, difficulty, rng: mulberry32((Date.now() >>> 0) || 1) });
   if (debugSpecial) match.world.players.L.gauge = 100;
   const fx = createFx();
+  fx.reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   game.match = match; game.fx = fx;
   game.input.setEnabled(true);
   subBtn.disabled = false;
@@ -63,7 +64,7 @@ export function startMatch(home, away, difficulty, { onSubRequest, onOver, debug
   const render = () => drawFrame(ctx, match, game.imgs, fx, performance.now() / 1000);
   game.loop = createLoop({ step, render });
   game.loop.start();
-  if (params.get('debug')) window.__debug = { match, get world() { return match.world; }, fx };
+  window.__debug = { match, get world() { return match.world; }, fx };   // 콘솔·검사 스크립트용
   return match;
 }
 
