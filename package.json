@@ -1,0 +1,9 @@
+{
+  "name": "ulsan-head-soccer",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"test/**/*.test.js\"",
+    "selfplay": "node tools/selfplay.js"
+  }
+}
