@@ -19,9 +19,9 @@ export const DT = 1 / 120;
 
 // 난이도 5단계 (2026-10-31 형준). 반응 지연(초), 예측 오차(±px), 이동 속도 배율
 export const DIFFICULTY = {
-  youth:   { name: '유스',   reaction: 0.40, error: 140, speed: 0.80 },
-  reserve: { name: '2군',    reaction: 0.28, error: 90,  speed: 0.90 },
-  first:   { name: '1군',    reaction: 0.18, error: 50,  speed: 1.00 },
+  youth:   { name: '유스',   reaction: 0.55, error: 200, speed: 0.65 },   // 2026-10-31 형준: 유스·2군·1군은 더 쉽게
+  reserve: { name: '2군',    reaction: 0.40, error: 140, speed: 0.78 },
+  first:   { name: '1군',    reaction: 0.28, error: 90,  speed: 0.90 },
   ace:     { name: '에이스', reaction: 0.12, error: 30,  speed: 1.05 },
   legend:  { name: '레전드', reaction: 0.08, error: 15,  speed: 1.10 },
 };

@@ -21,14 +21,14 @@ const check = (name, ok, info = '') => { results.push(ok); console.log(`${ok ? '
       const st = document.getElementById('stage').getBoundingClientRect(), o = document.getElementById('overlay');
       const btns = [...document.querySelectorAll('.pad .ctl')].map(b => b.getBoundingClientRect());
       const cv = document.getElementById('game').getBoundingClientRect();
-      const overlap = btns.some(b => b.left < cv.right && b.right > cv.left && b.top < cv.bottom && b.bottom > cv.top);
+      const onCanvas = btns.every(b => b.left >= cv.left - 1 && b.right <= cv.right + 1 && b.top >= cv.top - 1 && b.bottom <= cv.bottom + 1);   // 버튼은 캔버스 위에 겹친다
       const act = document.querySelector('.sheet .action').getBoundingClientRect();
       const stageBox = document.getElementById('stage').getBoundingClientRect();
       const inside = act.left >= stageBox.left - 1 && act.right <= stageBox.right + 1 && act.top >= stageBox.top - 1 && act.bottom <= stageBox.bottom + 1;
-      return { rotated: document.getElementById('stage').dataset.rotated, overflow: Math.max(o.scrollHeight - o.clientHeight, o.scrollWidth - o.clientWidth), overlap, inside, stage: [Math.round(st.width), Math.round(st.height)] };
+      return { rotated: document.getElementById('stage').dataset.rotated, overflow: Math.max(o.scrollHeight - o.clientHeight, o.scrollWidth - o.clientWidth), onCanvas, inside, stage: [Math.round(st.width), Math.round(st.height)] };
     });
     check(`${name} select fits (rotated=${m.rotated})`, m.overflow <= 0 && m.rotated === '1' && m.inside, `overflow ${m.overflow}px, start button inside=${m.inside}, stage ${m.stage}`);
-    check(`${name} buttons do not overlap the canvas`, !m.overlap);
+    check(`${name} buttons sit on the canvas`, m.onCanvas);
     await page.screenshot({ path: `${OUT}/${slug}-select.png` });
     await page.goto(BASE + '?debug=1'); await page.waitForFunction(() => window.__debug && window.__debug.match.phase === 'play', null, { timeout: 8000 }); await page.waitForTimeout(400);
     await page.screenshot({ path: `${OUT}/${slug}-play.png` });

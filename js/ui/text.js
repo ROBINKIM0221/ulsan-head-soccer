@@ -11,5 +11,5 @@ export function josa(word, [withTail, noTail]) {
 // 결과 공유 문장
 export function shareText({ me, them, L, R, result }) {
   const ending = result === 'win' ? '이겼다!' : result === 'lose' ? '졌다…' : '비겼다!';
-  return `ULSAN HD FC 일대일축구에서 ${josa(me, ['으로', '로'])} ${josa(them, ['을', '를'])} ${L}:${R}로 ${ending}`;
+  return `ULSAN HD FC 1 VS 1 축구에서 ${josa(me, ['으로', '로'])} ${josa(them, ['을', '를'])} ${L}:${R}로 ${ending}`;
 }

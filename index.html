@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#004098">
-<title>ULSAN HD FC 일대일축구</title>
+<title>ULSAN HD FC 1 VS 1 축구</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
@@ -13,6 +13,7 @@
 </head>
 <body>
 <div id="stage">
+  <div id="arena">
   <canvas id="game" width="1280" height="720" aria-label="경기장"></canvas>
 
   <div class="pad left" aria-label="이동">
@@ -24,6 +25,7 @@
     <button class="ctl kick" data-btn="kick" type="button" aria-label="슛"><span>슛</span></button>
   </div>
   <button class="sub" data-btn="sub" type="button" aria-label="선수 교체">교체</button>
+  </div>
 
   <div id="overlay" hidden></div>
   <div id="hint" hidden>폰을 가로로 돌려 주세요</div>

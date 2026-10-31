@@ -22,7 +22,7 @@ function loadImages() {
 }
 
 function layout() {
-  const r = fitStage(stage, canvas, { padsVisible: !stage.classList.contains('kb') });
+  const r = fitStage(stage, canvas);
   if (r.rotated && !layout.hinted) {
     layout.hinted = true;
     hint.hidden = false;
@@ -108,7 +108,7 @@ async function boot() {
   layout();
   window.addEventListener('resize', layout);
   window.addEventListener('orientationchange', () => setTimeout(layout, 50));
-  game.input = createInput(stage, { onKeyboard: layout });   // 키보드를 쓰기 시작하면 패드를 숨기고 캔버스를 넓힌다
+  game.input = createInput(stage);   // 키보드를 쓰기 시작하면 CSS(.kb)가 터치 버튼을 숨긴다
   game.imgs = await loadImages();
   pauseOnHide();
 

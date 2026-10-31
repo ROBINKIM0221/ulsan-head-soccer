@@ -6,7 +6,6 @@
   --muted: #B9CBE8;
   --ui:  "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
   --num: Teko, "Arial Narrow", sans-serif;
-  --pad: 110px;
 }
 
 * { box-sizing: border-box; }
@@ -27,44 +26,43 @@ body {
   background: var(--blue);
   overflow: hidden;
 }
+#arena { position: relative; flex: none; }
 #game { display: block; background: #5FB8F5; border-radius: 6px; }
 
-/* ---------- 조작 버튼 ---------- */
+/* ---------- 조작 버튼: 캔버스 아래 양 모서리에 반투명으로 겹친다 ---------- */
 .pad {
-  position: absolute; top: 0; bottom: 0; width: var(--pad);
-  display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
-  gap: 14px; padding: 0 0 max(18px, env(safe-area-inset-bottom));
+  position: absolute; bottom: 10px;
+  display: flex; align-items: flex-end; gap: 10px;
 }
-.pad.left { left: 0; padding-left: max(0px, env(safe-area-inset-left)); }
-.pad.right { right: 0; padding-right: max(0px, env(safe-area-inset-right)); }
-#stage[data-rotated="1"] .pad.left { padding-left: max(0px, env(safe-area-inset-top)); }      /* 눕힌 상태: 무대 왼쪽이 화면 위(노치) */
-#stage[data-rotated="1"] .pad.right { padding-right: max(0px, env(safe-area-inset-bottom)); }
-.pad.left { flex-direction: row; align-items: flex-end; justify-content: center; gap: 6px; }
-.pad.left .ctl { width: 64px; height: 64px; flex: none; }   /* 두 개가 110~144px 열에 들어가되 64px 밑으로는 안 줄어든다 */
+.pad.left { left: 10px; }
+.pad.right { right: 10px; }
+#stage[data-rotated="1"] .pad.left { left: max(10px, env(safe-area-inset-top)); }        /* 눕힌 상태: 무대 왼쪽이 화면 위(노치) */
+#stage[data-rotated="1"] .pad.right { right: max(10px, env(safe-area-inset-bottom)); }
 
 .ctl {
   all: unset;
   position: relative;
-  width: 72px; height: 72px; border-radius: 50%;
+  width: 64px; height: 64px; border-radius: 50%;
   display: grid; place-items: center;
-  background: rgba(255,255,255,.12);
-  border: 2px solid rgba(255,255,255,.55);
-  color: var(--white); font: 700 15px var(--ui);
+  background: rgba(0,43,107,.28);
+  border: 2px solid rgba(255,255,255,.7);
+  color: var(--white); font: 800 15px var(--ui);
+  text-shadow: 0 1px 2px rgba(0,0,0,.5);
   touch-action: none; cursor: pointer;
   transition: transform .06s, background .06s;
 }
-.ctl .glyph { font-size: 22px; }
-.ctl.down, .ctl:active { background: rgba(255,255,255,.3); transform: scale(.94); }
+.ctl .glyph { font-size: 24px; }
+.ctl.down, .ctl:active { background: rgba(255,255,255,.35); transform: scale(.94); }
 .ctl:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
-.ctl.kick { background: rgba(255,199,44,.25); border-color: var(--gold); }
+.ctl.kick { background: rgba(255,199,44,.3); border-color: var(--gold); }
 
-/* 점프는 가장 자주 누르니 조금 더 크게 */
-.ctl.jump { width: 84px; height: 84px; font-size: 17px; }
+/* 점프는 가장 자주 누르니 조금 더 크게 (오른손 엄지 바로 밑, 맨 오른쪽) */
+.ctl.jump { width: 78px; height: 78px; font-size: 17px; }
 
-/* 교체 버튼: 위 가운데 점수판 옆 */
+/* 교체 버튼: 위 가운데 점수판 옆 (캔버스 기준) */
 .sub {
   all: unset;
-  position: absolute; top: 14px; left: calc(50% + 120px);
+  position: absolute; top: 10px; left: calc(50% + 116px);
   padding: 8px 14px; border-radius: 999px;
   background: rgba(0,43,107,.75); border: 1.5px solid rgba(255,255,255,.5);
   color: var(--white); font: 700 14px var(--ui);
@@ -99,7 +97,10 @@ body {
 .sheet { width: min(94%, 900px); max-height: 96%; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
 .emblem { display: block; width: 44px; height: 57px; background: url(../img/emblem.png) center / contain no-repeat; flex: none; }
 .brand { display: flex; align-items: center; gap: 12px; }
-.brand h1 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+.brand-text { display: flex; flex-direction: column; }
+.brand .club { font: 700 12px/1 var(--ui); letter-spacing: .06em; color: var(--muted); margin-bottom: 5px; }
+.brand h1 { margin: 0; display: flex; align-items: baseline; gap: 8px; font-size: 22px; font-weight: 800; letter-spacing: -.02em; line-height: 1; }
+.brand h1 .vs { font: 600 36px/.85 var(--num); color: var(--gold); letter-spacing: .02em; }
 .action {
   all: unset; box-sizing: border-box;
   min-width: 150px; padding: 13px 26px; border-radius: 999px;
@@ -129,10 +130,12 @@ body {
 .who .name { font-size: 24px; font-weight: 800; }
 .who .num { font: 600 30px var(--num); color: var(--gold); line-height: .9; }
 .who .pos { font-size: 13px; color: var(--muted); font-weight: 600; }
-.skill { background: rgba(255,255,255,.08); border-radius: 12px; padding: 10px 14px; }
-.skill .skill-label { margin: 0 0 2px; font-size: 12px; color: var(--muted); font-weight: 600; }
-.skill b { font-size: 18px; color: var(--gold); font-weight: 800; }
-.skill p:last-child { margin: 3px 0 0; font-size: 13px; line-height: 1.45; color: var(--white); word-break: keep-all; }
+.skill { background: rgba(255,255,255,.08); border-radius: 14px; padding: 11px 14px 12px 16px; border-left: 4px solid var(--gold); }
+.skill-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.skill-tag { font: 800 11px/1 var(--ui); color: var(--navy); background: var(--gold); padding: 4px 8px; border-radius: 999px; }
+.skill-when { font: 700 13px/1 var(--ui); color: var(--muted); }
+.skill-name { display: block; font-size: 20px; font-weight: 800; color: var(--white); letter-spacing: -.01em; line-height: 1.15; }
+.skill-desc { margin: 4px 0 0; font-size: 13.5px; line-height: 1.5; color: #DCE6F5; word-break: keep-all; }
 .thumbs { display: grid; grid-template-columns: repeat(6, 42px); gap: 8px; }
 .thumb {
   all: unset; width: 42px; height: 42px; border-radius: 50%; overflow: hidden; cursor: pointer;
@@ -184,8 +187,11 @@ body {
 /* 낮은 가로 화면(폰): 여백을 줄인다. 회전 상태에서는 뷰포트 높이가 아니라 무대 높이가 기준이라 JS 가 data-compact 를 단다 */
 #stage[data-compact="1"] .sheet.select { gap: 16px; }
 #stage[data-compact="1"] .brand h1 { font-size: 18px; }
-#stage[data-compact="1"] .skill { padding: 7px 12px; }
-#stage[data-compact="1"] .skill p:last-child { font-size: 12px; }
+#stage[data-compact="1"] .brand h1 .vs { font-size: 30px; }
+#stage[data-compact="1"] .skill { padding: 8px 12px 9px 14px; }
+#stage[data-compact="1"] .skill-head { margin-bottom: 4px; }
+#stage[data-compact="1"] .skill-name { font-size: 18px; }
+#stage[data-compact="1"] .skill-desc { font-size: 12.5px; }
 #stage[data-compact="1"] .thumbs { grid-template-columns: repeat(6, 36px); gap: 6px; }
 #stage[data-compact="1"] .thumb { width: 36px; height: 36px; }
 #stage[data-compact="1"] .action { padding: 10px 22px; font-size: 15px; min-width: 130px; }
@@ -203,10 +209,13 @@ body {
 #stage[data-tiny="1"] .thumbs { grid-template-columns: repeat(6, 26px); gap: 4px; }
 #stage[data-tiny="1"] .thumb { width: 26px; height: 26px; border-width: 1.5px; }
 #stage[data-tiny="1"] .thumb[aria-selected="true"] { border-width: 2px; }
-#stage[data-tiny="1"] .skill p:last-child { display: none; }
-#stage[data-tiny="1"] .skill { padding: 4px 10px; }
-#stage[data-tiny="1"] .skill b { font-size: 15px; }
+#stage[data-tiny="1"] .skill-desc { display: none; }
+#stage[data-tiny="1"] .skill { padding: 4px 10px 5px 12px; }
+#stage[data-tiny="1"] .skill-head { margin-bottom: 2px; }
+#stage[data-tiny="1"] .skill-name { font-size: 15px; }
 #stage[data-tiny="1"] .brand h1 { font-size: 15px; }
+#stage[data-tiny="1"] .brand h1 .vs { font-size: 24px; }
+#stage[data-tiny="1"] .brand .club { display: none; }
 #stage[data-tiny="1"] .brand .emblem { width: 26px; height: 34px; }
 #stage[data-tiny="1"] .pick { max-width: 100%; }
 #stage[data-tiny="1"] .pick-label { margin-bottom: 0; font-size: 12px; }

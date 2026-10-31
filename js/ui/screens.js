@@ -60,7 +60,8 @@ function buildCarousel({ players, imgs, initial, onChange }) {
     const def = players[idx];
     paintCard(canvas, def, imgs);
     who.innerHTML = `<b class="name">${def.name}</b><span class="num">${def.number}</span>`;
-    skill.innerHTML = `<p class="skill-label">필살기</p><b>${def.special.name}</b><p>${def.special.desc}</p>`;
+    const sp = def.special, when = sp.kind === 'oneshot' ? '다음 슛 한 번' : sp.kind === 'instant' ? '즉시' : `${sp.duration}초`;
+    skill.innerHTML = `<div class="skill-head"><span class="skill-tag">필살기</span><span class="skill-when">${when}</span></div><b class="skill-name">${sp.name}</b><p class="skill-desc">${sp.desc}</p>`;
     [...thumbs.children].forEach((t, k) => t.setAttribute('aria-selected', k === idx));
     onChange(def);
   }
@@ -95,7 +96,7 @@ function buildLevels(initial, onChange) {
 export function showSelect({ imgs, initialNumber, difficulty, onStart }) {
   const sheet = el('div', 'sheet select');
   const left = el('div', 'col left'), right = el('div', 'col right');
-  right.innerHTML = '<div class="brand"><span class="emblem" aria-hidden="true"></span><h1>ULSAN HD FC 일대일축구</h1></div>';
+  right.innerHTML = '<div class="brand"><span class="emblem" aria-hidden="true"></span><div class="brand-text"><span class="club">ULSAN HD FC</span><h1><span class="vs">1 VS 1</span> 축구</h1></div></div>';
   let diff = difficulty;
   const picker = buildCarousel({ players: PLAYERS, imgs, initial: initialNumber, onChange: () => {} });
   left.appendChild(picker.root.querySelector('.carousel'));

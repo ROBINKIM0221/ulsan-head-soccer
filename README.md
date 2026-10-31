@@ -1,4 +1,4 @@
-# ULSAN HD FC 일대일축구
+# ULSAN HD FC 1 VS 1 축구
 
 울산 HD FC 선수 12명 중 하나를 골라 컴퓨터 상대와 60초 헤드 사커 1대1 경기를 하는 팬 미니게임.
 선수마다 필살기가 하나씩 있고, 공을 건드려 게이지가 차면 자동으로 터진다. 경기 중 한 번 선수 교체가 가능하다. 난이도는 5단계.
@@ -42,7 +42,7 @@ python -m http.server 8766
 npm test                   # 규칙·물리·AI 테스트 (node --test)
 npm run selfplay -- 60     # AI 끼리 승률표 → docs/balance-날짜.md
 node tools/shots.cjs       # 화면·입력 검사 (Playwright, 서버 띄운 뒤)
-node tools/cutout-faces.cjs  # img/N.jpg → 배경 뺀 img/Nc.png
+node tools/faces.cjs       # 바탕화면 선수 배너 → img/N.jpg(선택 화면) + img/Nc.png(경기 컷아웃), 얼굴 자동 검출
 ```
 
 `?debug=1` 을 붙이면 선택 화면 없이 이동경 vs 야고로 바로 시작한다 (`&home=55&special=1` 식으로 선수·게이지 지정).

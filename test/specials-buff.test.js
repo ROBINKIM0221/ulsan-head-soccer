@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { FIELD, PHYS, DT, MATCH, NO_INPUT } from '../js/sim/constants.js';
+import { FIELD, PHYS, DT, MATCH, NO_INPUT, DIFFICULTY } from '../js/sim/constants.js';
 import { headCenter } from '../js/sim/physics.js';
 import { createMatch, stepMatch } from '../js/sim/match.js';
 import { activateSpecial, updateSpecials } from '../js/sim/specials.js';
@@ -59,10 +59,11 @@ test('giant: scale 1.3, speed .8, head power 1.2, back to normal after 3.5s', ()
 test('press: opponent speed and jump ×0.6, own mods unchanged', () => {
   const m = ready(38); const L = m.world.players.L, R = m.world.players.R;
   fire(m);
-  assert.ok(Math.abs(R.mods.speed - 0.6) < 1e-9); assert.ok(Math.abs(R.mods.jump - 0.6) < 1e-9); assert.equal(R.mods.press, true);
+  const aiSpeed = DIFFICULTY[m.difficulty].speed;   // AI 는 난이도 속도 배율을 먼저 받는다
+  assert.ok(Math.abs(R.mods.speed - 0.6 * aiSpeed) < 1e-9); assert.ok(Math.abs(R.mods.jump - 0.6) < 1e-9); assert.equal(R.mods.press, true);
   assert.equal(L.mods.speed, 1); assert.equal(L.mods.jump, 1);
   run(m, 5.1);
-  assert.equal(R.mods.speed, 1); assert.equal(R.mods.press, false);
+  assert.ok(Math.abs(R.mods.speed - aiSpeed) < 1e-9); assert.equal(R.mods.press, false);
 });
 
 test('cannon: header speed doubled and the opponent it hits is knocked back and stunned', () => {

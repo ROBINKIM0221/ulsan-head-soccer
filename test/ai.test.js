@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { FIELD, PHYS, DT, MATCH } from '../js/sim/constants.js';
+import { FIELD, PHYS, DT, MATCH, DIFFICULTY } from '../js/sim/constants.js';
 import { createWorld, headCenter, footPoint } from '../js/sim/physics.js';
 import { createAiState, decide, predictLanding, shouldSubstitute, pickSubstitute } from '../js/sim/ai.js';
 import { mulberry32 } from '../js/sim/rng.js';
@@ -20,10 +20,11 @@ test('predictLanding returns the ground point within the horizon', () => {
 test('AI moves toward the predicted landing only after the reaction delay', () => {
   const w = world(); const ai = createAiState('first', mulberry32(1));
   w.ball.x = 700; w.ball.y = 400; w.ball.vx = 0; w.ball.vy = 0;        // R(960) 기준 왼쪽에 떨어질 공
+  const ticks = Math.floor(DIFFICULTY.first.reaction / DT);
   let early = 0, late = 0;
-  for (let i = 0; i < 20; i++) { const o = decide(w, 'R', ai, DT); if (o.left || o.right) early++; }   // 0.167초
-  for (let i = 0; i < 12; i++) { const o = decide(w, 'R', ai, DT); if (o.left) late++; }               // 0.27초까지
-  assert.equal(early, 0, 'no movement before 0.18s');
+  for (let i = 0; i < ticks - 2; i++) { const o = decide(w, 'R', ai, DT); if (o.left || o.right) early++; }   // 반응 지연 전
+  for (let i = 0; i < 14; i++) { const o = decide(w, 'R', ai, DT); if (o.left) late++; }                     // 지연이 지난 직후
+  assert.equal(early, 0, `no movement before ${DIFFICULTY.first.reaction}s`);
   assert.ok(late > 0, 'moves left toward the ball afterwards');
 });
 

@@ -4,8 +4,8 @@ import { PHYS } from '../sim/constants.js';
 import { headCenter, bodyRect } from '../sim/physics.js';
 
 const BLUE = '#004098', NAVY = '#002B6B', GOLD = '#FFC72C', WHITE = '#FFFFFF', SKIN = '#F2C9A4', DARK = '#1A1A1A';
-const CUT_SCALE = 1.55;     // 컷아웃 그림 한 변 = 머리 지름 × 1.55 (얼굴 폭이 머리 원과 맞는다)
-const CUT_CENTER_Y = 0.6;   // 컷아웃 그림에서 얼굴 중심의 세로 위치 (0~1)
+const CUT_SCALE = 1.5;      // 컷아웃 그림 한 변 = 머리 지름 × 1.5 (tools/faces.cjs: 머리가 그림 높이의 70%)
+const CUT_CENTER_Y = 0.44;  // 컷아웃 그림에서 머리 중심의 세로 위치 (꼭대기 8%, 턱 78%)
 
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
