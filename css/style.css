@@ -80,6 +80,18 @@ body {
 /* 키보드를 쓰기 시작하면 터치 버튼은 숨기고 캔버스가 넓어진다 */
 #stage.kb .pad { display: none; }
 
+/* 노트북 안내: 마우스 기기에서만 캔버스 아래 가운데에 아주 작은 키캡 (2026-10-31 형준: "아주 작게 키보드 모양으로 방향키랑 z키") */
+.keys { display: none; position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); align-items: center; gap: 6px; color: rgba(255,255,255,.8); font: 600 10px var(--ui); pointer-events: none; }
+.keys .arrows { display: grid; grid-template-columns: repeat(3, 14px); gap: 2px; }
+.keys .arrows kbd:nth-child(1) { grid-area: 1 / 2; }   /* 역T: ↑ 위 가운데, 아래 ← ↓ → */
+.keys .arrows kbd:nth-child(2) { grid-area: 2 / 1; }
+.keys .arrows kbd:nth-child(3) { grid-area: 2 / 2; opacity: .4; }   /* ↓ 는 안 쓴다 */
+.keys .arrows kbd:nth-child(4) { grid-area: 2 / 3; }
+.keys kbd { display: grid; place-items: center; width: 14px; height: 13px; border-radius: 3px; background: rgba(255,255,255,.92); color: var(--navy); font: 700 9px var(--ui); box-shadow: 0 1.5px 0 rgba(0,43,107,.9); }
+.keys kbd.z { width: 16px; height: 15px; font-size: 10px; }
+.keys em { font-style: normal; margin-right: 6px; }
+@media (hover: hover) and (pointer: fine) { .keys { display: flex; } }
+
 /* ---------- 안내·오버레이 ---------- */
 #hint {
   position: absolute; left: 50%; top: 18px; transform: translateX(-50%);

@@ -45,7 +45,7 @@ export function pushEvents(fx, events, match) {
       case 'phase':
         if (e.phase === 'play' && match.clock >= 59.9) pop(fx, 'KICK OFF', FIELD.W / 2, 300, { size: 72, color: WHITE, life: 0.9, rise: 20 });
         if (e.phase === 'golden') pop(fx, '골든골!', FIELD.W / 2, 300, { size: 64, color: GOLD, life: 1.2, rise: 20 });
-        if (e.phase === 'over' && match.result !== 'draw') fx.party = startParty(match, fx.reduceMotion);   // 이긴 쪽 세레모니 (져도 상대 팀이 한다)
+        if (e.phase === 'over' && match.result !== 'draw') fx.party = startParty(match);   // 이긴 쪽 세레모니 (져도 상대 팀이 한다)
         break;
     }
   }

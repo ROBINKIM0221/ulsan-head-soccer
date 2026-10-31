@@ -1,6 +1,6 @@
 // 세레모니: 이긴 쪽 벤치 선수들이 양옆에서 우르르 달려와 경기장 폭에 고르게 퍼져 서서 저마다 조금씩 엇갈린 박자로 막 뛰며 두 팔을 번쩍 들고, 색종이가 쏟아지고, 하늘에 큰 VAMOS! 하나.
 // 진 쪽은 쓰러져 있다. 내가 져도 상대 팀이 똑같이 한다. 경기 상태는 건드리지 않고 그릴 때만 바꾼다.
-// still(움직임 줄이기 설정)은 색종이와 VAMOS 들썩임만 끈다. 점프는 세레모니 그 자체라 늘 한다 (2026-10-31 형준 폰의 애니메이션 제거 설정에서 "왜 또 방방 뛰는거는 사라졌어").
+// 움직임 줄이기 설정은 보지 않는다: 점프·색종이가 세레모니 그 자체다 (2026-10-31 형준 폰의 애니메이션 제거 설정에서 "왜 또 방방 뛰는거는 사라졌어", 이어서 "색종이도 무조건 뿌려줘").
 // (2026-10-31 형준: "좀 웃긴 요소", "우르르 나와서 세레모니", "지면 상대팀 선수들도 똑같이", "너무 겹쳐서 좀 퍼뜨려줘")
 import { FIELD } from '../sim/constants.js';
 import { createPlayer } from '../sim/physics.js';
@@ -16,7 +16,7 @@ const hopAt = (t, m = { beat: BEAT, phase: 0, hop: HOP }) => Math.max(0, Math.si
 const COLORS = ['#FFC72C', '#FFFFFF', '#004098'];
 const EDGE = 60, GAP = 70, SPACE = (FIELD.W - 2 * EDGE - 2 * GAP) / 10;   // 가장자리·이긴 선수 양옆을 비우고 남은 폭에 벤치 10명을 고르게 (약 102px)
 
-export function startParty(match, still = false) {
+export function startParty(match) {
   const side = match.result === 'lose' ? 'R' : 'L', { L, R } = match.world.players, star = match.world.players[side];
   const bench = PLAYERS.filter(p => p.number !== L.def.number && p.number !== R.def.number);
   // 이긴 선수 왼쪽에 들어갈 자리 수만큼 왼쪽에, 나머지는 오른쪽에 깐다(왼쪽부터 오름차순). 가장자리에 서 있어도 한쪽에 몰려 겹치지 않는다
@@ -30,7 +30,7 @@ export function startParty(match, still = false) {
     return { body, target: slots[fromLeft ? 5 - k : 4 + k], delay: i * 0.08, arrived: false,
       beat: 5.4 + (i % 4) * 0.5, phase: (i * 0.9) % 1.5, hop: 90 + (i % 3) * 12 };
   });
-  return { t: 0, still, side, members, confetti: [] };
+  return { t: 0, side, members, confetti: [] };
 }
 
 export function updateParty(party, match, dt) {
@@ -48,7 +48,7 @@ export function updateParty(party, match, dt) {
       b.y = FIELD.GROUND - hop; b.onGround = hop === 0;
     }
   }
-  if (!party.still && party.t < PARTY_LEN - 1) {
+  if (party.t < PARTY_LEN - 1) {
     for (let i = 0; i < 2; i++) party.confetti.push({ x: Math.random() * FIELD.W, y: -10, vx: (Math.random() - 0.5) * 80, vy: 160 + Math.random() * 200, rot: Math.random() * Math.PI * 2, vr: (Math.random() - 0.5) * 10, color: COLORS[(party.confetti.length + i) % 3], age: 0 });
   }
   for (const q of party.confetti) { q.age += dt; q.x += (q.vx + Math.sin(q.age * 4 + q.rot) * 50) * dt; q.y += q.vy * dt; q.rot += q.vr * dt; }
@@ -64,7 +64,7 @@ export function drawParty(ctx, party, match, imgs, t) {
   for (const m of party.members) drawPlayer(ctx, m.body, imgs[m.body.def.number], { kit: wornKit(match.kits[party.side], m.body.def), t, cheer: m.arrived });
   // VAMOS!: 0.3초 뒤 하늘 한가운데 커지며 나타나 박자에 맞춰 살짝 들썩인다
   if (party.t > 0.3) {
-    const grow = Math.min(1, (party.t - 0.3) / 0.35), k = party.still ? 1 : grow * (1 + 0.05 * Math.sin(party.t * BEAT));
+    const grow = Math.min(1, (party.t - 0.3) / 0.35), k = grow * (1 + 0.05 * Math.sin(party.t * BEAT));
     ctx.save(); ctx.translate(FIELD.W / 2, 250); ctx.scale(k, k); ctx.rotate(-0.04);
     ctx.font = '600 170px Teko, "Arial Narrow", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.lineWidth = 16; ctx.lineJoin = 'round'; ctx.strokeStyle = '#002B6B'; ctx.strokeText('VAMOS!', 0, 0);
