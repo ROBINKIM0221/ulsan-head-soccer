@@ -1,5 +1,6 @@
 // 세레모니: 이긴 쪽 벤치 선수들이 양옆에서 우르르 달려와 경기장 폭에 고르게 퍼져 서서 저마다 조금씩 엇갈린 박자로 막 뛰며 두 팔을 번쩍 들고, 색종이가 쏟아지고, 하늘에 큰 VAMOS! 하나.
 // 진 쪽은 쓰러져 있다. 내가 져도 상대 팀이 똑같이 한다. 경기 상태는 건드리지 않고 그릴 때만 바꾼다.
+// still(움직임 줄이기 설정)은 색종이와 VAMOS 들썩임만 끈다. 점프는 세레모니 그 자체라 늘 한다 (2026-10-31 형준 폰의 애니메이션 제거 설정에서 "왜 또 방방 뛰는거는 사라졌어").
 // (2026-10-31 형준: "좀 웃긴 요소", "우르르 나와서 세레모니", "지면 상대팀 선수들도 똑같이", "너무 겹쳐서 좀 퍼뜨려줘")
 import { FIELD } from '../sim/constants.js';
 import { createPlayer } from '../sim/physics.js';
@@ -43,7 +44,7 @@ export function updateParty(party, match, dt) {
       b.x += Math.sign(dx) * RUN * dt; b.vx = Math.sign(dx) * RUN; b.facing = Math.sign(dx); b.y = FIELD.GROUND; b.onGround = true;
     } else {                          // 도착: 자리에 딱 서서 이긴 선수를 보고 뛴다
       b.x = m.target; b.vx = 0; b.facing = Math.sign(star.x - b.x) || 1; m.arrived = true;
-      const hop = party.still ? 0 : hopAt(party.t, m);
+      const hop = hopAt(party.t, m);
       b.y = FIELD.GROUND - hop; b.onGround = hop === 0;
     }
   }
@@ -56,7 +57,7 @@ export function updateParty(party, match, dt) {
 
 // 그릴 때의 두 선수: 이긴 쪽은 펄쩍, 진 쪽은 쓰러져 있다
 export const partyView = (party, side, p) => side === party.side
-  ? { ...p, y: FIELD.GROUND - (party.still ? 0 : hopAt(party.t)), onGround: party.still, kickAnim: 0, stun: 0, pinned: false, active: null }
+  ? { ...p, y: FIELD.GROUND - hopAt(party.t), onGround: hopAt(party.t) === 0, kickAnim: 0, stun: 0, pinned: false, active: null }
   : { ...p, stun: 1, pinned: false, active: null };
 
 export function drawParty(ctx, party, match, imgs, t) {

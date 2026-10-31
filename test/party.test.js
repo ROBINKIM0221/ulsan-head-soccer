@@ -49,12 +49,14 @@ test('when I lose, the opponent bench celebrates around the opponent and I am th
   assert.ok(hopped, 'the opponent hops');
 });
 
-test('reduced motion: nobody hops and there is no confetti', () => {
+// 2026-10-31 형준 폰(애니메이션 제거 설정)에서 "왜 또 방방 뛰는거는 사라졌어" — 점프는 세레모니의 내용이라 설정과 상관없이 한다. 색종이만 끈다
+test('reduced motion: no confetti, but everyone still hops', () => {
   const m = won(), party = startParty(m, true);
   run(party, m, 3);
   assert.equal(party.confetti.length, 0);
-  assert.ok(party.members.every(x => x.body.y === FIELD.GROUND));
-  assert.equal(partyView(party, 'L', m.world.players.L).y, FIELD.GROUND);
+  let benchHop = 0, starHop = 0;
+  for (let i = 0; i < 140; i++) { updateParty(party, m, DT); benchHop = Math.max(benchHop, ...party.members.map(x => FIELD.GROUND - x.body.y)); starHop = Math.max(starHop, FIELD.GROUND - partyView(party, 'L', m.world.players.L).y); }
+  assert.ok(benchHop >= 90 && starHop >= 90, 'bench ' + Math.round(benchHop) + ' star ' + Math.round(starHop));
 });
 
 test('the loser is drawn knocked over and my player hops, without touching the match state', () => {
