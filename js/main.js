@@ -85,7 +85,7 @@ function startCountdown() {
   const tick = () => {
     game.countdownTimer = null;
     if (document.hidden || !game.match) { game.countdown = null; return; }
-    if (game.match.phase === 'over' || n === 0) { game.countdown = null; game.loop.start(); return; }
+    if (game.match.phase === 'over' || n === 0) { game.countdown = null; game.input.setEnabled(game.match.phase !== 'over'); game.loop.start(); return; }   // 일시정지가 꺼 둔 입력을 다시 켠다 (2026-10-31 형준: 재개 뒤 내 선수가 안 움직이는 버그)
     game.countdown = n;
     drawFrame(ctx, game.match, game.imgs, game.fx, performance.now() / 1000);
     drawCountdown(ctx, n);
