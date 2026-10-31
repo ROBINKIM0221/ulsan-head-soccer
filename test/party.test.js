@@ -15,13 +15,38 @@ test('the bench (everyone but the two on the pitch) runs in from both edges and 
   assert.ok(party.members.some(x => x.body.x < 0) && party.members.some(x => x.body.x > FIELD.W), 'start off both edges');
   run(party, m, 3);
   const L = m.world.players.L;
-  assert.ok(party.members.every(x => Math.abs(x.body.x - L.x) < 400 && Math.abs(x.body.x - L.x) > 40), 'gathered near my player, not on top');
+  assert.ok(party.members.every(x => Math.abs(x.body.x - L.x) > 40), 'not on top of my player');
   assert.ok(party.members.every(x => x.body.x >= 60 && x.body.x <= FIELD.W - 60), 'inside the field');
   let hopped = false;   // 모두 같은 박자로 뛰니 한 순간이 아니라 반 박자 동안 본다
   for (let i = 0; i < 60; i++) { updateParty(party, m, DT); if (party.members.some(x => x.body.y < FIELD.GROUND)) hopped = true; }
   assert.ok(hopped, 'they hop');
   assert.ok(party.confetti.length > 0 && party.confetti.every(q => q.y < FIELD.GROUND + 10));
   assert.ok(PARTY_LEN >= 3);
+});
+
+// 2026-10-31 형준: "한쪽 선수들은 너무 겹쳐서 좀 퍼뜨려줘" — 승자가 어디 서 있든 이웃끼리 95px 넘게 떨어지고 경기장 안에 있다
+test('the bench spreads out evenly across the pitch instead of piling up, wherever my player stands', () => {
+  for (const x of [640, 150, 1150]) {
+    const m = won(); m.world.players.L.x = x;
+    const party = startParty(m); run(party, m, 3);
+    const xs = party.members.map(p => p.body.x).sort((a, b) => a - b);
+    const gaps = xs.slice(1).map((v, i) => v - xs[i]);
+    assert.ok(gaps.every(g => g >= 95), 'neighbours at least 95px apart at x=' + x + ': ' + gaps.map(Math.round).join(','));
+    assert.ok(xs.every(v => v >= 60 && v <= FIELD.W - 60 && Math.abs(v - x) >= 110), 'inside the field and off my player at x=' + x + ': ' + xs.map(Math.round).join(','));
+  }
+});
+
+// 2026-10-31 형준: "지면 상대팀 선수들도 똑같이 세레머니"
+test('when I lose, the opponent bench celebrates around the opponent and I am the one knocked over', () => {
+  const m = createMatch({ home: byNumber(10), away: byNumber(99) }); m.phase = 'over'; m.result = 'lose';
+  const party = startParty(m); run(party, m, 3);
+  assert.equal(party.side, 'R');
+  assert.ok(party.members.every(p => p.body.side === 'R' && p.arrived), 'opponent bench all arrived');
+  const { L, R } = m.world.players;
+  assert.equal(partyView(party, 'L', L).stun, 1); assert.equal(partyView(party, 'R', R).stun, 0);
+  let hopped = false;
+  for (let i = 0; i < 60; i++) { updateParty(party, m, DT); if (partyView(party, 'R', R).y < FIELD.GROUND) hopped = true; }
+  assert.ok(hopped, 'the opponent hops');
 });
 
 test('reduced motion: nobody hops and there is no confetti', () => {

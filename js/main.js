@@ -56,7 +56,7 @@ export function startMatch(home, away, difficulty, { kit, onSubRequest, onOver, 
       if (e.type === 'phase' && e.phase === 'sub') { game.input.setEnabled(false); game.loop.stop(); onSubRequest?.(match); }   // 선택하는 동안 루프도 쉰다
       if (e.type === 'phase' && e.phase === 'over' && !overNotified) {
         overNotified = true; game.input.setEnabled(false);
-        const wait = match.result === 'win' ? PARTY_LEN * 1000 : 1300;   // 이기면 세레모니가 끝날 때까지, 아니면 GOAL 연출까지만 돌린다
+        const wait = match.result !== 'draw' ? PARTY_LEN * 1000 : 1300;   // 승패가 갈리면 세레모니가 끝날 때까지, 무승부면 GOAL 연출까지만 돌린다
         setTimeout(() => { if (game.match === match) game.loop.stop(); }, wait);
         onOver?.(match, wait - 100);
       }
