@@ -79,9 +79,11 @@ function buildCarousel({ players, imgs, initial, kitFor, onChange }) {
   return { root, current: () => players[idx], refresh: () => go(idx), onKey };
 }
 
-function buildLevels(initial, onChange) {
+function buildLevels(initial, onChange, extra) {
   const wrap = el('div', 'pick');
-  wrap.innerHTML = '<p class="pick-label" id="levelsLabel">난이도</p>';
+  const head = el('div', 'pick-head', '<p class="pick-label" id="levelsLabel">난이도</p>');
+  if (extra) head.appendChild(extra);
+  wrap.appendChild(head);
   const levels = el('div', 'levels'); levels.setAttribute('role', 'group'); levels.setAttribute('aria-labelledby', 'levelsLabel');
   let cur = initial;
   const paint = () => { const i = LEVELS.findIndex(l => l.id === cur); [...levels.children].forEach((b, k) => { b.setAttribute('aria-pressed', k === i); b.classList.toggle('on', k <= i); }); };
@@ -113,7 +115,42 @@ function buildKits(onChange) {
   return { root: wrap, show };
 }
 
-export function showSelect({ imgs, initialNumber, difficulty, kit, onStart }) {
+// 상대 고르기: 난이도 줄 오른쪽 작은 버튼. 기본은 랜덤, 누르면 얼굴 목록(랜덤 + 내 선수 뺀 11명)에서 한 명 (2026-10-31 형준)
+function buildOpponent(initial, onChange) {
+  let cur = initial, mine = null;   // cur: 등번호 또는 null(랜덤)
+  const btn = el('button', 'opp'); btn.type = 'button'; btn.setAttribute('aria-haspopup', 'dialog');
+  const paint = () => {
+    const def = cur && byNumber(cur);
+    btn.innerHTML = def ? `<img class="opp-face" src="${def.img}" alt=""><span>상대</span><b>${def.name}</b>` : '<i class="opp-face">?</i><span>상대</span><b>랜덤</b>';
+    btn.setAttribute('aria-label', `상대 선택: 현재 ${def ? def.name : '랜덤'}`);
+  };
+  function open() {
+    const modal = el('div', 'modal'); modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-label', '상대 선택');
+    const panel = el('div', 'modal-panel', '<p class="pick-label">상대 선택</p>');
+    const grid = el('div', 'thumbs');
+    const close = () => { modal.remove(); btn.focus({ preventScroll: true }); };
+    const pick = n => { cur = n; paint(); close(); onChange(cur); };
+    const rnd = el('button', 'thumb random', '?'); rnd.type = 'button'; rnd.setAttribute('aria-label', '랜덤'); rnd.setAttribute('aria-selected', cur === null);
+    rnd.addEventListener('click', () => pick(null));
+    grid.appendChild(rnd);
+    for (const p of PLAYERS.filter(p => p.number !== mine)) {
+      const b = el('button', 'thumb', `<img src="${p.img}" alt="">`); b.type = 'button'; b.setAttribute('aria-label', `${p.name} ${p.number}번`); b.setAttribute('aria-selected', p.number === cur);
+      b.addEventListener('click', () => pick(p.number));
+      grid.appendChild(b);
+    }
+    panel.appendChild(grid); modal.appendChild(panel);
+    modal.addEventListener('click', e => { if (e.target === modal) close(); });
+    modal.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
+    overlay.appendChild(modal);
+    (grid.querySelector('[aria-selected="true"]') || rnd).focus({ preventScroll: true });
+  }
+  btn.addEventListener('click', open);
+  paint();
+  // 내 선수가 바뀌면 알린다. 내가 상대로 골라 둔 선수를 고르면 랜덤으로 되돌린다
+  return { button: btn, current: () => cur, setMine: n => { mine = n; if (cur === n) { cur = null; paint(); onChange(cur); } } };
+}
+
+export function showSelect({ imgs, initialNumber, difficulty, kit, opponent = null, onStart }) {
   const sheet = el('div', 'sheet select');
   const left = el('div', 'col left'), right = el('div', 'col right');
   right.innerHTML = '<div class="brand"><span class="emblem" aria-hidden="true"></span><div class="brand-text"><span class="club">ULSAN HD FC</span><h1><span class="vs">1 VS 1</span> 축구</h1></div></div>';
@@ -122,15 +159,16 @@ export function showSelect({ imgs, initialNumber, difficulty, kit, onStart }) {
   const slot = def => (def.position === 'GK' ? 'gk' : 'field');
   const init = kitById(kit); if (init) chosen[init.gk ? 'gk' : 'field'] = init.id;
   const kits = buildKits(id => { chosen[slot(picker.current())] = id; picker.refresh(); });
+  const opp = buildOpponent(opponent, () => {});
   const picker = buildCarousel({ players: PLAYERS, imgs, initial: initialNumber, kitFor: def => kitById(chosen[slot(def)]),
-    onChange: def => kits.show(kitsFor(def), chosen[slot(def)]) });
+    onChange: def => { kits.show(kitsFor(def), chosen[slot(def)]); opp.setMine(def.number); } });
   left.appendChild(picker.root.querySelector('.carousel'));
   left.appendChild(kits.root);
   right.appendChild(picker.root.querySelector('.skill'));
   right.appendChild(picker.root.querySelector('.thumbs'));
-  right.appendChild(buildLevels(diff, d => { diff = d; }));
+  right.appendChild(buildLevels(diff, d => { diff = d; }, opp.button));
   const start = el('button', 'action', '경기 시작'); start.type = 'button';
-  start.addEventListener('click', () => onStart(picker.current(), diff, chosen[slot(picker.current())]));
+  start.addEventListener('click', () => onStart(picker.current(), diff, chosen[slot(picker.current())], opp.current()));
   right.appendChild(start);
   sheet.append(left, right);
   sheet.addEventListener('keydown', picker.onKey);
@@ -170,12 +208,14 @@ export function showSubSelect({ imgs, exclude, kits, onPick, onCancel }) {
 export function showResult({ match, onAgain, onChange }) {
   const sheet = el('div', 'sheet result');
   const verdict = match.result === 'win' ? '승리' : match.result === 'lose' ? '패배' : '무승부';
-  const faces = side => match.used[side].map(d => `<img src="${d.img}" alt="${d.name}" title="${d.name}">`).join('');
+  // 선수마다 얼굴·이름·골 수, 교체했으면 화살표로 잇는다 (2026-10-31 형준: 대칭 + 선수별 골)
+  const tally = side => { const t = {}; for (const g of match.goals) if (g.side === side) t[g.number] = (t[g.number] || 0) + 1; return t; };
+  const lineup = side => { const t = tally(side); return match.used[side].map(d => `<div class="chip"><img src="${d.img}" alt=""><b>${d.name}</b><span class="g${t[d.number] ? '' : ' none'}"><em>${t[d.number] || 0}</em>골</span></div>`).join('<i class="sub-arrow" aria-hidden="true">→</i>'); };
   sheet.innerHTML = `
     <span class="emblem" aria-hidden="true"></span>
     <p class="verdict ${match.result}">${verdict}</p>
     <p class="score"><span>${match.scores.L}</span><em>-</em><span>${match.scores.R}</span></p>
-    <div class="lineup"><div class="side">${faces('L')}<b>${match.used.L.map(d => d.name).join(' → ')}</b></div><div class="side away">${faces('R')}<b>${match.used.R.map(d => d.name).join(' → ')}</b></div></div>
+    <div class="lineup"><div class="side">${lineup('L')}</div><div class="side away">${lineup('R')}</div></div></div>
     <div class="row">
       <button class="action" type="button" data-act="again">다시 하기</button>
       <button class="action ghost" type="button" data-act="change">선수 바꾸기</button>
@@ -198,12 +238,14 @@ export function showResult({ match, onAgain, onChange }) {
 // 전체 흐름
 export function runFlow({ startMatch, finishSubstitution, imgs }) {
   const saved = load() || {};
-  let selection = { number: byNumber(saved.number) ? saved.number : 10, difficulty: LEVELS.some(l => l.id === saved.difficulty) ? saved.difficulty : 'first', kit: kitById(saved.kit) ? saved.kit : 'home' };
+  const number = byNumber(saved.number) ? saved.number : 10;
+  let selection = { number, difficulty: LEVELS.some(l => l.id === saved.difficulty) ? saved.difficulty : 'first', kit: kitById(saved.kit) ? saved.kit : 'home',
+    opp: byNumber(saved.opp) && saved.opp !== number ? saved.opp : null };   // opp: 고른 상대 등번호, null 이면 랜덤
 
   const randomOther = home => { const pool = PLAYERS.filter(p => p.number !== home.number); return pool[Math.floor(Math.random() * pool.length)]; };
 
-  function play(home, difficulty, kit) {
-    const away = randomOther(home);
+  function play(home, difficulty, kit, opp) {
+    const away = byNumber(opp) && opp !== home.number ? byNumber(opp) : randomOther(home);
     showVs(home, away).then(() => {
       hideOverlay();
       startMatch(home, away, difficulty, {
@@ -213,14 +255,14 @@ export function runFlow({ startMatch, finishSubstitution, imgs }) {
           onPick: d => { hideOverlay(); finishSubstitution(d); },
           onCancel: () => { hideOverlay(); finishSubstitution(null); },
         }),
-        onOver: m => setTimeout(() => showResult({ match: m, onAgain: () => play(home, difficulty, kit), onChange: toSelect }), 1200),
+        onOver: m => setTimeout(() => showResult({ match: m, onAgain: () => play(home, difficulty, kit, opp), onChange: toSelect }), 1200),
       });
     });
   }
   function toSelect() {
-    showSelect({ imgs, initialNumber: selection.number, difficulty: selection.difficulty, kit: selection.kit, onStart: (def, diff, kit) => {
-      selection = { number: def.number, difficulty: diff, kit }; save(selection);
-      play(def, diff, kit);
+    showSelect({ imgs, initialNumber: selection.number, difficulty: selection.difficulty, kit: selection.kit, opponent: selection.opp, onStart: (def, diff, kit, opp) => {
+      selection = { number: def.number, difficulty: diff, kit, opp }; save(selection);
+      play(def, diff, kit, opp);
     } });
   }
   toSelect();

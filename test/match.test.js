@@ -187,3 +187,11 @@ test('stepMatch does nothing in the over phase', () => {
   assert.deepEqual(run(m, 1), []);
   assert.equal(m.world.ball.x, bx); assert.equal(m.clock, clock);
 });
+
+test('each goal is logged with the scoring side and the player on the pitch', () => {
+  const m = mk();
+  toPlay(m);
+  assert.deepEqual(m.goals, []);
+  shootRight(m); run(m, 0.5);
+  assert.deepEqual(m.goals, [{ side: 'L', number: 10 }]);
+});

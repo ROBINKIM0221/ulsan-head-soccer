@@ -124,6 +124,7 @@ async function boot() {
       onOver: m => showResult({ match: m, onAgain: () => location.reload(), onChange: () => location.reload() }),
     });
     if (dbg === 'result') { match.scores.L = 3; match.scores.R = 1; match.phase = 'over'; match.result = 'win'; game.loop.stop();
+      match.used.R.push(byNumber(96)); match.goals = [{ side: 'L', number: 10 }, { side: 'L', number: 10 }, { side: 'L', number: 10 }, { side: 'R', number: 96 }];   // 교체·골 수 표시 확인용
       showResult({ match, onAgain: () => location.reload(), onChange: () => location.reload() }); }
     if (dbg === 'sub') setTimeout(() => { requestSubstitute(match, 'L'); game.input.setEnabled(false);
       showSubSelect({ imgs: game.imgs, kits: match.kits.L, exclude: [10, 99], onPick: d => { hideOverlay(); finishSubstitution(d); }, onCancel: () => { hideOverlay(); finishSubstitution(null); } }); }, 1500);

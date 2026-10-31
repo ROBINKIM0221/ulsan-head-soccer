@@ -171,6 +171,19 @@ body {
 .shirt { width: 34px; height: 30px; background: linear-gradient(90deg, var(--t) 0 16%, var(--j) 16% 84%, var(--t) 84%); clip-path: polygon(28% 0, 72% 0, 100% 26%, 88% 44%, 80% 38%, 80% 100%, 20% 100%, 20% 38%, 12% 44%, 0 26%); }
 .kit span { font-size: 12px; font-weight: 600; color: var(--muted); }
 .kit[aria-pressed="true"] span { color: var(--white); font-weight: 800; }
+
+/* 상대 고르기: 난이도 줄 오른쪽 작은 버튼 + 얼굴 목록 모달 */
+.pick-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.pick-head .pick-label { margin: 0; }
+.opp { all: unset; display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 4px; border-radius: 999px; border: 1.5px solid rgba(255,255,255,.4); font: 600 12px var(--ui); color: var(--muted); cursor: pointer; touch-action: manipulation; }
+.opp b { color: var(--white); font-weight: 800; }
+.opp:focus-visible { outline: 3px solid var(--white); outline-offset: 2px; }
+.opp-face { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--gold); color: var(--navy); font: 800 13px var(--ui); object-fit: cover; }
+.modal { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0,20,60,.55); }
+.modal-panel { background: var(--navy); border: 1px solid rgba(255,255,255,.2); border-radius: 16px; padding: 12px 16px 16px; box-shadow: 0 10px 40px rgba(0,0,0,.4); }
+.modal-panel .pick-label { margin-bottom: 8px; }
+.thumb.random { display: grid; place-items: center; background: var(--gold); color: var(--navy); font: 800 20px var(--ui); }
+.thumb.random[aria-selected="true"] { border-color: var(--white); }
 .sub-note { margin: 0; font-size: 13px; color: var(--muted); }
 
 /* ---------- VS ---------- */
@@ -189,12 +202,18 @@ body {
 .verdict.lose, .verdict.draw { color: var(--white); }
 .score { margin: 0; display: flex; align-items: baseline; gap: 14px; font: 600 72px var(--num); line-height: .8; }
 .score em { font-style: normal; color: var(--muted); font-size: 48px; }
-.lineup { display: flex; gap: 40px; align-items: flex-start; }
-.lineup .side { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.lineup .side img { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 3px solid var(--white); margin: 0 -8px; }
-.lineup .side.away img { border-color: var(--muted); }
-.lineup .side b { font-size: 14px; font-weight: 700; color: var(--muted); }
-.lineup .side:not(.away) b { color: var(--white); }
+/* 결과 줄: 양쪽을 같은 폭 칸에 가운데 맞춰 대칭으로, 선수마다 얼굴·이름·골 수 (2026-10-31 형준) */
+.lineup { display: flex; justify-content: center; gap: 28px; }
+.lineup .side { width: 200px; display: flex; justify-content: center; align-items: flex-start; gap: 4px; }   /* 양쪽 같은 고정 폭: 한 명이든 두 명이든 가운데 */
+.chip { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 76px; }
+.chip img { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 3px solid var(--white); }
+.side.away .chip img { border-color: var(--muted); }
+.chip b { font-size: 13px; font-weight: 700; color: var(--white); white-space: nowrap; }
+.side.away .chip b { color: var(--muted); }
+.chip .g { font-size: 12px; font-weight: 700; color: var(--gold); line-height: 1; }
+.chip .g em { font: 600 20px/1 var(--num); font-style: normal; margin-right: 1px; }
+.chip .g.none { color: rgba(185,203,232,.6); }
+.sub-arrow { font-style: normal; color: var(--muted); font-size: 18px; margin-top: 18px; }
 
 /* 낮은 가로 화면(폰): 여백을 줄인다. 회전 상태에서는 뷰포트 높이가 아니라 무대 높이가 기준이라 JS 가 data-compact 를 단다 */
 #stage[data-compact="1"] .sheet.select { gap: 16px; }
@@ -234,6 +253,10 @@ body {
 #stage[data-tiny="1"] .brand .emblem { width: 26px; height: 34px; }
 #stage[data-tiny="1"] .pick { max-width: 100%; }
 #stage[data-tiny="1"] .pick-label { margin-bottom: 0; font-size: 12px; }
+#stage[data-tiny="1"] .pick-head { margin-bottom: 0; }
+#stage[data-tiny="1"] .opp { font-size: 11px; padding: 2px 8px 2px 3px; gap: 4px; }
+#stage[data-tiny="1"] .opp-face { width: 18px; height: 18px; font-size: 11px; }
+#stage[data-tiny="1"] .modal-panel { padding: 8px 12px 12px; }
 #stage[data-tiny="1"] .level { padding: 3px 0 2px; gap: 3px; }
 #stage[data-tiny="1"] .level span { font-size: 10px; letter-spacing: -.02em; }
 #stage[data-tiny="1"] .action { padding: 7px 14px; font-size: 13px; min-width: 0; width: 100%; }
@@ -247,9 +270,14 @@ body {
 #stage[data-tiny="1"] .verdict { font-size: 26px; }
 #stage[data-tiny="1"] .score { font-size: 44px; }
 #stage[data-tiny="1"] .score em { font-size: 30px; }
-#stage[data-tiny="1"] .lineup { gap: 24px; }
-#stage[data-tiny="1"] .lineup .side img { width: 40px; height: 40px; border-width: 2px; }
-#stage[data-tiny="1"] .lineup .side b { font-size: 12px; }
+#stage[data-tiny="1"] .lineup { gap: 16px; }
+#stage[data-tiny="1"] .lineup .side { width: 150px; }
+#stage[data-tiny="1"] .chip { width: 60px; }
+#stage[data-tiny="1"] .chip img { width: 40px; height: 40px; border-width: 2px; }
+#stage[data-tiny="1"] .chip b { font-size: 11px; }
+#stage[data-tiny="1"] .chip .g { font-size: 11px; }
+#stage[data-tiny="1"] .chip .g em { font-size: 16px; }
+#stage[data-tiny="1"] .sub-arrow { margin-top: 12px; font-size: 14px; }
 #stage[data-tiny="1"] .sheet.result .row { gap: 6px; flex-wrap: nowrap; }
 #stage[data-tiny="1"] .sheet.result .action { width: auto; min-width: 0; padding: 7px 12px; font-size: 13px; }
 #stage[data-tiny="1"] .face img { width: 70px; height: 70px; }

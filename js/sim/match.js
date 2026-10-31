@@ -12,6 +12,7 @@ export function createMatch({ home, away, difficulty = 'first', rng = Math.rando
     scores: { L: 0, R: 0 }, subUsed: { L: false, R: false }, used: { L: [home], R: [away] },
     difficulty, rng, ai: createAiState(difficulty, rng), result: null, pendingSub: null,
     kits: sideKits(kit),   // 양쪽 유니폼 { L: { field, gk }, R: { field, gk } }
+    goals: [],             // 골마다 { side, number }: 결과 화면의 선수별 골 수
   };
 }
 
@@ -66,6 +67,7 @@ export function stepMatch(match, inputsL, dt) {
       p.gauge = Math.min(GAUGE.MAX, p.gauge + (e.perfect ? GAUGE.PERFECT : GAUGE.TOUCH) * (p.def.special.gaugeRate ?? 1));
     } else if (e.type === 'goal') {
       match.scores[e.scorer]++;
+      match.goals.push({ side: e.scorer, number: match.used[e.scorer].at(-1).number });
       const c = world.players[other(e.scorer)];
       c.gauge = Math.min(GAUGE.MAX, c.gauge + GAUGE.CONCEDE * (c.def.special.gaugeRate ?? 1));
       if (match.phase === 'golden') { finish(match, events); return events; }
