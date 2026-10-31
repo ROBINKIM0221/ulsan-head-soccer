@@ -64,21 +64,36 @@ function processBanner({ dataUrl, SIZE }) {
       for (let x = sx; x < sx + S; x++) { seed(x, sy); seed(x, sy + S - 1); }
       for (let y = sy; y < sy + S; y++) { seed(sx, y); seed(sx + S - 1, y); }
       while (q.length) { const k = q.pop(); const x = k % W, y = (k / W) | 0; seed(x - 1, y); seed(x + 1, y); seed(x, y - 1); seed(x, y + 1); }
-      return open(mark, 2);
+      return reclaim(mark);
     }
-    // 열림: 반지름 r 로 깎았다가 다시 불린다. 2r 보다 가는 배경 가지(귀 하이라이트로 새어 든 것)가 사라진다. 크롭 밖은 배경으로 친다.
-    function open(mask, r) {
-      const x0 = Math.max(0, sx), x1 = Math.min(W, sx + S), y0 = Math.max(0, sy), y1 = Math.min(H, sy + S);
-      const er = new Uint8Array(W * H), out = new Uint8Array(W * H);
-      const get = (x, y) => (x < x0 || x >= x1 || y < y0 || y >= y1) ? 1 : mask[y * W + x];
-      for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
-        let all = 1; for (let dy = -r; dy <= r && all; dy++) for (let dx = -r; dx <= r; dx++) if (!get(x + dx, y + dy)) { all = 0; break; }
-        er[y * W + x] = all;
+    // 좁은 통로로 새어 든 배경 되찾기. 귀 옆 관자놀이의 하이라이트는 종이와 같은 무채색이라 색으로는 못 가르지만,
+    // 종이와는 귀 위의 좁은 틈(≤12px)으로만 이어진다. 반지름 6 으로 깎았다 불린 뒤 테두리와 이어진 배경만 남기고,
+    // 그렇게 끊긴 영역은 진짜 흰 종이(모든 채널 ≥226)일 때만 배경으로 되돌린다 (머리카락 사이 틈의 종이는 돌아오고, 피부 하이라이트는 남는다).
+    const bounds = () => [Math.max(0, sx), Math.min(W, sx + S), Math.max(0, sy), Math.min(H, sy + S)];   // 크롭은 두 번 바뀌므로 부를 때마다 읽는다
+    function morph(mask, r, erodeMode) {
+      const [bx0, bx1, by0, by1] = bounds();
+      const out = new Uint8Array(W * H);
+      const get = (x, y) => (x < bx0 || x >= bx1 || y < by0 || y >= by1) ? 1 : mask[y * W + x];
+      for (let y = by0; y < by1; y++) for (let x = bx0; x < bx1; x++) {
+        let v = erodeMode ? 1 : 0;
+        for (let dy = -r; dy <= r && v === (erodeMode ? 1 : 0); dy++) for (let dx = -r; dx <= r; dx++) { const g = get(x + dx, y + dy); if (erodeMode ? !g : g) { v = erodeMode ? 0 : 1; break; } }
+        out[y * W + x] = v;
       }
-      const getE = (x, y) => (x < x0 || x >= x1 || y < y0 || y >= y1) ? 1 : er[y * W + x];
-      for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
-        let any = 0; for (let dy = -r; dy <= r && !any; dy++) for (let dx = -r; dx <= r; dx++) if (getE(x + dx, y + dy)) { any = 1; break; }
-        out[y * W + x] = any;
+      return out;
+    }
+    function reclaim(mask) {
+      const opened = morph(morph(mask, 6, true), 6, false);
+      const conn = new Uint8Array(W * H); const q = [];
+      const seed = (x, y) => { if (!inside(x, y)) return; const k = y * W + x; if (conn[k] || !opened[k] || !mask[k]) return; conn[k] = 1; q.push(k); };
+      for (let x = sx; x < sx + S; x++) { seed(x, sy); seed(x, sy + S - 1); }
+      for (let y = sy; y < sy + S; y++) { seed(sx, y); seed(sx + S - 1, y); }
+      while (q.length) { const k = q.pop(); const x = k % W, y = (k / W) | 0; seed(x - 1, y); seed(x + 1, y); seed(x, y - 1); seed(x, y + 1); }
+      const [bx0, bx1, by0, by1] = bounds();
+      const out = new Uint8Array(W * H);
+      for (let y = by0; y < by1; y++) for (let x = bx0; x < bx1; x++) {
+        const k = y * W + x; if (!mask[k]) continue;
+        const i = k * 4, mn = Math.min(px[i], px[i + 1], px[i + 2]);
+        out[k] = conn[k] || mn >= 226 ? 1 : 0;
       }
       return out;
     }

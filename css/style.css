@@ -63,12 +63,14 @@ body {
 .sub {
   all: unset;
   position: absolute; top: 10px; left: calc(50% + 116px);
-  padding: 8px 14px; border-radius: 999px;
-  background: rgba(0,43,107,.75); border: 1.5px solid rgba(255,255,255,.5);
-  color: var(--white); font: 700 14px var(--ui);
+  padding: 10px 18px; border-radius: 999px;
+  background: var(--gold); border: 2px solid var(--white);
+  color: var(--navy); font: 800 16px var(--ui); letter-spacing: -.01em;
+  box-shadow: 0 2px 8px rgba(0,0,0,.25);
   touch-action: manipulation; cursor: pointer;
 }
-.sub:disabled { opacity: .35; cursor: default; }
+.sub::before { content: '⇄ '; font-weight: 900; }
+.sub:disabled { opacity: .35; cursor: default; box-shadow: none; }
 .sub:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 
 /* 키보드를 쓰기 시작하면 터치 버튼은 숨기고 캔버스가 넓어진다 */
