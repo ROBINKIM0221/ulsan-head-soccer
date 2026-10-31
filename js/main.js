@@ -33,9 +33,9 @@ function layout() {
 
 const game = { match: null, fx: null, loop: null, input: null, imgs: null, paused: false, countdown: null, countdownTimer: null };
 
-export function startMatch(home, away, difficulty, { onSubRequest, onOver, debugSpecial } = {}) {
+export function startMatch(home, away, difficulty, { kit, onSubRequest, onOver, debugSpecial } = {}) {
   if (game.loop) game.loop.stop();
-  const match = createMatch({ home, away, difficulty, rng: mulberry32((Date.now() >>> 0) || 1) });
+  const match = createMatch({ home, away, difficulty, kit, rng: mulberry32((Date.now() >>> 0) || 1) });
   if (debugSpecial) match.world.players.L.gauge = 100;
   const fx = createFx();
   fx.reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -115,18 +115,18 @@ async function boot() {
   const { runFlow, showResult, showSubSelect, hideOverlay } = await import('./ui/screens.js');
   const dbg = params.get('debug');
   if (dbg === '1' || dbg === 'result' || dbg === 'sub') {
-    // 선택 화면 없이 바로: 이동경 vs 야고 (1군). ?special=1 이면 L 게이지 100 으로 시작
+    // 선택 화면 없이 바로: 이동경 vs 야고 (1군). ?special=1 이면 L 게이지 100 으로 시작, &kit=third 로 유니폼
     const home = byNumber(Number(params.get('home') || 10)), away = byNumber(Number(params.get('away') || 99));
     const match = startMatch(home, away, params.get('difficulty') || 'first', {
-      debugSpecial: params.get('special') === '1',
-      onSubRequest: m => showSubSelect({ imgs: game.imgs, exclude: [m.used.L.at(-1).number, m.used.R.at(-1).number],
+      kit: params.get('kit') || 'home', debugSpecial: params.get('special') === '1',
+      onSubRequest: m => showSubSelect({ imgs: game.imgs, kits: m.kits.L, exclude: [m.used.L.at(-1).number, m.used.R.at(-1).number],
         onPick: d => { hideOverlay(); finishSubstitution(d); }, onCancel: () => { hideOverlay(); finishSubstitution(null); } }),
       onOver: m => showResult({ match: m, onAgain: () => location.reload(), onChange: () => location.reload() }),
     });
     if (dbg === 'result') { match.scores.L = 3; match.scores.R = 1; match.phase = 'over'; match.result = 'win'; game.loop.stop();
       showResult({ match, onAgain: () => location.reload(), onChange: () => location.reload() }); }
     if (dbg === 'sub') setTimeout(() => { requestSubstitute(match, 'L'); game.input.setEnabled(false);
-      showSubSelect({ imgs: game.imgs, exclude: [10, 99], onPick: d => { hideOverlay(); finishSubstitution(d); }, onCancel: () => { hideOverlay(); finishSubstitution(null); } }); }, 1500);
+      showSubSelect({ imgs: game.imgs, kits: match.kits.L, exclude: [10, 99], onPick: d => { hideOverlay(); finishSubstitution(d); }, onCancel: () => { hideOverlay(); finishSubstitution(null); } }); }, 1500);
     return;
   }
   runFlow({ startMatch, finishSubstitution, imgs: game.imgs, stage });

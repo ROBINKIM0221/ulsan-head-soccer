@@ -117,7 +117,7 @@ body {
 
 /* ---------- 선수 선택 ---------- */
 .sheet.select { flex-direction: row; align-items: center; justify-content: center; gap: 28px; text-align: left; }
-.sheet.select .col.left { flex: none; }
+.sheet.select .col.left { flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .sheet.select .col.right { display: flex; flex-direction: column; gap: 10px; min-width: 0; flex: 1 1 auto; max-width: 520px; }
 .carousel { display: flex; align-items: center; gap: 6px; }
 .arrow {
@@ -161,6 +161,16 @@ body {
 .level:focus-visible .dot { outline: 3px solid var(--white); outline-offset: 4px; }
 .level span { font-size: 12px; font-weight: 600; color: var(--muted); }
 .level[aria-pressed="true"] span { color: var(--white); font-weight: 800; }
+
+/* 유니폼 고르기: 카드 밑에 작은 셔츠들 (셔츠 색 --j, 소매 트림 --t) */
+.kits-pick { width: auto; max-width: none; text-align: center; }
+.kits { display: flex; gap: 4px; justify-content: center; }
+.kit { all: unset; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px 8px 4px; border-radius: 10px; border: 2px solid transparent; cursor: pointer; touch-action: manipulation; }
+.kit[aria-pressed="true"] { border-color: var(--gold); background: rgba(255,255,255,.08); }
+.kit:focus-visible { outline: 3px solid var(--white); outline-offset: 2px; }
+.shirt { width: 34px; height: 30px; background: linear-gradient(90deg, var(--t) 0 16%, var(--j) 16% 84%, var(--t) 84%); clip-path: polygon(28% 0, 72% 0, 100% 26%, 88% 44%, 80% 38%, 80% 100%, 20% 100%, 20% 38%, 12% 44%, 0 26%); }
+.kit span { font-size: 12px; font-weight: 600; color: var(--muted); }
+.kit[aria-pressed="true"] span { color: var(--white); font-weight: 800; }
 .sub-note { margin: 0; font-size: 13px; color: var(--muted); }
 
 /* ---------- VS ---------- */
@@ -197,6 +207,9 @@ body {
 #stage[data-compact="1"] .thumbs { grid-template-columns: repeat(6, 36px); gap: 6px; }
 #stage[data-compact="1"] .thumb { width: 36px; height: 36px; }
 #stage[data-compact="1"] .action { padding: 10px 22px; font-size: 15px; min-width: 130px; }
+#stage[data-compact="1"] .shirt { width: 28px; height: 24px; }
+#stage[data-compact="1"] .kit { padding: 4px 7px 3px; }
+#stage[data-compact="1"] .kit span { font-size: 11px; }
 #stage[data-compact="1"] .face img { width: 90px; height: 90px; }
 #stage[data-compact="1"] .vs-mark { font-size: 72px; }
 #stage[data-compact="1"] .verdict { font-size: 34px; }
@@ -224,6 +237,10 @@ body {
 #stage[data-tiny="1"] .level { padding: 3px 0 2px; gap: 3px; }
 #stage[data-tiny="1"] .level span { font-size: 10px; letter-spacing: -.02em; }
 #stage[data-tiny="1"] .action { padding: 7px 14px; font-size: 13px; min-width: 0; width: 100%; }
+#stage[data-tiny="1"] .shirt { width: 22px; height: 19px; }
+#stage[data-tiny="1"] .kit { padding: 3px 5px 2px; gap: 2px; border-radius: 7px; }
+#stage[data-tiny="1"] .kit span { font-size: 10px; }
+#stage[data-tiny="1"] .kits-pick .pick-label { margin-bottom: 0; }
 #stage[data-tiny="1"] .sub-note { font-size: 11px; }
 #stage[data-tiny="1"] .sheet.result { gap: 6px; }
 #stage[data-tiny="1"] .sheet.result .emblem { display: none; }

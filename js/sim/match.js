@@ -3,13 +3,15 @@ import { MATCH, GAUGE, DIFFICULTY, NO_INPUT } from './constants.js';
 import { createWorld, createPlayer, stepPhysics, resetKickoff } from './physics.js';
 import { createAiState, decide, shouldSubstitute, pickSubstitute } from './ai.js';
 import { activateSpecial, updateSpecials, specialHooks, endSpecial } from './specials.js';
+import { sideKits } from '../data/kits.js';
 
-export function createMatch({ home, away, difficulty = 'first', rng = Math.random }) {
+export function createMatch({ home, away, difficulty = 'first', rng = Math.random, kit = 'home' }) {
   return {
     world: createWorld(home, away),
     clock: MATCH.LEN, phase: 'kickoff', phaseT: MATCH.GOAL_PAUSE,
     scores: { L: 0, R: 0 }, subUsed: { L: false, R: false }, used: { L: [home], R: [away] },
     difficulty, rng, ai: createAiState(difficulty, rng), result: null, pendingSub: null,
+    kits: sideKits(kit),   // 양쪽 유니폼 { L: { field, gk }, R: { field, gk } }
   };
 }
 

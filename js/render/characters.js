@@ -2,6 +2,7 @@
 // art = { photo: Image, cut: Image|null }. 경기에서는 배경을 뺀 컷아웃(cut), 선택 카드는 동그란 사진(circle 옵션).
 import { PHYS } from '../sim/constants.js';
 import { headCenter, bodyRect } from '../sim/physics.js';
+import { KITS } from '../data/kits.js';
 
 const BLUE = '#004098', NAVY = '#002B6B', GOLD = '#FFC72C', WHITE = '#FFFFFF', SKIN = '#F2C9A4', DARK = '#1A1A1A';
 const CUT_SCALE = 1.5;      // 컷아웃 그림 한 변 = 머리 지름 × 1.5 (tools/faces.cjs: 머리가 그림 높이의 70%)
@@ -16,9 +17,9 @@ function roundRect(ctx, x, y, w, h, r) {
 }
 
 // 콩알 몸: 큰 머리 아래 작은 유니폼, 짧은 팔다리, 큰 운동화, 스티커 같은 진한 테두리. 걸을 때 다리가 번갈아 움직인다.
-function drawBody(ctx, b, rect, away, t = 0) {
+function drawBody(ctx, b, rect, kit, t = 0) {
   const s = b.scale, f = b.facing, cx = b.x, bottom = rect.y + rect.h;
-  const jersey = away ? WHITE : BLUE, trim = away ? BLUE : GOLD, numColor = away ? BLUE : WHITE, shorts = away ? '#D7E1F2' : NAVY;
+  const { jersey, trim, number: numColor, shorts } = kit;
   const line = '#0F2452', lw = 2.5 * s;
   const torsoW = 46 * s, torsoH = 34 * s, torsoTop = rect.y - 4 * s;           // 턱 밑에 살짝 끼운다
   const shortsH = 9 * s, legLen = 7 * s, shoeW = 30 * s, shoeH = 14 * s;
@@ -37,7 +38,7 @@ function drawBody(ctx, b, rect, away, t = 0) {
   // 운동화: 흰 바닥에 파란 몸통, 앞코가 발 앞쪽으로
   const shoe = (x, y, lift) => {
     ctx.save(); ctx.translate(x + f * 5 * s, y + shoeH / 2); ctx.rotate(-f * lift * 0.5);
-    ctx.fillStyle = away ? NAVY : BLUE; ctx.beginPath(); ctx.ellipse(0, 0, shoeW / 2, shoeH / 2, 0, 0, Math.PI * 2); ctx.fill(); outline();
+    ctx.fillStyle = kit.shoe; ctx.beginPath(); ctx.ellipse(0, 0, shoeW / 2, shoeH / 2, 0, 0, Math.PI * 2); ctx.fill(); outline();
     ctx.fillStyle = WHITE; ctx.beginPath(); ctx.ellipse(0, shoeH * 0.28, shoeW / 2 - 1.5 * s, shoeH * 0.24, 0, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = WHITE; ctx.beginPath(); ctx.arc(f * shoeW * 0.18, -shoeH * 0.12, 2.2 * s, 0, Math.PI * 2); ctx.fill();   // 끈 매듭
     ctx.restore();
@@ -118,7 +119,7 @@ function drawHead(ctx, b, art, circle) {
   }
 }
 
-export function drawPlayer(ctx, b, art, { away = false, circle = false, t = 0 } = {}) {
+export function drawPlayer(ctx, b, art, { kit = KITS[0], circle = false, t = 0 } = {}) {
   const h = headCenter(b), rect = bodyRect(b);
   const isTrain = b.active && b.active.id === 'train';
   const isCatch = b.active && b.active.id === 'catch';
@@ -130,7 +131,7 @@ export function drawPlayer(ctx, b, art, { away = false, circle = false, t = 0 } 
   const useCut = !circle && art && art.cut;
   if (useCut) drawHead(ctx, b, art, false);          // 컷아웃은 몸이 어깨를 덮도록 먼저
   if (isTrain) drawTrain(ctx, b, rect);
-  else drawBody(ctx, b, rect, away, t);
+  else drawBody(ctx, b, rect, kit, t);
   if (!useCut) drawHead(ctx, b, art, true);
   if (isCatch) {   // 장갑 두 개
     ctx.fillStyle = '#F2F2F2'; ctx.strokeStyle = '#333'; ctx.lineWidth = 2;

@@ -3,6 +3,7 @@ import { FIELD, PHYS } from '../sim/constants.js';
 import { headCenter, footPoint } from '../sim/physics.js';
 import { drawStadium, drawGoals, drawPosts } from './stadium.js';
 import { drawPlayer, drawBall } from './characters.js';
+import { wornKit } from '../data/kits.js';
 import { byNumber } from '../data/players.js';
 
 const GOLD = '#FFC72C', WHITE = '#FFFFFF', NAVY = '#002B6B';
@@ -176,12 +177,12 @@ export function drawFrame(ctx, match, imgs, fx, t) {
   // 스프린트 잔상
   for (const g of fx.ghosts) {
     ctx.save(); ctx.globalAlpha = 0.25 * (1 - g.age / g.life);
-    drawPlayer(ctx, { ...w.players[g.side], x: g.x, y: g.y, active: null, stun: 0, pinned: false, kickAnim: 0 }, imgs[g.def.number], { away: g.side === 'R' });
+    drawPlayer(ctx, { ...w.players[g.side], x: g.x, y: g.y, active: null, stun: 0, pinned: false, kickAnim: 0 }, imgs[g.def.number], { kit: wornKit(match.kits[g.side], g.def) });
     ctx.restore();
   }
   // 선수 (공에 가까운 쪽을 위에)
   const order = Math.abs(b.x - w.players.L.x) < Math.abs(b.x - w.players.R.x) ? ['R', 'L'] : ['L', 'R'];
-  for (const side of order) { const p = w.players[side]; drawPlayer(ctx, p, imgs[p.def.number], { away: side === 'R', t }); }
+  for (const side of order) { const p = w.players[side]; drawPlayer(ctx, p, imgs[p.def.number], { kit: wornKit(match.kits[side], p.def), t }); }
   // 레이저 빛줄기
   if (b.flight === 'laser') {
     const sp = Math.hypot(b.vx, b.vy) || 1;

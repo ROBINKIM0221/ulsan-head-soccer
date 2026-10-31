@@ -23,7 +23,7 @@ export const DIFFICULTY = {
   reserve: { name: '2군',    reaction: 0.40, error: 140, speed: 0.78 },
   first:   { name: '1군',    reaction: 0.28, error: 90,  speed: 0.90 },
   ace:     { name: '에이스', reaction: 0.12, error: 30,  speed: 1.05 },
-  legend:  { name: '레전드', reaction: 0.08, error: 15,  speed: 1.10 },
+  legend:  { name: '레전드', reaction: 0.05, error: 8,   speed: 1.18 },   // 2026-10-31 형준: 레전드는 조금 더 어렵게
 };
 export const DIFFICULTY_ORDER = ['youth', 'reserve', 'first', 'ace', 'legend'];
 
