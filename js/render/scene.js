@@ -5,13 +5,14 @@ import { drawStadium, drawGoals, drawPosts } from './stadium.js';
 import { drawPlayer, drawBall } from './characters.js';
 import { wornKit } from '../data/kits.js';
 import { byNumber } from '../data/players.js';
+import { startParty, updateParty, partyView, drawParty } from './party.js';
 
 const GOLD = '#FFC72C', WHITE = '#FFFFFF', NAVY = '#002B6B';
 const UI = '"Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';
 const NUM = 'Teko, "Arial Narrow", sans-serif';
 
 export function createFx() {
-  return { particles: [], pops: [], shake: 0, ballRot: 0, lastBallX: null, subBoard: null, ghosts: [], trail: [] };
+  return { particles: [], pops: [], shake: 0, ballRot: 0, lastBallX: null, subBoard: null, ghosts: [], trail: [], party: null };
 }
 
 function pop(fx, text, x, y, { size = 48, color = GOLD, life = 0.8, rise = 40 } = {}) {
@@ -42,6 +43,7 @@ export function pushEvents(fx, events, match) {
       case 'phase':
         if (e.phase === 'play' && match.clock >= 59.9) pop(fx, 'KICK OFF', FIELD.W / 2, 300, { size: 72, color: WHITE, life: 0.9, rise: 20 });
         if (e.phase === 'golden') pop(fx, '골든골!', FIELD.W / 2, 300, { size: 64, color: GOLD, life: 1.2, rise: 20 });
+        if (e.phase === 'over' && match.result === 'win') fx.party = startParty(match, fx.reduceMotion);   // 승리 세레모니
         break;
     }
   }
@@ -56,6 +58,7 @@ export function updateFx(fx, match, dt) {
   for (const p of fx.pops) p.age += dt;
   fx.pops = fx.pops.filter(p => p.age < p.life);
   if (fx.subBoard) { fx.subBoard.t -= dt; if (fx.subBoard.t <= 0) fx.subBoard = null; }
+  if (fx.party) updateParty(fx.party, match, dt);
   for (const side of ['L', 'R']) {
     const p = w.players[side];
     if (!p.active) continue;
@@ -182,7 +185,7 @@ export function drawFrame(ctx, match, imgs, fx, t) {
   }
   // 선수 (공에 가까운 쪽을 위에)
   const order = Math.abs(b.x - w.players.L.x) < Math.abs(b.x - w.players.R.x) ? ['R', 'L'] : ['L', 'R'];
-  for (const side of order) { const p = w.players[side]; drawPlayer(ctx, p, imgs[p.def.number], { kit: wornKit(match.kits[side], p.def), t }); }
+  for (const side of order) { const p0 = w.players[side], p = fx.party ? partyView(fx.party, side, p0) : p0; drawPlayer(ctx, p, imgs[p.def.number], { kit: wornKit(match.kits[side], p.def), t }); }
   // 레이저 빛줄기
   if (b.flight === 'laser') {
     const sp = Math.hypot(b.vx, b.vy) || 1;
@@ -202,6 +205,7 @@ export function drawFrame(ctx, match, imgs, fx, t) {
     ctx.save(); ctx.globalAlpha = 0.8 * (1 - q.age / q.life); ctx.fillStyle = q.color || '#FFFFFF';
     ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   }
+  if (fx.party) drawParty(ctx, fx.party, match, imgs, t);
   drawPosts(ctx);
   drawHud(ctx, match, t);
   if (fx.subBoard) drawSubBoard(ctx, fx.subBoard);

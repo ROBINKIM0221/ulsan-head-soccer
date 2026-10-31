@@ -255,7 +255,7 @@ export function runFlow({ startMatch, finishSubstitution, imgs }) {
           onPick: d => { hideOverlay(); finishSubstitution(d); },
           onCancel: () => { hideOverlay(); finishSubstitution(null); },
         }),
-        onOver: m => setTimeout(() => showResult({ match: m, onAgain: () => play(home, difficulty, kit, opp), onChange: toSelect }), 1200),
+        onOver: (m, wait) => setTimeout(() => showResult({ match: m, onAgain: () => play(home, difficulty, kit, opp), onChange: toSelect }), wait),
       });
     });
   }

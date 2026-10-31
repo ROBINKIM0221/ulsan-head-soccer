@@ -6,6 +6,7 @@ import { createLoop } from './loop.js';
 import { createFx, pushEvents, updateFx, drawFrame, drawCountdown } from './render/scene.js';
 import { createInput } from './ui/input.js';
 import { fitStage } from './ui/orientation.js';
+import { PARTY_LEN } from './render/party.js';
 
 const stage = document.getElementById('stage');
 const canvas = document.getElementById('game');
@@ -53,8 +54,9 @@ export function startMatch(home, away, difficulty, { kit, onSubRequest, onOver, 
       if (e.type === 'phase' && e.phase === 'sub') { game.input.setEnabled(false); game.loop.stop(); onSubRequest?.(match); }   // 선택하는 동안 루프도 쉰다
       if (e.type === 'phase' && e.phase === 'over' && !overNotified) {
         overNotified = true; game.input.setEnabled(false);
-        setTimeout(() => { if (game.match === match) game.loop.stop(); }, 1300);   // GOAL 연출이 끝나면 멈춘다 (결과 화면 뒤에서 돌지 않게)
-        onOver?.(match);
+        const wait = match.result === 'win' ? PARTY_LEN * 1000 : 1300;   // 이기면 세레모니가 끝날 때까지, 아니면 GOAL 연출까지만 돌린다
+        setTimeout(() => { if (game.match === match) game.loop.stop(); }, wait);
+        onOver?.(match, wait - 100);
       }
     }
     subBtn.disabled = match.subUsed.L || !(match.phase === 'play' || match.phase === 'golden');   // 킥오프·골 연출 중엔 눌러도 소용없으니 꺼 둔다
@@ -121,7 +123,7 @@ async function boot() {
       kit: params.get('kit') || 'home', debugSpecial: params.get('special') === '1',
       onSubRequest: m => showSubSelect({ imgs: game.imgs, kits: m.kits.L, exclude: [m.used.L.at(-1).number, m.used.R.at(-1).number],
         onPick: d => { hideOverlay(); finishSubstitution(d); }, onCancel: () => { hideOverlay(); finishSubstitution(null); } }),
-      onOver: m => showResult({ match: m, onAgain: () => location.reload(), onChange: () => location.reload() }),
+      onOver: (m, wait) => setTimeout(() => showResult({ match: m, onAgain: () => location.reload(), onChange: () => location.reload() }), wait),
     });
     if (dbg === 'result') { match.scores.L = 3; match.scores.R = 1; match.phase = 'over'; match.result = 'win'; game.loop.stop();
       match.used.R.push(byNumber(96)); match.goals = [{ side: 'L', number: 10 }, { side: 'L', number: 10 }, { side: 'L', number: 10 }, { side: 'R', number: 96 }];   // 교체·골 수 표시 확인용
