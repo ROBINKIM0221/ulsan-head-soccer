@@ -205,6 +205,21 @@ export function showSubSelect({ imgs, exclude, kits, onPick, onCancel }) {
   ok.focus({ preventScroll: true });
 }
 
+// 일시정지 메뉴: 경기 중 메뉴 버튼(또는 Esc). 계속하기는 3·2·1 뒤 재개, 메인으로는 선수 선택 화면 (2026-10-31 형준)
+export function showPause({ onResume, onQuit }) {
+  const sheet = el('div', 'sheet pause');
+  sheet.innerHTML = `<h1>일시정지</h1>
+    <div class="row">
+      <button class="action" type="button" data-act="resume">계속하기</button>
+      <button class="action ghost" type="button" data-act="quit">메인으로</button>
+    </div>`;
+  sheet.querySelector('[data-act="resume"]').addEventListener('click', onResume);
+  sheet.querySelector('[data-act="quit"]').addEventListener('click', onQuit);
+  sheet.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); onResume(); } });
+  show(sheet);
+  sheet.querySelector('[data-act="resume"]').focus({ preventScroll: true });
+}
+
 export function showResult({ match, onAgain, onChange }) {
   const sheet = el('div', 'sheet result');
   const verdict = match.result === 'win' ? '승리' : match.result === 'lose' ? '패배' : '무승부';

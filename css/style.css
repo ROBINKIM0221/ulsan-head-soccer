@@ -72,6 +72,10 @@ body {
 .sub::before { content: '⇄ '; font-weight: 900; }
 .sub:disabled { opacity: .35; cursor: default; box-shadow: none; }
 .sub:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+/* 메뉴(일시정지) 버튼: 점수판 반대편, 교체와 구분되게 남색 */
+.sub.menu { left: auto; right: calc(50% + 116px); background: rgba(0,43,107,.7); border-color: rgba(255,255,255,.7); color: var(--white); }
+.sub.menu::before { content: 'II '; letter-spacing: .04em; }
+.sub.menu:focus-visible { outline-color: var(--white); }
 
 /* 키보드를 쓰기 시작하면 터치 버튼은 숨기고 캔버스가 넓어진다 */
 #stage.kb .pad { display: none; }
@@ -186,6 +190,10 @@ body {
 .thumb.random[aria-selected="true"] { border-color: var(--white); }
 .sub-note { margin: 0; font-size: 13px; color: var(--muted); }
 
+/* 일시정지 */
+.sheet.pause { gap: 18px; }
+.sheet.pause h1 { margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -.02em; }
+
 /* ---------- VS ---------- */
 .sheet.vs { flex-direction: row; justify-content: center; gap: 40px; }
 .face { display: flex; flex-direction: column; align-items: center; gap: 6px; }
@@ -265,6 +273,7 @@ body {
 #stage[data-tiny="1"] .kit span { font-size: 10px; }
 #stage[data-tiny="1"] .kits-pick .pick-label { margin-bottom: 0; }
 #stage[data-tiny="1"] .sub-note { font-size: 11px; }
+#stage[data-tiny="1"] .sheet.pause h1 { font-size: 22px; }
 #stage[data-tiny="1"] .sheet.result { gap: 6px; }
 #stage[data-tiny="1"] .sheet.result .emblem { display: none; }
 #stage[data-tiny="1"] .verdict { font-size: 26px; }

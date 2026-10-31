@@ -13,6 +13,7 @@ const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const hint = document.getElementById('hint');
 const subBtn = stage.querySelector('[data-btn="sub"]');
+const menuBtn = stage.querySelector('.sub.menu');
 const params = new URLSearchParams(location.search);
 
 const loadImage = src => new Promise(res => { const img = new Image(); img.onload = () => res(img); img.onerror = () => res(null); img.src = src; });
@@ -32,7 +33,7 @@ function layout() {
   return r;
 }
 
-const game = { match: null, fx: null, loop: null, input: null, imgs: null, paused: false, countdown: null, countdownTimer: null };
+const game = { match: null, fx: null, loop: null, input: null, imgs: null, paused: false, countdown: null, countdownTimer: null, ui: null, quit: null };
 
 export function startMatch(home, away, difficulty, { kit, onSubRequest, onOver, debugSpecial } = {}) {
   if (game.loop) game.loop.stop();
@@ -42,7 +43,7 @@ export function startMatch(home, away, difficulty, { kit, onSubRequest, onOver, 
   fx.reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   game.match = match; game.fx = fx;
   game.input.setEnabled(true);
-  subBtn.disabled = false;
+  subBtn.disabled = false; menuBtn.disabled = false;
 
   let overNotified = false;
   const step = dt => {
@@ -60,6 +61,7 @@ export function startMatch(home, away, difficulty, { kit, onSubRequest, onOver, 
       }
     }
     subBtn.disabled = match.subUsed.L || !(match.phase === 'play' || match.phase === 'golden');   // 킥오프·골 연출 중엔 눌러도 소용없으니 꺼 둔다
+    menuBtn.disabled = match.phase === 'over' || match.phase === 'sub';
   };
   const render = () => drawFrame(ctx, match, game.imgs, fx, performance.now() / 1000);
   game.loop = createLoop({ step, render });
@@ -92,6 +94,17 @@ function startCountdown() {
   tick();
 }
 
+// 일시정지 메뉴: 메뉴 버튼 또는 Esc. 계속하기는 3·2·1 뒤 재개, 메인으로는 선수 선택 화면 (2026-10-31 형준: "경기 중에 메인으로 돌아가는 키")
+function pauseMatch() {
+  const m = game.match;
+  if (!m || m.phase === 'over' || m.phase === 'sub' || !game.loop.running) return;
+  game.loop.stop(); game.input.setEnabled(false);
+  game.ui.showPause({
+    onResume: () => { game.ui.hideOverlay(); startCountdown(); },
+    onQuit: () => { game.ui.hideOverlay(); game.match = null; subBtn.disabled = menuBtn.disabled = true; game.quit(); },
+  });
+}
+
 // 탭이 숨겨지면 멈추고, 돌아오면 3초 세고 재개
 function pauseOnHide() {
   document.addEventListener('visibilitychange', () => {
@@ -114,11 +127,15 @@ async function boot() {
   game.imgs = await loadImages();
   pauseOnHide();
 
-  const { runFlow, showResult, showSubSelect, hideOverlay } = await import('./ui/screens.js');
+  const { runFlow, showResult, showSubSelect, hideOverlay, showPause } = await import('./ui/screens.js');
+  game.ui = { showPause, hideOverlay };
+  menuBtn.addEventListener('click', pauseMatch);
+  window.addEventListener('keydown', e => { if (e.key === 'Escape') pauseMatch(); });   // 시트가 떠 있을 때의 Esc 는 시트가 먼저 먹는다
   const dbg = params.get('debug');
   if (dbg === '1' || dbg === 'result' || dbg === 'sub') {
     // 선택 화면 없이 바로: 이동경 vs 야고 (1군). ?special=1 이면 L 게이지 100 으로 시작, &kit=third 로 유니폼
     const home = byNumber(Number(params.get('home') || 10)), away = byNumber(Number(params.get('away') || 99));
+    game.quit = () => location.reload();
     const match = startMatch(home, away, params.get('difficulty') || 'first', {
       kit: params.get('kit') || 'home', debugSpecial: params.get('special') === '1',
       onSubRequest: m => showSubSelect({ imgs: game.imgs, kits: m.kits.L, exclude: [m.used.L.at(-1).number, m.used.R.at(-1).number],
@@ -132,7 +149,8 @@ async function boot() {
       showSubSelect({ imgs: game.imgs, kits: match.kits.L, exclude: [10, 99], onPick: d => { hideOverlay(); finishSubstitution(d); }, onCancel: () => { hideOverlay(); finishSubstitution(null); } }); }, 1500);
     return;
   }
-  runFlow({ startMatch, finishSubstitution, imgs: game.imgs, stage });
+  const flow = runFlow({ startMatch, finishSubstitution, imgs: game.imgs, stage });
+  game.quit = flow.toSelect;
 }
 
 boot();
