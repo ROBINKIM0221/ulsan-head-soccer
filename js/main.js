@@ -7,6 +7,7 @@ import { createFx, pushEvents, updateFx, drawFrame, drawCountdown } from './rend
 import { createInput } from './ui/input.js';
 import { fitStage } from './ui/orientation.js';
 import { PARTY_LEN } from './render/party.js';
+import { unlockSound, soundLog, audioState } from './sound.js';
 
 const stage = document.getElementById('stage');
 const canvas = document.getElementById('game');
@@ -66,7 +67,7 @@ export function startMatch(home, away, difficulty, { kit, onSubRequest, onOver, 
   const render = () => drawFrame(ctx, match, game.imgs, fx, performance.now() / 1000);
   game.loop = createLoop({ step, render });
   game.loop.start();
-  window.__debug = { match, get world() { return match.world; }, fx, get loop() { return game.loop; }, get countdown() { return game.countdown; } };   // 콘솔·검사 스크립트용
+  window.__debug = { match, get world() { return match.world; }, fx, get loop() { return game.loop; }, get countdown() { return game.countdown; }, sounds: soundLog, get audio() { return audioState(); } };   // 콘솔·검사 스크립트용
   return match;
 }
 
@@ -124,6 +125,7 @@ async function boot() {
   window.addEventListener('resize', layout);
   window.addEventListener('orientationchange', () => setTimeout(layout, 50));
   game.input = createInput(stage);   // 키보드를 쓰기 시작하면 CSS(.kb)가 터치 버튼을 숨긴다
+  for (const ev of ['pointerdown', 'keydown']) window.addEventListener(ev, unlockSound, { capture: true });   // 첫 입력에서 오디오 잠금 해제
   game.imgs = await loadImages();
   pauseOnHide();
 

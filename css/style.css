@@ -181,6 +181,10 @@ body {
 .pick-head .pick-label { margin: 0; }
 .opp { all: unset; display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 4px; border-radius: 999px; border: 1.5px solid rgba(255,255,255,.4); font: 600 12px var(--ui); color: var(--muted); cursor: pointer; touch-action: manipulation; }
 .opp b { color: var(--white); font-weight: 800; }
+.pick-extras { display: flex; gap: 6px; align-items: center; }
+.opp.sound { padding: 3px 10px; }
+.opp.sound[aria-pressed="false"] { opacity: .6; text-decoration: line-through; }
+.sheet.pause .opp.sound { margin-top: 4px; }
 .opp:focus-visible { outline: 3px solid var(--white); outline-offset: 2px; }
 .opp-face { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--gold); color: var(--navy); font: 800 13px var(--ui); object-fit: cover; }
 .modal { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0,20,60,.55); }
@@ -263,6 +267,8 @@ body {
 #stage[data-tiny="1"] .pick-label { margin-bottom: 0; font-size: 12px; }
 #stage[data-tiny="1"] .pick-head { margin-bottom: 0; }
 #stage[data-tiny="1"] .opp { font-size: 11px; padding: 2px 8px 2px 3px; gap: 4px; }
+#stage[data-tiny="1"] .opp.sound { padding: 2px 7px; }
+#stage[data-tiny="1"] .pick-extras { gap: 4px; }
 #stage[data-tiny="1"] .opp-face { width: 18px; height: 18px; font-size: 11px; }
 #stage[data-tiny="1"] .modal-panel { padding: 8px 12px 12px; }
 #stage[data-tiny="1"] .level { padding: 3px 0 2px; gap: 3px; }

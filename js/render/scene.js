@@ -6,6 +6,7 @@ import { drawPlayer, drawBall } from './characters.js';
 import { wornKit } from '../data/kits.js';
 import { byNumber } from '../data/players.js';
 import { startParty, updateParty, partyView, drawParty } from './party.js';
+import { sfx, eventSound } from '../sound.js';
 
 const GOLD = '#FFC72C', WHITE = '#FFFFFF', NAVY = '#002B6B';
 const UI = '"Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';
@@ -23,6 +24,7 @@ function pop(fx, text, x, y, { size = 48, color = GOLD, life = 0.8, rise = 40 } 
 export function pushEvents(fx, events, match) {
   const w = match.world, b = w.ball;
   for (const e of events) {
+    const snd = eventSound(e, match); if (snd) sfx(snd);
     switch (e.type) {
       case 'touch': if (e.perfect) pop(fx, 'PERFECT', b.x, b.y - 60, { size: 40, color: WHITE, life: 0.7 }); break;
       case 'goal': {

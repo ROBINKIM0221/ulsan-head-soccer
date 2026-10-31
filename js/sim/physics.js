@@ -96,7 +96,7 @@ function touch(world, p, ball, perfect, part, events, hooks) {
   ball.lastTouch = { side: p.side, t: world.t };
   if (world.t - p.lastTouchT < PHYS.TOUCH_DEBOUNCE) return;
   p.lastTouchT = world.t;
-  events.push({ type: 'touch', side: p.side, perfect });
+  events.push({ type: 'touch', side: p.side, perfect, part });   // part: head | foot | body (효과음 구분)
   if (hooks.onBallTouch) hooks.onBallTouch(p.side, { perfect, part });
 }
 

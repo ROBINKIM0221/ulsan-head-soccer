@@ -1,6 +1,7 @@
 // 화면 흐름: 선수 선택(넘겨보기) → VS → 경기 → (교체 선택) → 결과. 전부 #overlay 안의 DOM.
 import { PLAYERS, byNumber } from '../data/players.js';
 import { KITS, GK_KITS, kitById, kitsFor, wornKit } from '../data/kits.js';
+import { sfx, soundEnabled, setSoundEnabled } from '../sound.js';
 import { createPlayer } from '../sim/physics.js';
 import { drawPlayer } from '../render/characters.js';
 import { shareText } from './text.js';
@@ -12,7 +13,8 @@ const STORE = 'uhd11.select';
 
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
 export function hideOverlay() { overlay.hidden = true; overlay.innerHTML = ''; }
-function show(node) { overlay.innerHTML = ''; overlay.appendChild(node); overlay.hidden = false; }
+const tickOnButtons = node => node.addEventListener('click', e => { if (e.target.closest('button')) sfx('tick'); });   // 시트 안 모든 버튼에 틱 소리
+function show(node) { tickOnButtons(node); overlay.innerHTML = ''; overlay.appendChild(node); overlay.hidden = false; }
 
 const load = () => { try { return JSON.parse(localStorage.getItem(STORE)) || null; } catch { return null; } };
 const save = v => { try { localStorage.setItem(STORE, JSON.stringify(v)); } catch { /* 사생활 모드 등 */ } };
@@ -141,6 +143,7 @@ function buildOpponent(initial, onChange) {
     panel.appendChild(grid); modal.appendChild(panel);
     modal.addEventListener('click', e => { if (e.target === modal) close(); });
     modal.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
+    tickOnButtons(modal);
     overlay.appendChild(modal);
     (grid.querySelector('[aria-selected="true"]') || rnd).focus({ preventScroll: true });
   }
@@ -148,6 +151,15 @@ function buildOpponent(initial, onChange) {
   paint();
   // 내 선수가 바뀌면 알린다. 내가 상대로 골라 둔 선수를 고르면 랜덤으로 되돌린다
   return { button: btn, current: () => cur, setMine: n => { mine = n; if (cur === n) { cur = null; paint(); onChange(cur); } } };
+}
+
+// 소리 켜기/끄기 알약. 2026-10-31 형준: 효과음 추가와 함께. 상태는 sound.js 가 저장한다
+function buildSoundToggle(cls = 'opp sound') {
+  const b = el('button', cls); b.type = 'button'; b.setAttribute('aria-pressed', soundEnabled());
+  const paint = () => { const on = soundEnabled(); b.textContent = on ? '♪ 소리 켬' : '♪ 소리 끔'; b.setAttribute('aria-pressed', on); b.setAttribute('aria-label', on ? '효과음 끄기' : '효과음 켜기'); };
+  b.addEventListener('click', () => { setSoundEnabled(!soundEnabled()); paint(); });
+  paint();
+  return b;
 }
 
 export function showSelect({ imgs, initialNumber, difficulty, kit, opponent = null, onStart }) {
@@ -166,7 +178,8 @@ export function showSelect({ imgs, initialNumber, difficulty, kit, opponent = nu
   left.appendChild(kits.root);
   right.appendChild(picker.root.querySelector('.skill'));
   right.appendChild(picker.root.querySelector('.thumbs'));
-  right.appendChild(buildLevels(diff, d => { diff = d; }, opp.button));
+  const extras = el('div', 'pick-extras'); extras.append(opp.button, buildSoundToggle());
+  right.appendChild(buildLevels(diff, d => { diff = d; }, extras));
   const start = el('button', 'action', '경기 시작'); start.type = 'button';
   start.addEventListener('click', () => onStart(picker.current(), diff, chosen[slot(picker.current())], opp.current()));
   right.appendChild(start);
@@ -213,6 +226,7 @@ export function showPause({ onResume, onQuit }) {
       <button class="action" type="button" data-act="resume">계속하기</button>
       <button class="action ghost" type="button" data-act="quit">메인으로</button>
     </div>`;
+  sheet.appendChild(buildSoundToggle('opp sound'));
   sheet.querySelector('[data-act="resume"]').addEventListener('click', onResume);
   sheet.querySelector('[data-act="quit"]').addEventListener('click', onQuit);
   sheet.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); onResume(); } });
