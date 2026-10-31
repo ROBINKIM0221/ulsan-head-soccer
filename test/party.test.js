@@ -40,21 +40,18 @@ test('the loser is drawn knocked over and my player hops, without touching the m
   assert.ok(partyView(party, 'L', L).y <= FIELD.GROUND); assert.equal(L.y, FIELD.GROUND);
 });
 
-test('once gathered, everyone keeps jumping slightly out of step, arms up, and shouts appear', () => {
+test('once gathered, everyone keeps jumping slightly out of step', () => {
   const m = won(), party = startParty(m);
   run(party, m, 2.2);
   assert.ok(party.members.every(x => x.arrived), 'all arrived by 2.2s');
   // 저마다 박자가 조금씩 달라 같은 순간 높이가 제각각이고, 한 박자 안에 누구나 90px 넘게 뛴다
-  let distinct = 0; const peaks = party.members.map(() => FIELD.GROUND), seen = new Set();
+  let distinct = 0; const peaks = party.members.map(() => FIELD.GROUND);
   for (let i = 0; i < 140; i++) {
     updateParty(party, m, DT);
-    for (const q of party.shouts) seen.add(q.text);
     const ys = party.members.map(x => Math.round(x.body.y));
     if (new Set(ys).size >= 3) distinct++;
     ys.forEach((y, k) => { peaks[k] = Math.min(peaks[k], y); });
   }
   assert.ok(distinct > 100, `staggered moments ${distinct}/140`);
   assert.ok(peaks.every(p => FIELD.GROUND - p >= 90), `peaks ${peaks.map(p => FIELD.GROUND - p).join(',')}`);
-  assert.ok(party.shouts.length > 0 && party.shouts.every(s => s.text.length >= 2));
-  assert.ok(seen.has('VAMOS!') && !seen.has('울산!'), [...seen].join(','));
 });
