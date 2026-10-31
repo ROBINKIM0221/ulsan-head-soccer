@@ -1,6 +1,6 @@
 // 필살기 연출 점검: 선수마다 게이지 100 으로 시작해 X 로 발동하고(한 방형은 공 쪽으로 달려가 Z 로 차고) 스크린샷을 찍는다.
 // 사용: python -m http.server 8766 을 띄운 뒤  node tools/shots-specials.cjs [out=shots/specials]
-const PW = 'C:/Users/robin/AppData/Local/npm-cache/_npx/9833c18b2d85bc59/node_modules/playwright';
+const PW = 'C:/Users/robin/AppData/Roaming/npm/node_modules/playwright';
 const { chromium } = require(PW);
 const fs = require('node:fs');
 const BASE = 'http://127.0.0.1:8766/';

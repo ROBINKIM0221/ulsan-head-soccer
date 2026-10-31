@@ -1,6 +1,6 @@
 // 기기 확인: 폰 4기종(세로 뷰포트 → 회전된 화면)에서 선택·경기·결과 세 장씩, 데스크톱 키보드만으로 흐름 1회, 움직임 줄이기 설정.
 // 사용: python -m http.server 8766 을 띄운 뒤  node tools/shots-devices.cjs [out=shots/devices]
-const PW = 'C:/Users/robin/AppData/Local/npm-cache/_npx/9833c18b2d85bc59/node_modules/playwright';
+const PW = 'C:/Users/robin/AppData/Roaming/npm/node_modules/playwright';
 const { chromium, devices } = require(PW);
 const fs = require('node:fs');
 const BASE = 'http://127.0.0.1:8766/';

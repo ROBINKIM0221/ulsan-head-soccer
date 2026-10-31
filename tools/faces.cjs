@@ -3,7 +3,7 @@
 //   img/Nc.png — 경기용 컷아웃 256 (배경·유니폼 제거, 턱 아래는 서서히 투명)
 // 를 만든다. 얼굴 위치·크기는 피부색 픽셀로 자동 측정한다 (배너마다 서 있는 자리가 달라 고정 박스로는 치우친다).
 // 사용: node tools/faces.cjs [--sheet out.png]   (서버 필요 없음)
-const PW = 'C:/Users/robin/AppData/Local/npm-cache/_npx/9833c18b2d85bc59/node_modules/playwright';
+const PW = 'C:/Users/robin/AppData/Roaming/npm/node_modules/playwright';
 const { chromium } = require(PW);
 const fs = require('node:fs');
 const path = require('node:path');

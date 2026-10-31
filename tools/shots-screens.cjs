@@ -1,6 +1,6 @@
 // 화면 흐름 스크린샷: 선택(스와이프 포함)·VS·교체·결과를 아이폰(회전)·Pixel·데스크톱에서 찍는다.
 // 사용: python -m http.server 8766 을 띄운 뒤  node tools/shots-screens.cjs [out=shots]
-const PW = 'C:/Users/robin/AppData/Local/npm-cache/_npx/9833c18b2d85bc59/node_modules/playwright';
+const PW = 'C:/Users/robin/AppData/Roaming/npm/node_modules/playwright';
 const { chromium, devices } = require(PW);
 const fs = require('node:fs');
 const BASE = 'http://127.0.0.1:8766/';

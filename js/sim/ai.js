@@ -53,6 +53,9 @@ export function decide(world, side, ai, dt) {
   const ballBehind = (ball.x - me.x) * dir < -10;
   if (me.onGround && ballBehind && Math.abs(ball.x - me.x) < 110 && ball.y > h.y) out.jump = true;
 
+  // 헛점프: 난이도가 낮을수록 공과 상관없이 가끔 뛴다 (떠 있는 동안 공이 밑으로 지나간다)
+  if (me.onGround && cfg.silly > 0 && ai.rng() < cfg.silly * dt) out.jump = true;
+
   const f = footPoint(me);
   const inFront = (ball.x - me.x) * dir > -10;
   if (inFront && me.kickCooldown <= 0 && Math.hypot(ball.x - f.x, ball.y - f.y) <= PHYS.KICK_RANGE) out.kick = true;

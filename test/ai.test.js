@@ -77,3 +77,18 @@ test('shouldSubstitute after 45s, once, with the ball far from its own goal; pic
   assert.equal(tied.role, 'defend');
   assert.ok(PLAYERS.includes(tied));
 });
+
+test('2군~에이스는 공이 멀리 있어도 가끔 헛점프를 하고, 레전드는 하지 않는다', () => {
+  // 공을 왼쪽 구석 바닥에 두고 R 은 오른쪽에 멀리: 원래 규칙으로는 뛸 이유가 전혀 없다
+  const jumps = diff => {
+    const w = world(); w.ball.x = 100; w.ball.y = FIELD.GROUND - PHYS.BALL_R; w.ball.vx = 0; w.ball.vy = 0; w.players.R.x = 1100;
+    const ai = createAiState(diff, mulberry32(3));
+    let n = 0;
+    for (let i = 0; i < Math.round(10 / DT); i++) if (decide(w, 'R', ai, DT).jump) n++;
+    return n;
+  };
+  assert.equal(jumps('legend'), 0);
+  const ace = jumps('ace'), first = jumps('first'), reserve = jumps('reserve');
+  assert.ok(ace >= 1 && ace <= 8, `ace ${ace}`);
+  assert.ok(reserve >= 5 && reserve <= 20 && reserve > first && first > ace, `reserve ${reserve} first ${first} ace ${ace}`);
+});

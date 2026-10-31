@@ -1,6 +1,6 @@
 // 화면 확인: 데스크톱과 폰 프로필로 스크린샷을 찍고, 회전된 버튼 탭·멀티터치·키보드·복귀 카운트다운·스와이프가 먹는지 검사한다.
 // 사용: python -m http.server 8766 을 띄운 뒤  node tools/shots.cjs [out=shots]
-const PW = 'C:/Users/robin/AppData/Local/npm-cache/_npx/9833c18b2d85bc59/node_modules/playwright';
+const PW = 'C:/Users/robin/AppData/Roaming/npm/node_modules/playwright';
 const { chromium, devices } = require(PW);
 const fs = require('node:fs');
 const BASE = 'http://127.0.0.1:8766/';

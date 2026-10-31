@@ -17,7 +17,7 @@ function roundRect(ctx, x, y, w, h, r) {
 }
 
 // 콩알 몸: 큰 머리 아래 작은 유니폼, 짧은 팔다리, 큰 운동화, 스티커 같은 진한 테두리. 걸을 때 다리가 번갈아 움직인다.
-function drawBody(ctx, b, rect, kit, t = 0) {
+function drawBody(ctx, b, rect, kit, t = 0, cheer = false) {
   const s = b.scale, f = b.facing, cx = b.x, bottom = rect.y + rect.h;
   const { jersey, trim, number: numColor, shorts } = kit;
   const line = '#0F2452', lw = 2.5 * s;
@@ -49,8 +49,16 @@ function drawBody(ctx, b, rect, kit, t = 0) {
   // 반바지
   ctx.fillStyle = shorts;
   roundRect(ctx, cx - torsoW * 0.44, torsoTop + torsoH - 5 * s, torsoW * 0.88, shortsH + 5 * s, 6 * s); ctx.fill(); outline();
-  // 팔: 양옆 짧은 소매 + 동그란 손
+  // 팔: 양옆 짧은 소매 + 동그란 손. 환호(cheer)면 어깨에서 머리 옆으로 두 팔을 번쩍 든다
   for (const side of [-1, 1]) {
+    if (cheer) {
+      const sx = cx + side * (torsoW / 2 - 3 * s), sy = torsoTop + 9 * s, hx = cx + side * 60 * s, hy = torsoTop - 50 * s;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = line; ctx.lineWidth = 13 * s + lw * 2; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(hx, hy); ctx.stroke();
+      ctx.strokeStyle = jersey; ctx.lineWidth = 13 * s; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(hx, hy); ctx.stroke();
+      ctx.fillStyle = SKIN; ctx.beginPath(); ctx.arc(hx, hy, 6 * s, 0, Math.PI * 2); ctx.fill(); outline();
+      continue;
+    }
     ctx.fillStyle = jersey;
     roundRect(ctx, cx + side * torsoW / 2 - (side > 0 ? 3 * s : 11 * s), torsoTop + 7 * s, 14 * s, 16 * s, 7 * s); ctx.fill(); outline();
     ctx.fillStyle = SKIN; ctx.beginPath(); ctx.arc(cx + side * (torsoW / 2 + 4 * s), torsoTop + 26 * s, 5 * s, 0, Math.PI * 2); ctx.fill(); outline();
@@ -119,7 +127,7 @@ function drawHead(ctx, b, art, circle) {
   }
 }
 
-export function drawPlayer(ctx, b, art, { kit = KITS[0], circle = false, t = 0 } = {}) {
+export function drawPlayer(ctx, b, art, { kit = KITS[0], circle = false, t = 0, cheer = false } = {}) {
   const h = headCenter(b), rect = bodyRect(b);
   const isTrain = b.active && b.active.id === 'train';
   const isCatch = b.active && b.active.id === 'catch';
@@ -131,7 +139,7 @@ export function drawPlayer(ctx, b, art, { kit = KITS[0], circle = false, t = 0 }
   const useCut = !circle && art && art.cut;
   if (useCut) drawHead(ctx, b, art, false);          // 컷아웃은 몸이 어깨를 덮도록 먼저
   if (isTrain) drawTrain(ctx, b, rect);
-  else drawBody(ctx, b, rect, kit, t);
+  else drawBody(ctx, b, rect, kit, t, cheer);
   if (!useCut) drawHead(ctx, b, art, true);
   if (isCatch) {   // 장갑 두 개
     ctx.fillStyle = '#F2F2F2'; ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
