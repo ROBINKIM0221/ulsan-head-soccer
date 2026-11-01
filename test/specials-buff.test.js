@@ -100,19 +100,28 @@ test('magnet: a free ball within 400 is pulled toward the head; a laser-flight b
   assert.ok(Math.abs(m2.world.ball.x - (h2.x + 150)) < 1, 'laser ball ignored');
 });
 
-test('spirit: faster and higher, immune to knockdown, and bumps the opponent back once a second', () => {
-  const m = ready(26, 96); const L = m.world.players.L, R = m.world.players.R;
-  L.x = 500; R.x = 560; R.stun = 5;
-  const evF = fire(m);                                     // 발동 틱에 이미 부딪혀 튕길 수 있다
+test('spirit: faster and higher, immune to knockdown', () => {
+  const m = ready(26, 96); const L = m.world.players.L;
+  fire(m);
   assert.ok(Math.abs(L.mods.speed - 1.3) < 1e-9); assert.ok(Math.abs(L.mods.jump - 1.2) < 1e-9);
-  L.stun = 1; const ev0 = run(m, DT);
+  L.stun = 1; run(m, DT);
   assert.equal(L.stun, 0, 'cannot be knocked down while active');
-  const ev = evF.concat(ev0, run(m, 0.5, inp({ right: true })));
-  assert.ok(ev.some(e => e.type === 'knockback' && e.side === 'R'), 'opponent bumped');
-  assert.ok(R.x > 600, `opponent pushed to ${R.x}`);
-  const bumps = run(m, 2.0, inp({ right: true })).filter(e => e.type === 'knockback').length;
-  assert.ok(bumps >= 1 && bumps <= 3, `bumps in 2s: ${bumps}`);
 });
+
+// 2026-11-01 형준 "김영권 정승현 조현택 최석현은 부딪히면 상대방 미끄러지는것도 추가": 발동 중 몸이 닿은 상대는 0.8초 미끄러져 넘어지고 밀리며, 1.5초 안에는 다시 안 넘어진다
+for (const [no, id] of [[19, 'giant'], [15, 'highjump'], [26, 'spirit']]) {
+  test(`${id}: bumping into the opponent knocks them down for .8s and pushes them, at most once per 1.5s`, () => {
+    const m = ready(no, 96); const L = m.world.players.L, R = m.world.players.R;
+    L.x = 500; R.x = 560;
+    let peak = 0;
+    const ev = fire(m).concat(run(m, 0.5, inp({ right: true }), m => { peak = Math.max(peak, m.world.players.R.stun); }));
+    assert.ok(ev.some(e => e.type === 'knockdown' && e.side === 'R'), 'opponent knocked down');
+    assert.ok(peak > 0.7 && peak <= 0.8, `stun ${peak}`);
+    assert.ok(R.x > 600, `opponent pushed to ${R.x}`);
+    const n = run(m, 2.0, inp({ right: true })).filter(e => e.type === 'knockdown').length;
+    assert.ok(n >= 1 && n <= 2, `knockdowns in 2s: ${n}`);
+  });
+}
 
 test('activate while active is ignored and mods do not accumulate across ticks', () => {
   const m = ready(11); const L = m.world.players.L;

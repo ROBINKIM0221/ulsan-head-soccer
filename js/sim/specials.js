@@ -16,17 +16,29 @@ function flightOver(b, data, dirX) {
 
 // SPECIALS[id] = { activate(match, side), update(match, side, dt) -> Event[]|undefined, end(match, side),
 //                  onKick(match, side) -> boolean, onBallTouch(match, side, info) }
+// 몸싸움 미끄러짐(거인·높이뛰기·투지): 발동 중 몸이 닿은 상대는 0.8초 넘어지고 320px/s 로 밀린다. 한 번 넘어뜨리면 1.5초 동안은 다시 안 건드린다.
+// 2026-11-01 형준 "김영권 정승현 조현택 최석현은 부딪히면 상대방 미끄러지는것도 추가". 기관차에 붙들린 상대는 제외.
+const SLIP = 0.8, SLIP_COOL = 1.5;
+function slipOnContact(m, s, dt) {
+  const p = me(m, s), o = me(m, opp(s)), d = p.active.data;
+  d.cool = Math.max(0, (d.cool || 0) - dt);
+  const touching = Math.abs(o.x - p.x) < (PHYS.BODY_W * (p.scale + o.scale)) / 2 + 6 && o.y > p.y - PHYS.BODY_H * p.scale - 20;
+  if (d.cool > 0 || !touching || o.pinned) return;
+  o.vx = 320 * Math.sign(o.x - p.x || dir(s)); o.stun = Math.max(o.stun, SLIP); d.cool = SLIP_COOL;
+  return [{ type: 'knockdown', side: opp(s) }];
+}
+
 export const SPECIALS = {
   // ── 지속형 ──
   // 밸런스 2026-10-31: 1.8→2.0, 달리는 기세로 킥 1.35배 (승률 15%→21%)
   sprint: { update(m, s) { const p = me(m, s); p.mods.speed *= 2.0; p.mods.kickPow *= 1.35; } },
 
   // 밸런스 2026-10-31: 점프 1.5→1.35(AI 가 너무 높이 떠서 공을 놓침), 헤딩 ×2.0 (승률 26%→18%→14%→4%)
-  highjump: { update(m, s) { const p = me(m, s); p.mods.jump *= 1.4; p.mods.headPow *= 2.2; p.mods.speed *= 1.2; } },   // 몸이 가벼워져 조금 빨라진다 (새 물리에서 25%)
+  highjump: { update(m, s, dt) { const p = me(m, s); p.mods.jump *= 1.4; p.mods.headPow *= 2.2; p.mods.speed *= 1.2; return slipOnContact(m, s, dt); } },   // 몸이 가벼워져 조금 빨라진다 (새 물리에서 25%)
 
   giant: {
     activate(m, s) { me(m, s).scale = 1.3; },   // 밸런스 2026-10-31: 1.7→1.5→1.4→1.3 (새 물리에서 66%)
-    update(m, s) { const p = me(m, s); p.mods.speed *= 0.8; p.mods.headPow *= 1.2; },
+    update(m, s, dt) { const p = me(m, s); p.mods.speed *= 0.8; p.mods.headPow *= 1.2; return slipOnContact(m, s, dt); },
     end(m, s) { me(m, s).scale = 1; },
   },
 
@@ -108,17 +120,11 @@ export const SPECIALS = {
 
   // 투지 폭발 (조현택): 5초간 더 빠르고 높이 뛰며, 넘어지지 않고, 몸싸움에서 상대를 튕겨낸다 (1초에 한 번)
   spirit: {
-    activate(m, s) { me(m, s).active.data = { cool: 0 }; },
     update(m, s, dt) {
-      const p = me(m, s), o = me(m, opp(s)), d = p.active.data;
+      const p = me(m, s);
       p.mods.speed *= 1.3; p.mods.jump *= 1.2;
-      p.stun = 0;                                            // 슬라이딩·대포에 넘어지지 않는다
-      d.cool = Math.max(0, d.cool - dt);
-      const touching = Math.abs(o.x - p.x) < (PHYS.BODY_W * (p.scale + o.scale)) / 2 + 6 && o.y > p.y - PHYS.BODY_H * p.scale - 20;
-      if (d.cool === 0 && touching && !o.pinned) {
-        o.vx = 320 * Math.sign(o.x - p.x || dir(s)); o.stun = Math.max(o.stun, 0.35); d.cool = 1;
-        return [{ type: 'knockback', side: opp(s) }];
-      }
+      p.stun = 0;                                            // 슬라이딩·대포·몸싸움에 넘어지지 않는다
+      return slipOnContact(m, s, dt);
     },
   },
 
@@ -199,7 +205,7 @@ export const SPECIALS = {
         b.vx = dir(s) * 1000 * Math.cos(rad(35)); b.vy = -1000 * Math.sin(rad(35)); d.kicked = true;
       }
       if (!d.hit && Math.abs(o.x - p.x) < PHYS.BODY_W + 10 && o.y > FIELD.GROUND - PHYS.BODY_H) {
-        o.stun = Math.max(o.stun, 1); d.hit = true; ev.push({ type: 'knockdown', side: opp(s) });
+        o.stun = Math.max(o.stun, 1.3); d.hit = true; ev.push({ type: 'knockdown', side: opp(s) });   // 2026-11-01 형준: 1→1.3초 "살짝 더 오래"
       }
       return ev;
     },

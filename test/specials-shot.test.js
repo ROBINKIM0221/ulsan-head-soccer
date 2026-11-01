@@ -84,7 +84,8 @@ test('curve: next kick leaves at 55deg/1050, passes through the opponent briefly
   assert.equal(b.flight, null); assert.equal(b.curveAx, 0); assert.equal(b.passThrough, null);
 });
 
-test('slide: dashes 180px in .35s, kicks the ball once, knocks the opponent down for 1s', () => {
+// 2026-11-01 형준 "최석현은 원래 상대방 미끄러지는거니까 살짝 더 오래": 넘어짐 1초 → 1.3초
+test('slide: dashes 180px in .35s, kicks the ball once, knocks the opponent down for 1.3s', () => {
   const m = ready(96); const L = m.world.players.L, R = m.world.players.R; const b = m.world.ball;
   L.x = 400; R.x = 1160;
   const x0 = L.x;
@@ -103,7 +104,8 @@ test('slide: dashes 180px in .35s, kicks the ball once, knocks the opponent down
 
   const m3 = ready(96); const L3 = m3.world.players.L, R3 = m3.world.players.R;
   L3.x = 400; R3.x = 480;
-  const ev = fire(m3).concat(run(m3, 0.35));
+  let peak = 0;
+  const ev = fire(m3).concat(run(m3, 0.35, NO_INPUT, m => { peak = Math.max(peak, m.world.players.R.stun); }));
   assert.ok(ev.some(e => e.type === 'knockdown' && e.side === 'R'));
-  assert.ok(R3.stun > 0.5, `stun ${R3.stun}`);
+  assert.ok(peak > 1.2 && peak <= 1.3, `stun ${peak}`);
 });
