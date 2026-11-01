@@ -62,8 +62,8 @@ export const partyView = (party, side, p) => side === party.side
 
 export function drawParty(ctx, party, match, imgs, t) {
   for (const m of party.members) drawPlayer(ctx, m.body, imgs[m.body.def.number], { kit: wornKit(match.kits[party.side], m.body.def), t, cheer: m.arrived });
-  // VAMOS!: 0.3초 뒤 하늘 한가운데 커지며 나타나 박자에 맞춰 살짝 들썩인다
-  if (party.t > 0.3) {
+  // VAMOS!: 0.3초 뒤 하늘 한가운데 커지며 나타나 박자에 맞춰 살짝 들썩인다. 내가 이겼을 때만 (2026-11-01 형준 "졌을땐 바모스 뜨면 안돼")
+  if (party.side === 'L' && party.t > 0.3) {
     const grow = Math.min(1, (party.t - 0.3) / 0.35), k = grow * (1 + 0.05 * Math.sin(party.t * BEAT));
     ctx.save(); ctx.translate(FIELD.W / 2, 250); ctx.scale(k, k); ctx.rotate(-0.04);
     ctx.font = '600 170px Teko, "Arial Narrow", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';

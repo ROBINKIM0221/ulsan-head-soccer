@@ -2,11 +2,21 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createMatch } from '../js/sim/match.js';
 import { byNumber } from '../js/data/players.js';
-import { startParty, updateParty, partyView, PARTY_LEN } from '../js/render/party.js';
+import { startParty, updateParty, partyView, drawParty, PARTY_LEN } from '../js/render/party.js';
 import { FIELD, DT } from '../js/sim/constants.js';
 
 const won = () => { const m = createMatch({ home: byNumber(10), away: byNumber(99) }); m.phase = 'over'; m.result = 'win'; return m; };
 const run = (party, m, seconds) => { for (let i = 0, n = Math.round(seconds / DT); i < n; i++) updateParty(party, m, DT); };
+// 그리기 호출만 받아 적는 가짜 캔버스: 모든 메서드는 빈 함수, 글자 그리기만 모은다
+const drawnTexts = (party, m) => { const out = []; const ctx = new Proxy({}, { get: (_, k) => (k === 'fillText' || k === 'strokeText') ? s => out.push(s) : () => ({}) }); drawParty(ctx, party, m, {}, 1); return out; };
+
+// 2026-11-01 형준 "졌을땐 바모스 뜨면 안돼": VAMOS! 는 내가 이겼을 때만
+test('VAMOS! is drawn only when I win', () => {
+  for (const [result, shown] of [['win', true], ['lose', false]]) {
+    const m = won(); m.result = result; const party = startParty(m); run(party, m, 1);
+    assert.equal(drawnTexts(party, m).includes('VAMOS!'), shown, result);
+  }
+});
 
 test('the bench (everyone but the two on the pitch) runs in from both edges and gathers around my player', () => {
   const m = won(), party = startParty(m);
