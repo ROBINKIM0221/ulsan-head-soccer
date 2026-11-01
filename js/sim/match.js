@@ -11,7 +11,7 @@ export function createMatch({ home, away, difficulty = 'first', rng = Math.rando
     clock: MATCH.LEN, phase: 'kickoff', phaseT: MATCH.GOAL_PAUSE,
     scores: { L: 0, R: 0 }, subUsed: { L: false, R: false }, used: { L: [home], R: [away] },
     difficulty, rng, ai: createAiState(difficulty, rng), result: null, pendingSub: null,
-    kits: sideKits(kit),   // 양쪽 유니폼 { L: { field, gk }, R: { field, gk } }
+    kits: sideKits(kit, rng),   // 양쪽 유니폼 { L: { field, gk }, R: { field, gk } }, 상대 것은 경기마다 무작위
     goals: [],             // 골마다 { side, number }: 결과 화면의 선수별 골 수
   };
 }

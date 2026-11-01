@@ -98,7 +98,7 @@ function buildLevels(initial, onChange, extra) {
   return wrap;
 }
 
-// 유니폼 고르기: 카드 밑 작은 셔츠들. 선수가 바뀌면 목록도 바뀐다 (조현우는 골키퍼 4종, 나머지는 필드 4종)
+// 유니폼 고르기: 카드 밑 작은 셔츠들. 선수가 바뀌면 목록도 바뀐다 (조현우는 골키퍼 4종, 나머지는 필드 5종)
 function buildKits(onChange) {
   const wrap = el('div', 'pick kits-pick');
   const label = el('p', 'pick-label'); label.id = 'kitsLabel';
@@ -108,7 +108,7 @@ function buildKits(onChange) {
     label.textContent = list === GK_KITS ? '골키퍼 유니폼' : '유니폼';
     row.innerHTML = '';
     for (const k of list) {
-      const b = el('button', 'kit', `<i class="shirt" style="--j:${k.jersey};--t:${k.trim}"></i><span>${k.name}</span>`); b.type = 'button';
+      const b = el('button', 'kit', `<i class="shirt" style="--j:${k.jersey};--t:${k.trim}${k.stripe ? ';--s:' + k.stripe : ''}"></i><span>${k.name}</span>`); b.type = 'button';
       b.setAttribute('aria-label', `${k.name} 유니폼`); b.setAttribute('aria-pressed', k.id === cur);
       b.addEventListener('click', () => { show(list, k.id); onChange(k.id); });
       row.appendChild(b);

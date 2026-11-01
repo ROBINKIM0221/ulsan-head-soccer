@@ -66,6 +66,12 @@ function drawBody(ctx, b, rect, kit, t = 0, cheer = false) {
   // 유니폼
   ctx.fillStyle = jersey;
   roundRect(ctx, cx - torsoW / 2, torsoTop, torsoW, torsoH, 15 * s); ctx.fill(); outline();
+  if (kit.stripe) {   // 세로 줄무늬(레트로): 몸통 안에만 네 줄
+    ctx.save(); roundRect(ctx, cx - torsoW / 2, torsoTop, torsoW, torsoH, 15 * s); ctx.clip();
+    ctx.fillStyle = kit.stripe;
+    for (const k of [-18, -6, 6, 18]) ctx.fillRect(cx + (k - 3) * s, torsoTop, 6 * s, torsoH);
+    ctx.restore();
+  }
   ctx.strokeStyle = trim; ctx.lineWidth = 2.5 * s;
   ctx.beginPath(); ctx.moveTo(cx - torsoW / 2 + 7 * s, torsoTop + 4 * s); ctx.lineTo(cx - torsoW / 2 + 7 * s, torsoTop + torsoH - 7 * s); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(cx + torsoW / 2 - 7 * s, torsoTop + 4 * s); ctx.lineTo(cx + torsoW / 2 - 7 * s, torsoTop + torsoH - 7 * s); ctx.stroke();
