@@ -27,6 +27,7 @@ test('roles and special ids match spec', () => {
   assert.deepEqual(attack, [10, 11, 14, 26, 99]);
   assert.equal(byNumber(55).special.id, 'train');
   assert.equal(byNumber(55).special.duration, 3.0);   // 2026-11-01 형준: 1초 늘림
+  assert.equal(byNumber(24).special.duration, 7);     // 2026-11-01 형준: "이규성 자석 1초 줄여줘" 8→7
   assert.equal(byNumber(38).special.id, 'press');
   assert.equal(byNumber(26).special.id, 'spirit');
   assert.equal(byNumber(96).special.kind, 'instant');

@@ -17,7 +17,7 @@ export const PLAYERS = [
     desc: '몸이 커져 골문을 막는다. 부딪힌 상대는 미끄러진다' }),
   P(21, '조현우', 'GK', 'defend', { id: 'catch', name: '선방 캐치', kind: 'buff', duration: 5,
     desc: '머리 위로 오는 공을 잡아 멀리 던진다' }),
-  P(24, '이규성', 'MF', 'defend', { id: 'magnet', name: '공 자석', kind: 'buff', duration: 8, gaugeRate: 2.0,   // 밸런스 2026-10-31
+  P(24, '이규성', 'MF', 'defend', { id: 'magnet', name: '공 자석', kind: 'buff', duration: 7, gaugeRate: 2.0,   // 밸런스 2026-10-31. 2026-11-01 형준: 8→7초
     desc: '가까운 공이 발 앞으로 끌려온다' }),
   P(26, '조현택', 'DF', 'attack', { id: 'spirit', name: '투지 폭발', kind: 'buff', duration: 5,   // 2026-10-31 형준: 롱스로인 → 투지
     desc: '빠르고 높이 뛰며 넘어지지 않는다. 부딪힌 상대는 미끄러진다' }),
