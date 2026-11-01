@@ -26,7 +26,7 @@ test('roles and special ids match spec', () => {
   const attack = PLAYERS.filter(p => p.role === 'attack').map(p => p.number);
   assert.deepEqual(attack, [10, 11, 14, 26, 99]);
   assert.equal(byNumber(55).special.id, 'train');
-  assert.equal(byNumber(55).special.duration, 2.0);
+  assert.equal(byNumber(55).special.duration, 3.0);   // 2026-11-01 형준: 1초 늘림
   assert.equal(byNumber(38).special.id, 'press');
   assert.equal(byNumber(26).special.id, 'spirit');
   assert.equal(byNumber(96).special.kind, 'instant');

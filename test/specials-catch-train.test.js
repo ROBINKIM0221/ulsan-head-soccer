@@ -57,13 +57,16 @@ test('catch ignores a laser-flight ball', () => {
   assert.equal(b.held, null);
 });
 
-test('train: scale 1.25, cannot jump, speed 1.1, back to normal after 2s', () => {
+// 2026-11-01 형준 "토마스 필살기 1초만 늘려줘": 2초 → 3초
+test('train: scale 1.25, cannot jump, speed 1.1, still a train at 2.2s, back to normal after 3s', () => {
   const m = ready(55); const L = m.world.players.L;
   fire(m);
   assert.equal(L.scale, 1.25); assert.equal(L.mods.canJump, false); assert.ok(Math.abs(L.mods.speed - 1.1) < 1e-9);
   run(m, 0.5, inp({ jump: true }));
   assert.equal(L.y, FIELD.GROUND, 'jump ignored');
   run(m, 1.7);
+  assert.equal(L.scale, 1.25, 'still a train at 2.2s');
+  run(m, 0.9);
   assert.equal(L.scale, 1); assert.equal(L.active, null); assert.equal(L.mods.canJump, true);
 });
 
@@ -107,11 +110,11 @@ test('train: scores when the ball crosses the line even with the pinned opponent
   assert.ok(R.x <= FIELD.W - FIELD.GOAL_DEPTH - PHYS.BODY_W / 2 + 1e-6, 'opponent never enters the goal mouth');
 });
 
-test('train: the charge lasts at most .35s (about 245px) and everything resets after 2s', () => {
+test('train: the charge lasts at most .35s (about 245px) and everything resets after 3s', () => {
   const m = ready(55); const L = m.world.players.L, R = m.world.players.R; const b = m.world.ball;
   L.x = 300; freeze(R, 1160);
   fire(m); ballAtFront(m);
-  const ev = run(m, 2.1);
+  const ev = run(m, 3.1);
   assert.equal(ev.filter(e => e.type === 'goal').length, 0, 'from the own half the train runs out of steam');
   assert.ok(L.x < 900, `train stopped at ${L.x}`);
   assert.equal(b.attached, null); assert.equal(L.forcedVx, null); assert.equal(L.scale, 1); assert.equal(L.active, null); assert.equal(R.pinned, false);

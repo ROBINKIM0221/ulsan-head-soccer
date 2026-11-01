@@ -148,7 +148,7 @@ export const SPECIALS = {
     end(m, s) { const b = m.world.ball; if (b.held && b.held.side === s) b.held = null; },
   },
 
-  // 기관차: 2.5초 동안 1.25배 크기·1.2배 속도·점프 불가. 공이 앞면에 닿으면 붙여서 0.4초(≈280px) 돌진,
+  // 기관차: 3초 동안 1.25배 크기·1.1배 속도·점프 불가. 공이 앞면에 닿으면 붙여서 0.4초(≈280px) 돌진,
   // 길에 있는 바닥의 상대는 공 앞에 붙어 함께 밀린다. 돌진이 끝나면 공을 놓는다.
   train: {
     activate(m, s) { const p = me(m, s); p.scale = 1.25; p.active.data = { charging: false, done: false, chargeT: 0 }; },   // 밸런스 2026-10-31: 크기 1.4→1.25

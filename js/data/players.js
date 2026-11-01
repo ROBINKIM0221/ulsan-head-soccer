@@ -23,7 +23,7 @@ export const PLAYERS = [
     desc: '빠르고 높게 뛰며 넘어지지 않고, 부딪힌 상대를 튕겨낸다' }),
   P(38, '박용우', 'MF', 'defend', { id: 'press', name: '압박', kind: 'buff', duration: 5,
     desc: '상대의 발이 무거워져 속도와 점프가 60%로 떨어진다' }),
-  P(55, '토마스', 'DF', 'defend', { id: 'train', name: '기관차 모드', kind: 'buff', duration: 2.0, gaugeRate: 0.75,   // 밸런스 2026-10-31: 새 물리에서 70%라 빈도로 조절
+  P(55, '토마스', 'DF', 'defend', { id: 'train', name: '기관차 모드', kind: 'buff', duration: 3.0, gaugeRate: 0.75,   // 밸런스 2026-10-31: 새 물리에서 70%라 빈도로 조절. 2026-11-01 형준: 2→3초
     desc: '증기기관차로 변신해 공과 상대를 한꺼번에 골문으로 밀어 넣는다' }),
   P(96, '최석현', 'DF', 'defend', { id: 'slide', name: '슬라이딩', kind: 'instant', duration: 0.35,
     desc: '미끄러지며 공을 걷어내고 부딪힌 상대를 넘어뜨린다' }),
