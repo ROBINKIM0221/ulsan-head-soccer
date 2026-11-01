@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { FIELD, PHYS, DT, MATCH, NO_INPUT } from '../js/sim/constants.js';
 import { headCenter } from '../js/sim/physics.js';
 import { createMatch, stepMatch } from '../js/sim/match.js';
-import { activateSpecial } from '../js/sim/specials.js';
+import { activateSpecial, holdOffset } from '../js/sim/specials.js';
 import { mulberry32 } from '../js/sim/rng.js';
 import { byNumber } from '../js/data/players.js';
 
@@ -45,6 +45,29 @@ test('catch: a ball heading for its own goal above the head is held .4s then thr
   assert.ok(ev2.some(e => e.type === 'throw' && e.side === 'L'), 'throw event');
   assert.equal(b.held, null);
   assert.ok(b.vx > 0, 'thrown toward the far goal');
+});
+
+// 2026-11-01 형준 "잡아서 던지는 모습을 좀더 리얼하게": 잡은 공은 0.15초 머리 위에 머물다 0.3초까지 뒤로 당겨지고 0.4초에 앞으로 휘둘러 놓는다
+test('holdOffset: fixed for .15s, pulled back 22 by .3s, 26 in front at .4s, mirrored for the right side', () => {
+  assert.deepEqual(holdOffset(0, 1), { dx: 0, dy: 0 });
+  assert.deepEqual(holdOffset(0.1, -1), { dx: 0, dy: 0 });
+  assert.equal(holdOffset(0.3, 1).dx, -22); assert.ok(holdOffset(0.3, 1).dy < 0, 'lifted while winding up');
+  assert.equal(holdOffset(0.4, 1).dx, 26); assert.equal(holdOffset(0.4, -1).dx, -26);
+});
+
+test('catch: the held ball stays over the head, is pulled back, then swings forward before the throw; a follow-through timer runs after', () => {
+  const m = ready(21); const L = m.world.players.L; const b = m.world.ball;
+  L.x = 400; fire(m);
+  const h = headCenter(L);
+  Object.assign(b, { held: null, x: h.x + 120, y: h.y - 60, vx: -500, vy: -150 });
+  for (let i = 0; !b.held && i < 200; i++) run(m, DT);
+  assert.ok(b.held, 'caught');
+  const d = L.active.data, dx = () => b.x - headCenter(L).x;
+  run(m, 0.1); assert.ok(Math.abs(dx()) < 1, 'over the head at ' + d.holdT.toFixed(2) + 's: ' + dx());
+  run(m, 0.15); assert.ok(dx() < -12, 'pulled back at ' + d.holdT.toFixed(2) + 's: ' + dx());
+  run(m, 0.13); assert.ok(dx() > 12, 'swung forward at ' + d.holdT.toFixed(2) + 's: ' + dx());
+  run(m, 0.05); assert.equal(b.held, null); assert.ok(b.vx > 0, 'thrown forward');
+  assert.ok(d.threw >= 0 && d.threw < 0.1, 'follow-through timer: ' + d.threw);
 });
 
 test('catch ignores a laser-flight ball', () => {

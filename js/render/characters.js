@@ -3,6 +3,7 @@
 import { PHYS } from '../sim/constants.js';
 import { headCenter, bodyRect } from '../sim/physics.js';
 import { KITS } from '../data/kits.js';
+import { holdOffset } from '../sim/specials.js';
 
 const BLUE = '#004098', NAVY = '#002B6B', GOLD = '#FFC72C', WHITE = '#FFFFFF', SKIN = '#F2C9A4', DARK = '#1A1A1A';
 const CUT_SCALE = 1.5;      // 컷아웃 그림 한 변 = 머리 지름 × 1.5 (tools/faces.cjs: 머리가 그림 높이의 70%)
@@ -147,11 +148,37 @@ export function drawPlayer(ctx, b, art, { kit = KITS[0], circle = false, t = 0, 
   if (isTrain) drawTrain(ctx, b, rect);
   else drawBody(ctx, b, rect, kit, t, cheer);
   if (!useCut) drawHead(ctx, b, art, true);
-  if (isCatch) {   // 장갑 두 개
-    ctx.fillStyle = '#F2F2F2'; ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
-    for (const dx of [-1, 1]) { roundRect(ctx, h.x + dx * (h.r + 6) - 14, h.y - h.r * 0.2, 28, 34, 9); ctx.fill(); ctx.stroke(); }
-  }
+  if (isCatch) drawGloves(ctx, b, h, kit);
   ctx.restore();
+}
+
+// 골키퍼 장갑 하나: 손가락 넷 + 안쪽으로 벌린 엄지 + 손바닥 + 유니폼 트림 색 손목 밴드. 로컬 좌표는 손가락이 위, 엄지가 -x 쪽.
+// inward = 엄지가 향할 방향(+1 오른쪽, -1 왼쪽). (2026-11-01 형준 "장갑 모양 좀 바꿔주고" — 전엔 흰 네모 둘)
+function drawGlove(ctx, x, y, rot, s, inward, band) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(-inward, 1);
+  const fill = () => { ctx.fill(); ctx.stroke(); };
+  ctx.fillStyle = '#F7F7F7'; ctx.strokeStyle = '#2A2A2A'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+  ctx.save(); ctx.translate(-10 * s, -3 * s); ctx.rotate(-0.6); roundRect(ctx, -3 * s, -13 * s, 6 * s, 16 * s, 3 * s); fill(); ctx.restore();   // 엄지
+  for (let i = 0; i < 4; i++) { const tip = i === 0 || i === 3 ? 3 * s : 0; roundRect(ctx, -9.3 * s + i * 5 * s, -24 * s + tip, 4.6 * s, 18 * s, 2.3 * s); fill(); }   // 손가락 (바깥 둘은 짧게)
+  roundRect(ctx, -11 * s, -9 * s, 22 * s, 22 * s, 7 * s); fill();                      // 손바닥이 손가락·엄지 뿌리를 덮는다
+  ctx.fillStyle = band; roundRect(ctx, -11 * s, 10 * s, 22 * s, 6 * s, 3 * s); fill();   // 손목 밴드
+  ctx.restore();
+}
+
+// 조현우 선방 캐치 중 장갑 자세: 준비(머리 양옆, 손가락 위) → 공을 쥠(공 양옆을 감싸고 sim 의 holdOffset 대로 함께 움직임) → 던진 직후 0.3초 앞손을 쭉 뻗음
+function drawGloves(ctx, b, h, kit) {
+  const s = b.scale, d = b.active.data || {}, dirX = b.side === 'L' ? 1 : -1, band = kit.trim;
+  if (d.holding) {
+    const o = holdOffset(d.holdT || 0, dirX), bx = h.x + o.dx, by = h.y - h.r - PHYS.BALL_R - 4 + o.dy;
+    drawGlove(ctx, bx - (PHYS.BALL_R + 7) * s, by + 6 * s, 0.35, s, 1, band);
+    drawGlove(ctx, bx + (PHYS.BALL_R + 7) * s, by + 6 * s, -0.35, s, -1, band);
+  } else if (d.threw !== undefined && d.threw < 0.3) {
+    drawGlove(ctx, h.x + dirX * (h.r + 26 * s), h.y - h.r - 18 * s, dirX * 1.0, s, -dirX, band);   // 앞손: 던진 방향으로 쭉
+    drawGlove(ctx, h.x - dirX * (h.r + 8 * s), h.y + 6 * s, -dirX * 0.3, s, dirX, band);           // 뒷손은 내려서 균형
+  } else {
+    drawGlove(ctx, h.x - h.r - 10 * s, h.y - 4 * s, -0.25, s, 1, band);
+    drawGlove(ctx, h.x + h.r + 10 * s, h.y - 4 * s, 0.25, s, -1, band);
+  }
 }
 
 export function drawBall(ctx, ball, rotation = 0) {

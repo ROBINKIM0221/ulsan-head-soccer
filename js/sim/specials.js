@@ -28,6 +28,14 @@ function slipOnContact(m, s, dt) {
   return [{ type: 'knockdown', side: opp(s) }];
 }
 
+// 잡은 공의 위치(머리 위 기준, t = 잡은 뒤 지난 초, dirX = 상대 골문 방향): 0.15초 고정 → 0.3초까지 뒤로 22px 당기며 살짝 들고 → 0.4초에 앞으로 26px 휘두르며 놓는다
+export const CATCH_HOLD = 0.4;
+export function holdOffset(t, dirX) {
+  if (t < 0.15) return { dx: 0, dy: 0 };
+  if (t < 0.3) { const k = (t - 0.15) / 0.15; return { dx: -dirX * 22 * k, dy: -8 * k }; }
+  const k = Math.min(1, (t - 0.3) / 0.1); return { dx: dirX * (-22 + 48 * k), dy: -8 - 6 * k };
+}
+
 export const SPECIALS = {
   // ── 지속형 ──
   // 밸런스 2026-10-31: 1.8→2.0, 달리는 기세로 킥 1.35배 (승률 15%→21%)
@@ -128,16 +136,20 @@ export const SPECIALS = {
     },
   },
 
-  // 내 골문 쪽으로 오는 공이 머리 위 150 안을 지나면 잡아 0.4초 뒤 40°·1100 으로 던진다
+  // 내 골문 쪽으로 오는 공이 머리 위 150 안을 지나면 잡아 0.4초 뒤 40°·1100 으로 던진다.
+  // 잡은 공은 holdOffset 대로 머리 위 → 뒤로 → 앞으로 휘둘러 놓는다. 그리기(장갑 자세)는 d.holdT·d.threw 를 본다 (2026-11-01 형준 "잡아서 던지는 모습을 좀더 리얼하게")
   catch: {
     update(m, s, dt) {
       const p = me(m, s), b = m.world.ball, d = p.active.data;
       p.mods.catchArmed = true;
       const h = headCenter(p);
+      if (d.threw !== undefined) d.threw += dt;   // 던진 뒤 지난 시간: 팔을 뻗은 자세로 잠깐 머문다
       if (d.holding) {
-        b.x = h.x; b.y = h.y - h.r - b.r - 4; b.held.t -= dt;
+        d.holdT += dt; b.held.t -= dt;
+        const o = holdOffset(d.holdT, dir(s));
+        b.x = h.x + o.dx; b.y = h.y - h.r - b.r - 4 + o.dy;
         if (b.held.t <= 0) {
-          b.held = null; d.holding = false;
+          b.held = null; d.holding = false; d.threw = 0;
           b.vx = dir(s) * 1100 * Math.cos(rad(40)); b.vy = -1100 * Math.sin(rad(40));
           return [{ type: 'throw', side: s }];
         }
@@ -147,7 +159,7 @@ export const SPECIALS = {
       const towardMyGoal = b.vx * dir(s) < 0;
       const inZone = Math.abs(b.x - h.x) <= h.r + b.r + 40 && b.y < h.y && b.y > h.y - h.r - 150;
       if (towardMyGoal && inZone) {
-        b.held = { side: s, t: 0.4 }; b.vx = 0; b.vy = 0; d.holding = true;
+        b.held = { side: s, t: CATCH_HOLD }; b.vx = 0; b.vy = 0; d.holding = true; d.holdT = 0; delete d.threw;
         return [{ type: 'catch', side: s }];
       }
     },
