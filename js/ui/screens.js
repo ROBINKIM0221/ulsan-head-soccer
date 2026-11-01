@@ -118,13 +118,15 @@ function buildKits(onChange) {
 }
 
 // 상대 고르기: 난이도 줄 오른쪽 작은 버튼. 기본은 랜덤, 누르면 얼굴 목록(랜덤 + 내 선수 뺀 11명)에서 한 명 (2026-10-31 형준)
+// 2026-11-01 형준 "상대가 랜덤으로 나온다는 표시 같고 선택할 수 있을 느낌이 안 들어" → 랜덤일 땐 "상대 고르기", 끝에 ▾ 화살표, 채운 배경
+const CARET = '<svg class="caret" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 function buildOpponent(initial, onChange) {
   let cur = initial, mine = null;   // cur: 등번호 또는 null(랜덤)
-  const btn = el('button', 'opp'); btn.type = 'button'; btn.setAttribute('aria-haspopup', 'dialog');
+  const btn = el('button', 'opp choose'); btn.type = 'button'; btn.setAttribute('aria-haspopup', 'dialog');
   const paint = () => {
     const def = cur && byNumber(cur);
-    btn.innerHTML = def ? `<img class="opp-face" src="${def.img}" alt=""><span>상대</span><b>${def.name}</b>` : '<i class="opp-face">?</i><span>상대</span><b>랜덤</b>';
-    btn.setAttribute('aria-label', `상대 선택: 현재 ${def ? def.name : '랜덤'}`);
+    btn.innerHTML = (def ? `<img class="opp-face" src="${def.img}" alt=""><span>상대</span><b>${def.name}</b>` : '<i class="opp-face">?</i><b>상대 고르기</b>') + CARET;
+    btn.setAttribute('aria-label', `상대 고르기: 현재 ${def ? def.name : '랜덤'}`);
   };
   function open() {
     const modal = el('div', 'modal'); modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-label', '상대 선택');

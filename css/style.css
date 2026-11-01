@@ -193,6 +193,8 @@ body {
 .pick-head .pick-label { margin: 0; }
 .opp { all: unset; display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 4px; border-radius: 999px; border: 1.5px solid rgba(255,255,255,.4); font: 600 12px var(--ui); color: var(--muted); cursor: pointer; touch-action: manipulation; }
 .opp b { color: var(--white); font-weight: 800; }
+.opp.choose { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.75); }   /* 고를 수 있는 버튼: 채운 배경 + 금색 ▾ (소리 토글과 구분) */
+.opp .caret { color: var(--gold); flex: none; }
 .pick-extras { display: flex; gap: 6px; align-items: center; }
 .opp.sound { padding: 3px 10px; }
 .opp.sound[aria-pressed="false"] { opacity: .6; text-decoration: line-through; }
