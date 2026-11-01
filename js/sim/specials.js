@@ -19,6 +19,7 @@ function flightOver(b, data, dirX) {
 // 몸싸움 미끄러짐(거인·높이뛰기·투지): 발동 중 몸이 닿은 상대는 0.8초 넘어지고 320px/s 로 밀린다. 한 번 넘어뜨리면 1.5초 동안은 다시 안 건드린다.
 // 2026-11-01 형준 "김영권 정승현 조현택 최석현은 부딪히면 상대방 미끄러지는것도 추가". 기관차에 붙들린 상대는 제외.
 const SLIP = 0.8, SLIP_COOL = 1.5;
+export const SLIP_SPECIALS = ['giant', 'highjump', 'spirit'];   // 화면이 발밑 고리로 '지금 닿으면 미끄러진다'를 보여 주는 데 쓴다
 function slipOnContact(m, s, dt) {
   const p = me(m, s), o = me(m, opp(s)), d = p.active.data;
   d.cool = Math.max(0, (d.cool || 0) - dt);
@@ -86,14 +87,15 @@ export const SPECIALS = {
   },
 
   // ── 다음 한 방형 ──
-  // 다음 킥: 1200 직선(20° 위), 0.8초 중력 없음, 상대를 통과
+  // 다음 킥: 1200 직선, 0.8초 중력 없음, 상대를 통과. 골문 안의 한 점(위아래 30px 안쪽)을 조준하고 ±2° 오차 → 어디서 쏘든 골문 근처 (2026-11-01 형준 "100프로는 아니더라도 골문 근처로"; 전엔 20° 고정이라 510px 밖에선 지붕)
   laser: {
     onKick(m, s) {
       const p = me(m, s), b = m.world.ball;
       if (!p.active.armed) return false;
       p.active.armed = false; p.active.t = 0.8;
-      // 밸런스 2026-10-31: 1500·3° → 1200·20°. 골라인에서 약 510px 안에서 쏴야 크로스바 아래로 들어간다 (승률 96%→88%→73%)
-      b.vx = dir(s) * 1200 * Math.cos(rad(20)); b.vy = -1200 * Math.sin(rad(20));
+      const gx = dir(s) > 0 ? FIELD.W : 0, ty = FIELD.GROUND - 30 - m.rng() * (FIELD.GOAL_H - 60);
+      const ang = Math.atan2(ty - b.y, gx - b.x) + rad((m.rng() - 0.5) * 4);
+      b.vx = 1200 * Math.cos(ang); b.vy = 1200 * Math.sin(ang);
       b.noGravityT = 0.8; b.passThrough = opp(s); b.flight = 'laser';
       return true;
     },

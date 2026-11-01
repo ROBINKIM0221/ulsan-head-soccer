@@ -35,15 +35,36 @@ test('laser: next kick flies straight at 1200 with no gravity for .8s and passes
   assert.ok(Math.abs(speed(b) - 1200) < 20, `speed ${speed(b)}`);
   assert.equal(b.flight, 'laser'); assert.equal(b.passThrough, 'R'); assert.ok(b.noGravityT > 0.7);
   assert.equal(L.active && L.active.armed, false, 'one-shot consumed');
-  const yStart = b.y;
+  const yAtGoal = b.y + (FIELD.W - b.x) * (b.vy / b.vx);
+  assert.ok(yAtGoal > FIELD.GROUND - FIELD.GOAL_H && yAtGoal < FIELD.GROUND, 'aimed into the goal mouth: ' + Math.round(yAtGoal));
   const ev = run(m, 0.25);
-  assert.ok(yStart - b.y > 60 && yStart - b.y < 130, `rising gently: ${yStart - b.y}`);
   assert.ok(b.x > R.x + 60, 'went through R');
   assert.equal(ev.filter(e => e.type === 'touch' && e.side === 'R').length, 0);
   // 760 에서 쏜 레이저는 크로스바 아래로 들어가 득점한다; 킥오프 재배치 뒤 공 표시는 지워져 있다
   for (let t = 0; t < 3 && m.phase !== 'kickoff'; t += DT) run(m, DT);
   assert.deepEqual(m.scores, { L: 1, R: 0 });
   assert.equal(b.flight, null); assert.equal(b.passThrough, null);
+});
+
+// 2026-11-01 형준 "레이저가 골문에서 크게 벗어나는 경우가 많네. 100프로는 아니더라도 골문 근처로": 골문 안의 한 점(위아래 30px 안쪽)을 조준하고 ±2° 오차
+test('laser: aims at a random point inside the goal with a little spread, so even from my own half it arrives near the goal', () => {
+  let scored = 0; const heights = [];
+  for (let seed = 1; seed <= 20; seed++) {
+    const m = createMatch({ home: byNumber(10), away: byNumber(19), difficulty: 'first', rng: mulberry32(seed) });
+    for (let i = 0, n = Math.round((MATCH.GOAL_PAUSE + DT) / DT); i < n; i++) stepMatch(m, NO_INPUT, DT);
+    const L = m.world.players.L, R = m.world.players.R, b = m.world.ball;
+    b.held = { side: 'L', t: 999 }; R.x = 1160;
+    fire(m); L.x = 300; ballAtFoot(m);
+    run(m, DT, inp({ kick: true }));
+    assert.equal(b.flight, 'laser');
+    const yAtGoal = b.y + (FIELD.W - b.x) * (b.vy / b.vx);
+    heights.push(Math.round(yAtGoal));
+    assert.ok(yAtGoal > FIELD.GROUND - FIELD.GOAL_H - 40 && yAtGoal < FIELD.GROUND + 10, 'near the goal from my own half: ' + Math.round(yAtGoal));
+    for (let t = 0; t < 2 && m.phase !== 'kickoff'; t += DT) run(m, DT);
+    if (m.scores.L === 1) scored++;
+  }
+  assert.ok(Math.max(...heights) - Math.min(...heights) > 60, 'spread: ' + heights.join(','));
+  assert.ok(scored >= 12, 'mostly scores from my own half: ' + scored + '/20');
 });
 
 test('laser: bouncing back (direction reversed) ends the flight early', () => {
