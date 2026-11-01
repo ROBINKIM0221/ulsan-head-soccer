@@ -44,3 +44,12 @@ test('without an AudioContext (node) sfx is a safe no-op, and the switch persist
   setSoundEnabled(true);
   assert.equal(sfx('nope'), false);
 });
+
+// 2026-11-01 형준 "아쉬운 노래 나오면서 LOSE": 패배는 휘슬 뒤 반음씩 내려가는 트롬본 네 음, 마지막은 축 처진다 (전엔 풀 죽은 두 음)
+test('lose: after the whistle a sad tune of at least 4 descending notes, the last one drooping', () => {
+  const notes = RECIPES.lose.filter(s => s.k === 'tone');
+  assert.ok(notes.length >= 4, 'notes: ' + notes.length);
+  for (let i = 1; i < notes.length; i++) assert.ok(notes[i].f0 < notes[i - 1].f0, 'descending at ' + i);
+  assert.ok(notes.at(-1).f1 < notes.at(-1).f0, 'last note droops');
+  assert.ok(notes.every(n => n.at >= 0.9) && notes.at(-1).at + notes.at(-1).t <= 4, 'after the whistle, within the ceremony');
+});

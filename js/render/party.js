@@ -48,7 +48,7 @@ export function updateParty(party, match, dt) {
       b.y = FIELD.GROUND - hop; b.onGround = hop === 0;
     }
   }
-  if (party.t < PARTY_LEN - 1) {
+  if (party.side === 'L' && party.t < PARTY_LEN - 1) {   // 색종이는 내가 이겼을 때만 (2026-11-01 형준 "졌을때는 색종이도 안나오고")
     for (let i = 0; i < 2; i++) party.confetti.push({ x: Math.random() * FIELD.W, y: -10, vx: (Math.random() - 0.5) * 80, vy: 160 + Math.random() * 200, rot: Math.random() * Math.PI * 2, vr: (Math.random() - 0.5) * 10, color: COLORS[(party.confetti.length + i) % 3], age: 0 });
   }
   for (const q of party.confetti) { q.age += dt; q.x += (q.vx + Math.sin(q.age * 4 + q.rot) * 50) * dt; q.y += q.vy * dt; q.rot += q.vr * dt; }
@@ -62,13 +62,14 @@ export const partyView = (party, side, p) => side === party.side
 
 export function drawParty(ctx, party, match, imgs, t) {
   for (const m of party.members) drawPlayer(ctx, m.body, imgs[m.body.def.number], { kit: wornKit(match.kits[party.side], m.body.def), t, cheer: m.arrived });
-  // VAMOS!: 0.3초 뒤 하늘 한가운데 커지며 나타나 박자에 맞춰 살짝 들썩인다. 내가 이겼을 때만 (2026-11-01 형준 "졌을땐 바모스 뜨면 안돼")
-  if (party.side === 'L' && party.t > 0.3) {
-    const grow = Math.min(1, (party.t - 0.3) / 0.35), k = grow * (1 + 0.05 * Math.sin(party.t * BEAT));
-    ctx.save(); ctx.translate(FIELD.W / 2, 250); ctx.scale(k, k); ctx.rotate(-0.04);
+  // 0.3초 뒤 하늘 한가운데 큰 글자가 커지며 나타난다. 이기면 금색 VAMOS! 가 박자에 들썩이고, 지면 회청색 LOSE 가 가만히 (2026-11-01 형준 "졌을땐 바모스 뜨면 안돼", "아쉬운 노래 나오면서 LOSE 뜨게")
+  if (party.t > 0.3) {
+    const won = party.side === 'L', word = won ? 'VAMOS!' : 'LOSE';
+    const grow = Math.min(1, (party.t - 0.3) / 0.35), k = grow * (won ? 1 + 0.05 * Math.sin(party.t * BEAT) : 1);
+    ctx.save(); ctx.translate(FIELD.W / 2, 250); ctx.scale(k, k); ctx.rotate(won ? -0.04 : 0.03);
     ctx.font = '600 170px Teko, "Arial Narrow", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.lineWidth = 16; ctx.lineJoin = 'round'; ctx.strokeStyle = '#002B6B'; ctx.strokeText('VAMOS!', 0, 0);
-    ctx.fillStyle = '#FFC72C'; ctx.fillText('VAMOS!', 0, 0); ctx.restore();
+    ctx.lineWidth = 16; ctx.lineJoin = 'round'; ctx.strokeStyle = '#002B6B'; ctx.strokeText(word, 0, 0);
+    ctx.fillStyle = won ? '#FFC72C' : '#B7C3D6'; ctx.fillText(word, 0, 0); ctx.restore();
   }
   for (const q of party.confetti) { ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.rot); ctx.fillStyle = q.color; ctx.fillRect(-7, -4, 14, 8); ctx.restore(); }
 }

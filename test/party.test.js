@@ -10,12 +10,19 @@ const run = (party, m, seconds) => { for (let i = 0, n = Math.round(seconds / DT
 // 그리기 호출만 받아 적는 가짜 캔버스: 모든 메서드는 빈 함수, 글자 그리기만 모은다
 const drawnTexts = (party, m) => { const out = []; const ctx = new Proxy({}, { get: (_, k) => (k === 'fillText' || k === 'strokeText') ? s => out.push(s) : () => ({}) }); drawParty(ctx, party, m, {}, 1); return out; };
 
-// 2026-11-01 형준 "졌을땐 바모스 뜨면 안돼": VAMOS! 는 내가 이겼을 때만
-test('VAMOS! is drawn only when I win', () => {
-  for (const [result, shown] of [['win', true], ['lose', false]]) {
-    const m = won(); m.result = result; const party = startParty(m); run(party, m, 1);
-    assert.equal(drawnTexts(party, m).includes('VAMOS!'), shown, result);
-  }
+// 2026-11-01 형준 "졌을땐 바모스 뜨면 안돼", 이어서 "졌을때는 색종이도 안나오고, 선수들 나와서 방방 뛰는건 그대로, 아쉬운 노래 나오면서 LOSE 뜨게"
+test('win: VAMOS! and confetti; lose: LOSE, no confetti, but the opponent bench still hops', () => {
+  const w = won(), pw = startParty(w); run(pw, w, 3);
+  const tw = drawnTexts(pw, w);
+  assert.ok(tw.includes('VAMOS!') && !tw.includes('LOSE'), 'win text: ' + tw.join(','));
+  assert.ok(pw.confetti.length > 0, 'confetti when I win');
+  const l = won(); l.result = 'lose'; const pl = startParty(l); run(pl, l, 3);
+  const tl = drawnTexts(pl, l);
+  assert.ok(tl.includes('LOSE') && !tl.includes('VAMOS!'), 'lose text: ' + tl.join(','));
+  assert.equal(pl.confetti.length, 0, 'no confetti when I lose');
+  let hopped = false;
+  for (let i = 0; i < 60; i++) { updateParty(pl, l, DT); if (pl.members.some(x => x.body.y < FIELD.GROUND)) hopped = true; }
+  assert.ok(hopped, 'the opponent bench still hops when I lose');
 });
 
 test('the bench (everyone but the two on the pitch) runs in from both edges and gathers around my player', () => {
