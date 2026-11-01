@@ -21,6 +21,8 @@ test('5 field kits (home, away, third, fourth, retro) and 4 goalkeeper kits with
   assert.equal(retro.name, '레트로');
   assert.match(retro.stripe, /^#[0-9A-Fa-f]{6}$/);
   assert.ok(KITS.filter(k => k.stripe).length === 1);
+  // 2026-11-01 형준 "비슷한 계열끼리는 안겹치게": 필드 킷은 진한 파랑 계열(dark)과 밝은 계열(light)로 나뉜다
+  assert.deepEqual(KITS.map(k => k.id + ':' + k.tone), ['home:dark', 'away:light', 'third:dark', 'fourth:light', 'retro:dark']);
 });
 
 test('조현우 picks from the goalkeeper kits, everyone else from the field kits', () => {
@@ -31,18 +33,19 @@ test('조현우 picks from the goalkeeper kits, everyone else from the field kit
   assert.equal(kitById('nope'), undefined);
 });
 
-// 2026-11-01 형준: "상대 유니폼은 그냥 아무거나 나오게" — 상대는 내 것과 다른 유니폼 중 무작위(rng), GK 도 내 것과 다른 것 중 무작위
-test('sideKits: the AI wears a random kit that is not mine, and a random GK kit that is not mine', () => {
+// 2026-11-01 형준: "상대 유니폼은 그냥 아무거나 나오게" → 이어서 "비슷한 계열끼리는 안겹치게" — 상대는 내 것과 다른 계열(dark↔light)의 유니폼 중 무작위(rng), GK 는 내 것과 다른 것 중 무작위
+test('sideKits: the AI wears a random kit of the other tone (dark vs light), and a random GK kit that is not mine', () => {
   const first = () => 0, last = () => 0.999;
   const a = sideKits('home', first);
   assert.equal(a.L.field.id, 'home'); assert.equal(a.R.field.id, 'away');
   assert.equal(a.L.gk, GK_KITS[0]); assert.equal(a.R.gk, GK_KITS[1]);
   const z = sideKits('home', last);
-  assert.equal(z.R.field, KITS.at(-1)); assert.equal(z.R.gk, GK_KITS.at(-1));
-  assert.equal(sideKits('third', first).R.field.id, 'home');
+  assert.equal(z.R.field.id, 'fourth'); assert.equal(z.R.gk, GK_KITS.at(-1));
+  assert.equal(sideKits('retro', first).R.field.id, 'away');
+  assert.equal(sideKits('away', first).R.field.id, 'home'); assert.equal(sideKits('away', last).R.field.id, 'retro');
   for (const k of KITS) for (let i = 0; i < 30; i++) {
     const s = sideKits(k.id);
-    assert.notEqual(s.R.field, s.L.field); assert.ok(KITS.includes(s.R.field)); assert.notEqual(s.R.gk, s.L.gk); assert.ok(GK_KITS.includes(s.R.gk));
+    assert.notEqual(s.R.field.tone, s.L.field.tone, k.id + ' vs ' + s.R.field.id); assert.ok(KITS.includes(s.R.field)); assert.notEqual(s.R.gk, s.L.gk); assert.ok(GK_KITS.includes(s.R.gk));
   }
   const g = sideKits(GK_KITS[1].id, first);
   assert.equal(g.L.gk, GK_KITS[1]); assert.equal(g.L.field.id, 'home'); assert.equal(g.R.field.id, 'away'); assert.equal(g.R.gk, GK_KITS[0]);
@@ -60,6 +63,6 @@ test('createMatch stores side kits: mine as chosen (home by default), the AI pic
   const m = createMatch(base);
   assert.equal(m.kits.L.field.id, 'home'); assert.notEqual(m.kits.R.field.id, 'home'); assert.ok(KITS.includes(m.kits.R.field));
   assert.equal(createMatch({ ...base, kit: 'third' }).kits.L.field.id, 'third');
-  assert.equal(createMatch({ ...base, kit: 'retro', rng: () => 0 }).kits.R.field.id, 'home');
-  assert.equal(createMatch({ ...base, rng: () => 0.999 }).kits.R.field.id, 'retro');
+  assert.equal(createMatch({ ...base, kit: 'retro', rng: () => 0 }).kits.R.field.id, 'away');
+  assert.equal(createMatch({ ...base, rng: () => 0.999 }).kits.R.field.id, 'fourth');
 });

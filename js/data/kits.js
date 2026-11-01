@@ -1,12 +1,12 @@
 // 울산 HD FC 유니폼. 필드 선수는 2026 시즌 4종(홈·어웨이·서드 '미드나이트 웨이브'·포스 'ULSAN 052') + 레트로(울산 현대 호랑이 시절 세로 줄무늬, 2026-11-01 형준 사진),
 // 골키퍼 조현우는 GK 유니폼 4종(2026 홈·원정, 2025 홈·원정). 2026-10-31 형준 요청.
-// 색은 공개 사진(구단 샵·나무위키·Footy Headlines)에서 뽑은 근사값. 콩알 몸에는 상의·트림 줄·등번호·반바지·운동화 다섯 색만 쓴다. stripe 가 있으면 상의에 그 색 세로 줄무늬.
+// 색은 공개 사진(구단 샵·나무위키·Footy Headlines)에서 뽑은 근사값. 콩알 몸에는 상의·트림 줄·등번호·반바지·운동화 다섯 색만 쓴다. stripe 가 있으면 상의에 그 색 세로 줄무늬. tone 은 계열(dark 진한 파랑 / light 밝은 색): 상대는 내 계열이 아닌 쪽에서만 나온다.
 export const KITS = [
-  { id: 'home',   name: '홈',     jersey: '#004098', trim: '#FFC72C', number: '#FFFFFF', shorts: '#002B6B', shoe: '#004098' },
-  { id: 'away',   name: '어웨이', jersey: '#FFFFFF', trim: '#8CCBF2', number: '#004098', shorts: '#D7E1F2', shoe: '#002B6B' },
-  { id: 'third',  name: '서드',   jersey: '#16213A', trim: '#CDB57C', number: '#CDB57C', shorts: '#16213A', shoe: '#0E1526' },
-  { id: 'fourth', name: '포스',   jersey: '#CFD4DC', trim: '#15234A', number: '#15234A', shorts: '#15234A', shoe: '#15234A' },
-  { id: 'retro',  name: '레트로', jersey: '#2B2A8A', stripe: '#0B1D63', trim: '#B9D4E8', number: '#FFFFFF', shorts: '#0B1D63', shoe: '#0B1D63' },
+  { id: 'home',   name: '홈',     tone: 'dark',  jersey: '#004098', trim: '#FFC72C', number: '#FFFFFF', shorts: '#002B6B', shoe: '#004098' },
+  { id: 'away',   name: '어웨이', tone: 'light', jersey: '#FFFFFF', trim: '#8CCBF2', number: '#004098', shorts: '#D7E1F2', shoe: '#002B6B' },
+  { id: 'third',  name: '서드',   tone: 'dark',  jersey: '#16213A', trim: '#CDB57C', number: '#CDB57C', shorts: '#16213A', shoe: '#0E1526' },
+  { id: 'fourth', name: '포스',   tone: 'light', jersey: '#CFD4DC', trim: '#15234A', number: '#15234A', shorts: '#15234A', shoe: '#15234A' },
+  { id: 'retro',  name: '레트로', tone: 'dark',  jersey: '#2B2A8A', stripe: '#0B1D63', trim: '#B9D4E8', number: '#FFFFFF', shorts: '#0B1D63', shoe: '#0B1D63' },
 ];
 export const GK_KITS = [
   { id: 'gk26h', name: '26 홈',  gk: true, jersey: '#D7297F', trim: '#C9DD35', number: '#FFFFFF', shorts: '#B21C66', shoe: '#1A1A1A' },
@@ -20,12 +20,12 @@ export const kitById = id => ALL.find(k => k.id === id);
 export const kitsFor = def => (def.position === 'GK' ? GK_KITS : KITS);
 
 // 양쪽 유니폼. 필드용·GK용을 다 정해 두고, 그리는 순간 선수 포지션에 맞는 쪽을 입는다 (교체로 조현우가 들어와도 자연스럽게).
-// 상대(AI): 내 것과 다른 유니폼 중 무작위, GK 도 내 것과 다른 것 중 무작위 (2026-11-01 형준: "상대 유니폼은 그냥 아무거나 나오게")
-const pickOther = (list, mine, rng) => { const rest = list.filter(k => k !== mine); return rest[Math.floor(rng() * rest.length)]; };
+// 상대(AI): 내 것과 다른 계열(dark↔light)의 유니폼 중 무작위, GK 는 내 것과 다른 것 중 무작위 (2026-11-01 형준: "상대 유니폼은 그냥 아무거나" → "비슷한 계열끼리는 안겹치게")
+const pickFrom = (rest, rng) => rest[Math.floor(rng() * rest.length)];
 export function sideKits(kitId, rng = Math.random) {
   const mine = kitById(kitId) || KITS[0];
   const L = mine.gk ? { field: KITS[0], gk: mine } : { field: mine, gk: GK_KITS[0] };
-  const R = { field: pickOther(KITS, L.field, rng), gk: pickOther(GK_KITS, L.gk, rng) };
+  const R = { field: pickFrom(KITS.filter(k => k.tone !== L.field.tone), rng), gk: pickFrom(GK_KITS.filter(k => k !== L.gk), rng) };
   return { L, R };
 }
 export const wornKit = (kits, def) => (def.position === 'GK' ? kits.gk : kits.field);
