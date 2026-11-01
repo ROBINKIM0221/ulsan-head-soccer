@@ -4,6 +4,7 @@ import { headCenter, footPoint } from '../sim/physics.js';
 import { drawStadium, drawGoals, drawPosts } from './stadium.js';
 import { drawPlayer, drawBall } from './characters.js';
 import { wornKit } from '../data/kits.js';
+import { SLIP_SPECIALS } from '../sim/specials.js';
 import { byNumber } from '../data/players.js';
 import { startParty, updateParty, partyView, drawParty } from './party.js';
 import { sfx, eventSound } from '../sound.js';
@@ -169,6 +170,11 @@ export function drawFrame(ctx, match, imgs, fx, t) {
       ctx.save(); ctx.strokeStyle = 'rgba(0,43,107,.55)'; ctx.lineWidth = 2;
       for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(p.x - 60 + i * 20, p.y - 10); ctx.lineTo(p.x - 40 + i * 20, p.y + 22); ctx.stroke(); ctx.beginPath(); ctx.moveTo(p.x + 60 - i * 20, p.y - 10); ctx.lineTo(p.x + 40 - i * 20, p.y + 22); ctx.stroke(); }
       ctx.restore();
+    }
+    // 몸싸움 미끄러짐 발동 중: 발밑에 도는 금색 점선 고리. 높이뛰기(8초)·투지(5초)는 겉으로 티가 안 나서 평소에도 미끄러지는 줄 알기 쉽다 (2026-11-01 형준 "필살기 아니어도 부딪히면 미끄러지는데")
+    if (p.active && SLIP_SPECIALS.includes(p.active.id)) {
+      ctx.save(); ctx.setLineDash([8, 6]); ctx.lineDashOffset = -t * 40; ctx.strokeStyle = 'rgba(255,199,44,.9)'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(p.x, FIELD.GROUND - 4, 48 * p.scale, 12 * p.scale, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
     }
     if (p.mods.magnet) {
       ctx.save(); ctx.setLineDash([10, 10]); ctx.lineDashOffset = -t * 60; ctx.strokeStyle = 'rgba(255,199,44,.8)'; ctx.lineWidth = 3;

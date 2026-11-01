@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { FIELD, PHYS, DT, MATCH, NO_INPUT, DIFFICULTY } from '../js/sim/constants.js';
 import { headCenter } from '../js/sim/physics.js';
 import { createMatch, stepMatch } from '../js/sim/match.js';
-import { activateSpecial, updateSpecials } from '../js/sim/specials.js';
+import { activateSpecial, updateSpecials, SLIP_SPECIALS } from '../js/sim/specials.js';
 import { mulberry32 } from '../js/sim/rng.js';
 import { byNumber } from '../js/data/players.js';
 
@@ -129,4 +129,17 @@ test('activate while active is ignored and mods do not accumulate across ticks',
   assert.equal(activateSpecial(m, 'L'), false);
   updateSpecials(m, DT); updateSpecials(m, DT);
   assert.equal(L.mods.speed, 2.0);
+});
+
+// 2026-11-01 형준 "수비수들 필살기 아니어도 부딪히면 미끄러지는데 필살기일때만 미끄러지게": 발동 중이 아니면 2초를 밀어붙여도 아무도 안 넘어진다. SLIP_SPECIALS 는 화면 표시(발밑 고리)가 쓴다
+test('without an active special, bumping into the opponent for 2s never knocks anyone down', () => {
+  assert.deepEqual(SLIP_SPECIALS, ['giant', 'highjump', 'spirit']);
+  for (const no of [19, 15, 26]) {
+    const m = ready(no, 96); const L = m.world.players.L, R = m.world.players.R;
+    L.x = 500; R.x = 560;
+    const ev = run(m, 2.0, inp({ right: true }));
+    assert.equal(L.active, null, no + ' has no special running');
+    assert.equal(ev.filter(e => e.type === 'knockdown').length, 0, no + ': knockdowns without a special');
+    assert.equal(R.stun, 0, no + ': opponent never stunned');
+  }
 });
