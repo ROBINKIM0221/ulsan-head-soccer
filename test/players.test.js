@@ -28,6 +28,7 @@ test('roles and special ids match spec', () => {
   assert.equal(byNumber(55).special.id, 'train');
   assert.equal(byNumber(55).special.duration, 3.0);   // 2026-11-01 형준: 1초 늘림
   assert.equal(byNumber(24).special.duration, 7);     // 2026-11-01 형준: "이규성 자석 1초 줄여줘" 8→7
+  assert.equal(byNumber(15).special.gaugeRate, 2.0);  // 2026-11-02 형준: "정승현 게이지 속도 좀만 줄여줘" 2.6→2.0 (경기의 91% 발동 중이던 것)
   assert.equal(byNumber(38).special.id, 'press');
   assert.equal(byNumber(26).special.id, 'spirit');
   assert.equal(byNumber(96).special.kind, 'instant');

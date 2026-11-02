@@ -11,7 +11,7 @@ export const PLAYERS = [
     desc: '두 배로 빨라지고 킥이 세진다' }),
   P(14, '이진현', 'MF', 'attack', { id: 'curve', name: '커브 슛', kind: 'oneshot', duration: 6, gaugeRate: 0.45,   // 밸런스 2026-10-31: 커브는 거의 확정골이라 절반 속도로 찬다
     desc: '상대 머리 위로 휘어 들어가는 슛' }),
-  P(15, '정승현', 'DF', 'defend', { id: 'highjump', name: '높이뛰기', kind: 'buff', duration: 8, gaugeRate: 2.6,   // 밸런스 2026-10-31 (AI 끼리 20%)
+  P(15, '정승현', 'DF', 'defend', { id: 'highjump', name: '높이뛰기', kind: 'buff', duration: 8, gaugeRate: 2.0,   // 밸런스 2026-10-31 (AI 끼리 20%). 2026-11-02 형준 "게이지 속도 좀만 줄여줘": 2.6→2.0
     desc: '더 높이 뛰고 헤딩은 두 배. 부딪힌 상대는 미끄러진다' }),
   P(19, '김영권', 'DF', 'defend', { id: 'giant', name: '거인 수비', kind: 'buff', duration: 3.5,
     desc: '몸이 커져 골문을 막는다. 부딪힌 상대는 미끄러진다' }),
