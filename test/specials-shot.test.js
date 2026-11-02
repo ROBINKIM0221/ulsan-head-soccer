@@ -106,13 +106,14 @@ test('curve: next kick leaves at 55deg/1050, passes through the opponent briefly
 });
 
 // 2026-11-01 형준 "최석현은 원래 상대방 미끄러지는거니까 살짝 더 오래": 넘어짐 1초 → 1.3초
-test('slide: dashes 180px in .35s, kicks the ball once, knocks the opponent down for 1.3s', () => {
+// 2026-11-02 형준 "최석현 발동 시간을 좀 늘려야겠는데": 0.35초 → 0.5초, 같은 속도라 약 257px
+test('slide: dashes about 257px in .5s, kicks the ball once, knocks the opponent down for 1.3s', () => {
   const m = ready(96); const L = m.world.players.L, R = m.world.players.R; const b = m.world.ball;
   L.x = 400; R.x = 1160;
   const x0 = L.x;
   fire(m);
-  run(m, 0.35);
-  assert.ok(Math.abs((L.x - x0) - 180) < 12, `slid ${L.x - x0}`);
+  run(m, 0.5);
+  assert.ok(Math.abs((L.x - x0) - 257) < 14, `slid ${L.x - x0}`);
   assert.equal(L.active, null, 'instant special over');
 
   const m2 = ready(96); const L2 = m2.world.players.L; const b2 = m2.world.ball;

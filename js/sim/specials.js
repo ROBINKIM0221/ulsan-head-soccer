@@ -209,9 +209,9 @@ export const SPECIALS = {
   },
 
   // ── 즉발 ──
-  // 0.35초 동안 180px 미끄러진다. 공은 1000 으로 걷어내고, 상대는 1초 넘어진다 (각 1회)
+  // 0.5초 동안 약 257px 미끄러진다(초속 515; 2026-11-02 형준 "발동 시간을 좀 늘려야겠는데": 0.35초·180px → 0.5초). 공은 1000 으로 걷어내고, 상대는 1.3초 넘어진다 (각 1회)
   slide: {
-    activate(m, s) { const p = me(m, s); p.forcedVx = dir(s) * 180 / 0.35; p.active.data = { kicked: false, hit: false }; },
+    activate(m, s) { const p = me(m, s); p.forcedVx = dir(s) * 515; p.active.data = { kicked: false, hit: false }; },
     update(m, s) {
       const p = me(m, s), d = p.active.data, b = m.world.ball, o = me(m, opp(s));
       const ev = [];

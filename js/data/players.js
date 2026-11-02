@@ -25,7 +25,7 @@ export const PLAYERS = [
     desc: '상대의 속도와 점프가 60%로 떨어진다' }),
   P(55, '토마스', 'DF', 'defend', { id: 'train', name: '기관차 모드', kind: 'buff', duration: 3.0, gaugeRate: 0.75,   // 밸런스 2026-10-31: 새 물리에서 70%라 빈도로 조절. 2026-11-01 형준: 2→3초
     desc: '기차가 되어 공과 상대를 골문으로 밀어 넣는다' }),
-  P(96, '최석현', 'DF', 'defend', { id: 'slide', name: '슬라이딩', kind: 'instant', duration: 0.35,
+  P(96, '최석현', 'DF', 'defend', { id: 'slide', name: '슬라이딩', kind: 'instant', duration: 0.5,   // 2026-11-02 형준: 0.35→0.5초
     desc: '미끄러지며 공을 걷어내고 상대를 넘어뜨린다' }),
   P(99, '야고', 'FW', 'attack', { id: 'cannon', name: '대포 헤딩', kind: 'buff', duration: 7,
     desc: '헤딩이 두 배. 맞은 상대는 뒤로 날아간다' }),
