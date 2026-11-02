@@ -19,7 +19,8 @@ function show(node) { tickOnButtons(node); overlay.innerHTML = ''; overlay.appen
 const load = () => { try { return JSON.parse(localStorage.getItem(STORE)) || null; } catch { return null; } };
 const save = v => { try { localStorage.setItem(STORE, JSON.stringify(v)); } catch { /* 사생활 모드 등 */ } };
 
-// 선택 카드: 경기 속 모습 그대로(입을 유니폼, 서 있는 자세)
+// 선택 카드: 경기 속 모습 그대로(입을 유니폼, 서 있는 자세, 머리도 경기처럼 컷아웃). 2026-11-03 형준: 왼쪽 큰 카드는 동그란 사진 대신 누끼로, 오른쪽 작은 얼굴들은 동그라미 그대로.
+// 컷아웃은 머리 원보다 위로 더 올라오므로(머리카락) 1.25 → 1.15 배로 살짝 줄여 캔버스 위에서 잘리지 않게 한다
 function paintCard(canvas, def, imgs, kit) {
   const ctx = canvas.getContext('2d');
   const dpr = Math.min(3, window.devicePixelRatio || 1);
@@ -30,9 +31,9 @@ function paintCard(canvas, def, imgs, kit) {
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = 'rgba(255,255,255,.08)'; ctx.beginPath(); ctx.ellipse(W / 2, H - 14, 70, 10, 0, 0, Math.PI * 2); ctx.fill();
   const body = createPlayer(def, 'L');
-  body.x = W / 2 / (1.25 * k); body.y = (H - 20 * k) / (1.25 * k);
-  ctx.save(); ctx.scale(1.25 * k, 1.25 * k);
-  drawPlayer(ctx, body, imgs[def.number], { kit, circle: true });
+  body.x = W / 2 / (1.15 * k); body.y = (H - 20 * k) / (1.15 * k);
+  ctx.save(); ctx.scale(1.15 * k, 1.15 * k);
+  drawPlayer(ctx, body, imgs[def.number], { kit });
   ctx.restore();
 }
 
