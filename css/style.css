@@ -131,6 +131,14 @@ body {
 .action.ghost { background: transparent; color: var(--white); border: 2px solid rgba(255,255,255,.55); }
 .row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 
+/* ---------- 첫 화면(사진 로딩 중): 엠블럼·제목 아래 금색 바가 왔다 갔다 ---------- */
+#overlay:has(.sheet.loading) { background: #0D3F7E; }   /* 반투명이면 밑의 조작 버튼이 흐릿하게 비친다. 색은 선택 화면의 반투명 남색과 같은 값 */
+.sheet.loading { gap: 22px; }
+.loading-bar { display: block; width: 140px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.18); overflow: hidden; }
+.loading-bar::after { content: ''; display: block; width: 40%; height: 100%; border-radius: 2px; background: var(--gold); animation: loading-slide 1s ease-in-out infinite alternate; }
+@keyframes loading-slide { from { transform: translateX(-20%); } to { transform: translateX(270%); } }
+@media (prefers-reduced-motion: reduce) { .loading-bar::after { animation: none; width: 100%; } }
+
 /* ---------- 선수 선택 ---------- */
 .sheet.select { flex-direction: row; align-items: center; justify-content: center; gap: 28px; text-align: left; }
 .sheet.select .col.left { flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; }

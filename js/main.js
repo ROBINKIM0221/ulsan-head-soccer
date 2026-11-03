@@ -136,6 +136,7 @@ async function boot() {
   const dbg = params.get('debug');
   if (dbg === '1' || dbg === 'result' || dbg === 'sub') {
     // 선택 화면 없이 바로: 이동경 vs 야고 (1군). ?special=1 이면 L 게이지 100 으로 시작, &kit=third 로 유니폼
+    hideOverlay();   // index.html 의 로딩 화면은 선택 화면이 덮어쓰는데, 디버그는 선택 화면이 없다
     const home = byNumber(Number(params.get('home') || 10)), away = byNumber(Number(params.get('away') || 99));
     game.quit = () => location.reload();
     const match = startMatch(home, away, params.get('difficulty') || 'first', {
