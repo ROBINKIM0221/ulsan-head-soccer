@@ -60,6 +60,9 @@ test('sideKits: an explicit right-side kit (2P) is worn as given, field or GK, a
   assert.equal(g.R.gk, GK_KITS[2]); assert.equal(g.R.field.id, 'away', 'field slot still random of the other tone');
   assert.equal(sideKits('home', () => 0, 'nope').R.field.id, 'away');
   assert.equal(sideKits('home', () => 0, null).R.field.id, 'away');
+  // 2026-11-08 형준 "2p 유니폼도 5개 중에 고르게": 2P 는 1P 와 같은 유니폼·같은 계열도 된다
+  assert.equal(sideKits('home', () => 0, 'home').R.field.id, 'home');
+  assert.equal(sideKits('home', () => 0, 'third').R.field.id, 'third');
 });
 
 test('wornKit picks the GK kit only for the goalkeeper', () => {

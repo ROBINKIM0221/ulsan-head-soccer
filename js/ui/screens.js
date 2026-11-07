@@ -165,16 +165,15 @@ function buildSoundToggle(cls = 'opp sound') {
 
 // 선택 화면: 왼쪽 반이 나(1P), 오른쪽 반이 상대 — 1인이면 컴퓨터(AI, 랜덤 "?" 카드 + 난이도), 2인이면 2P(선수 + 유니폼).
 // 가운데 기둥에 엠블럼·VS·"1인 | 2인"·소리·경기 시작 (2026-11-07 형준 "화면 왼쪽 반이 1p 오른쪽 2p였으면, 1인 혼자 ai랑 할 때는 오른쪽을 ai로").
-// 오른쪽은 왼쪽과 같은 선수를 못 고르고, 2P 유니폼은 왼쪽과 다른 계열만(경기의 sideKits 와 같은 규칙). 토글하면 상태를 들고 다시 그린다.
+// 오른쪽은 왼쪽과 같은 선수를 못 고른다. 2P 유니폼은 왼쪽과 상관없이 전부(2026-11-08 형준 "2p 유니폼도 5개 중에 고르게"; 그 전엔 다른 계열만). 토글하면 상태를 들고 다시 그린다.
 export function showSelect({ imgs, selection, onStart }) {
   const slot = def => (def.position === 'GK' ? 'gk' : 'field');
-  const st = { two: !!selection.two, diff: selection.difficulty, L: { number: selection.number, kit: { field: KITS[0].id, gk: GK_KITS[0].id } }, R: { number: selection.opp, kit: { field: null, gk: null } } };
+  const st = { two: !!selection.two, diff: selection.difficulty, L: { number: selection.number, kit: { field: KITS[0].id, gk: GK_KITS[0].id } }, R: { number: selection.opp, kit: { field: KITS[1].id, gk: GK_KITS[0].id } } };   // 2P 기본은 어웨이: 1P 기본 홈과 안 겹치게
   const initL = kitById(selection.kit); if (initL) st.L.kit[initL.gk ? 'gk' : 'field'] = initL.id;
   const initR = kitById(selection.kitR); if (initR) st.R.kit[initR.gk ? 'gk' : 'field'] = initR.id;
   const Ldef = () => byNumber(st.L.number);
-  // 2인은 교체가 없으니 지금 입은 것끼리만 안 겹치면 된다: 필드끼리는 다른 계열, 골키퍼끼리는 다른 GK 유니폼, 필드 vs 골키퍼는 뭐든
-  const allowedR = def => { const Lgk = Ldef().position === 'GK'; return def.position === 'GK' ? GK_KITS.filter(k => !(Lgk && k.id === st.L.kit.gk)) : (Lgk ? KITS : KITS.filter(k => k.tone !== kitById(st.L.kit.field).tone)); };
-  const kitForR = def => { const list = allowedR(def); return list.find(k => k.id === st.R.kit[slot(def)]) || list[0]; };
+  // 컴퓨터 카드 미리 보기용: 경기(sideKits)처럼 왼쪽과 다른 계열의 첫 유니폼, 골키퍼끼리는 왼쪽 것 빼고
+  const aiKit = def => { const Lgk = Ldef().position === 'GK'; return (def.position === 'GK' ? GK_KITS.filter(k => !(Lgk && k.id === st.L.kit.gk)) : (Lgk ? KITS : KITS.filter(k => k.tone !== kitById(st.L.kit.field).tone)))[0]; };
   const tag = (card, text) => card.prepend(el('span', 'tag', text));
 
   function render() {
@@ -184,7 +183,6 @@ export function showSelect({ imgs, selection, onStart }) {
     let pickR = null, kitsR = null;
     const kitsL = buildKits(id => {
       st.L.kit[slot(Ldef())] = id; pickL.refresh();
-      if (kitsR) { const d = pickR.current(); kitsR.show(allowedR(d), kitForR(d).id); pickR.refresh(); }   // 계열이 바뀌면 2P 목록도
     });
     const pickL = buildCarousel({ players: PLAYERS, imgs, initial: st.L.number, side: 'L', keys: st.two ? ['KeyA', 'KeyD'] : ['ArrowLeft', 'ArrowRight'],
       kitFor: def => kitById(st.L.kit[slot(def)]),
@@ -195,13 +193,13 @@ export function showSelect({ imgs, selection, onStart }) {
     if (st.two) {
       kitsR = buildKits(id => { st.R.kit[slot(pickR.current())] = id; pickR.refresh(); });
       pickR = buildCarousel({ players: PLAYERS, imgs, initial: st.R.number ?? 0, side: 'R', keys: ['ArrowLeft', 'ArrowRight'], exclude: () => st.L.number,
-        kitFor: kitForR,
-        onChange: def => { st.R.number = def.number; kitsR.show(allowedR(def), kitForR(def).id); } });
+        kitFor: def => kitById(st.R.kit[slot(def)]),
+        onChange: def => { st.R.number = def.number; kitsR.show(kitsFor(def), st.R.kit[slot(def)]); } });
       tag(pickR.card, '2P');
       right.append(pickR.root.querySelector('.carousel'), pickR.root.querySelector('.skill'), pickR.root.querySelector('.thumbs'), kitsR.root);
     } else {
       pickR = buildCarousel({ players: PLAYERS, imgs, initial: st.R.number ?? 0, side: 'R', random: true, keys: [], exclude: () => st.L.number,
-        kitFor: def => allowedR(def)[0],   // 미리 보기용. 경기에선 왼쪽과 다른 계열 중 무작위
+        kitFor: aiKit,   // 미리 보기용. 경기에선 왼쪽과 다른 계열 중 무작위
         onChange: def => { st.R.number = def.random ? null : def.number; } });
       tag(pickR.card, 'AI');
       right.append(pickR.root.querySelector('.carousel'), pickR.root.querySelector('.skill'), pickR.root.querySelector('.thumbs'), buildLevels(st.diff, d => { st.diff = d; }));
@@ -212,12 +210,12 @@ export function showSelect({ imgs, selection, onStart }) {
     const start = el('button', 'action', '경기 시작'); start.type = 'button';
     start.addEventListener('click', () => {
       const Rdef = pickR.current();
-      onStart({ number: st.L.number, difficulty: st.diff, kit: st.L.kit[slot(Ldef())], opp: Rdef.random ? null : Rdef.number, two: st.two, kitR: st.two ? kitForR(Rdef).id : null });
+      onStart({ number: st.L.number, difficulty: st.diff, kit: st.L.kit[slot(Ldef())], opp: Rdef.random ? null : Rdef.number, two: st.two, kitR: st.two ? st.R.kit[slot(Rdef)] : null });
     });
     mid.append(mode.root, buildSoundToggle(), start);
     row.append(left, mid, right);
     sheet.appendChild(row);
-    if (st.two) sheet.appendChild(el('p', 'two-keys', '<span class="grp"><b>1P</b> <kbd>A</kbd><kbd>D</kbd> 이동 · <kbd>W</kbd> 점프 · <kbd>Shift</kbd> 슛</span> <span class="grp"><b>2P</b> <kbd>←</kbd><kbd>→</kbd> 이동 · <kbd>↑</kbd> 점프 · <kbd>Space</kbd> 슛</span>'));
+    if (st.two) sheet.appendChild(el('p', 'two-keys', '<span class="grp"><b>1P</b> <kbd>A</kbd><kbd>D</kbd> 이동 · <kbd>W</kbd> 점프 · <kbd>Tab</kbd> 슛</span> <span class="grp"><b>2P</b> <kbd>←</kbd><kbd>→</kbd> 이동 · <kbd>↑</kbd> 점프 · <kbd>Space</kbd> 슛</span>'));
     show(sheet, e => { pickL.onKey(e); pickR.onKey(e); });
     start.focus({ preventScroll: true });
   }
