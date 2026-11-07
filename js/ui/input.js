@@ -1,15 +1,15 @@
 // 화면 버튼(포인터, 멀티터치)과 키보드를 Inputs 로 모은다.
 // left/right/jump 는 누르고 있는 동안, kick/special/sub 는 "이번에 눌림"(read 하면 소비).
 // 키는 이동·점프·슛뿐 (2026-10-31 형준: 단순하게). 필살기는 자동, 교체는 화면 버튼으로만.
-// 1인: 방향키 이동·점프, Space 슛 (2026-11-07 형준; WASD 는 조용한 별칭). 2인("선수 두 명이 하게"): 한 키보드를 반씩 — 왼쪽 선수 A·D·W + 왼쪽 Ctrl 슛, 오른쪽 선수 방향키 + Space 슛.
-// 오른쪽 Ctrl 은 방향키 옆이라 1P 슛에서 뺐다. 화면 버튼은 항상 L.
+// 1인: 방향키 이동·점프, Space 슛 (2026-11-07 형준; WASD 는 조용한 별칭). 2인("선수 두 명이 하게"): 한 키보드를 반씩 — 왼쪽 선수 A·D·W + 왼쪽 Shift 슛, 오른쪽 선수 방향키 + Space 슛.
+// 왼쪽 슛은 처음 Ctrl 이었는데 Ctrl+W(탭 닫기)를 페이지가 못 막아 Shift 로 (형준 "시프트로 ㄱㄱ"). 오른쪽 Shift 는 방향키 옆이라 뺐다. 화면 버튼은 항상 L.
 export const KEYS = {
   ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right',
   ArrowUp: 'jump', KeyW: 'jump',
   Space: 'kick',
 };
 export const KEYS_2P = {
-  L: { KeyA: 'left', KeyD: 'right', KeyW: 'jump', ControlLeft: 'kick' },
+  L: { KeyA: 'left', KeyD: 'right', KeyW: 'jump', ShiftLeft: 'kick' },
   R: { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'jump', Space: 'kick' },
 };
 
