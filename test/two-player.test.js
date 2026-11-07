@@ -27,6 +27,12 @@ test('two-player: the right player follows the 4th-argument inputs and the AI ne
   assert.notEqual(ai.world.players.R.x, x0, '1P: the AI still moves R');
 });
 
+test('two-player: the match wears the kit the right player picked (kitR)', () => {
+  const m = createMatch({ home: byNumber(10), away: byNumber(19), twoPlayer: true, kit: 'third', kitR: 'fourth', rng: () => 0 });   // rng 0 이면 무작위는 away 라 fourth 는 kitR 덕분
+  assert.equal(m.kits.L.field.id, 'third'); assert.equal(m.kits.R.field.id, 'fourth');
+  assert.equal(createMatch({ home: byNumber(10), away: byNumber(19), kit: 'home', rng: () => 0 }).kits.R.field.id, 'away', '1P: still random of the other tone');
+});
+
 test('two-player: no difficulty speed handicap on R and no substitution for anyone', () => {
   const m = mk({ twoPlayer: true }); toPlay(m);
   stepMatch(m, NO_INPUT, DT, NO_INPUT);

@@ -6,13 +6,13 @@ import { activateSpecial, updateSpecials, specialHooks, endSpecial } from './spe
 import { sideKits } from '../data/kits.js';
 
 // twoPlayer: 오른쪽도 사람(stepMatch 의 inputsR). AI·난이도 속도 보정·교체가 꺼진다 (2026-11-07 형준 "2인 모드", "ai 모드는 그대로 유지하면서")
-export function createMatch({ home, away, difficulty = 'first', rng = Math.random, kit = 'home', twoPlayer = false }) {
+export function createMatch({ home, away, difficulty = 'first', rng = Math.random, kit = 'home', twoPlayer = false, kitR = null }) {
   return {
     world: createWorld(home, away), twoPlayer,
     clock: MATCH.LEN, phase: 'kickoff', phaseT: MATCH.GOAL_PAUSE,
     scores: { L: 0, R: 0 }, subUsed: { L: false, R: false }, used: { L: [home], R: [away] },
     difficulty, rng, ai: createAiState(difficulty, rng), result: null, pendingSub: null,
-    kits: sideKits(kit, rng),   // 양쪽 유니폼 { L: { field, gk }, R: { field, gk } }, 상대 것은 경기마다 무작위
+    kits: sideKits(kit, rng, kitR),   // 양쪽 유니폼 { L: { field, gk }, R: { field, gk } }, 상대 것은 경기마다 무작위(2P 가 골랐으면 kitR)
     goals: [],             // 골마다 { side, number }: 결과 화면의 선수별 골 수
   };
 }

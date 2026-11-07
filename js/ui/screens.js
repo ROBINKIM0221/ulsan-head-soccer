@@ -2,7 +2,7 @@
 import { PLAYERS, byNumber } from '../data/players.js';
 import { KITS, GK_KITS, kitById, kitsFor, wornKit } from '../data/kits.js';
 import { sfx, soundEnabled, setSoundEnabled } from '../sound.js';
-import { createPlayer } from '../sim/physics.js';
+import { createPlayer, headCenter } from '../sim/physics.js';
 import { drawPlayer } from '../render/characters.js';
 import { shareText } from './text.js';
 import { DIFFICULTY, DIFFICULTY_ORDER } from '../sim/constants.js';
@@ -12,34 +12,49 @@ const LEVELS = DIFFICULTY_ORDER.map(id => ({ id, name: DIFFICULTY[id].name }));
 const STORE = 'uhd11.select';
 
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
-export function hideOverlay() { overlay.hidden = true; overlay.innerHTML = ''; }
+export function hideOverlay() { overlay.hidden = true; overlay.innerHTML = ''; sheetKeys = null; }
 const tickOnButtons = node => node.addEventListener('click', e => { if (e.target.closest('button')) sfx('tick'); });   // 시트 안 모든 버튼에 틱 소리
-function show(node) { tickOnButtons(node); overlay.innerHTML = ''; overlay.appendChild(node); overlay.hidden = false; }
+// 시트의 키 넘기기(onKey)는 창 전체에서 받는다: 유니폼 버튼처럼 눌리면 다시 그려지는 버튼은 포커스를 body 로 떨어뜨려 시트 위 리스너가 못 받는다
+let sheetKeys = null;
+window.addEventListener('keydown', e => { if (sheetKeys && !overlay.hidden) sheetKeys(e); });
+function show(node, onKey = null) { tickOnButtons(node); overlay.innerHTML = ''; overlay.appendChild(node); overlay.hidden = false; sheetKeys = onKey; }
 
 const load = () => { try { return JSON.parse(localStorage.getItem(STORE)) || null; } catch { return null; } };
 const save = v => { try { localStorage.setItem(STORE, JSON.stringify(v)); } catch { /* 사생활 모드 등 */ } };
 
 // 선택 카드: 경기 속 모습 그대로(입을 유니폼, 서 있는 자세, 머리도 경기처럼 컷아웃). 2026-11-03 형준: 왼쪽 큰 카드는 동그란 사진 대신 누끼로, 오른쪽 작은 얼굴들은 동그라미 그대로.
-// 컷아웃은 머리 원보다 위로 더 올라오므로(머리카락) 1.25 → 1.15 배로 살짝 줄여 캔버스 위에서 잘리지 않게 한다
-function paintCard(canvas, def, imgs, kit) {
+// 컷아웃은 머리 원보다 위로 더 올라오므로(머리카락) 1.25 → 1.15 배로 살짝 줄여 캔버스 위에서 잘리지 않게 한다.
+// side 'R' 은 경기처럼 왼쪽을 본다. def.random(컴퓨터 상대 랜덤)이면 회색 선수에 물음표 머리. 폰 가로(카드 둘이 나란히)에서는 작게.
+const MYSTERY_KIT = { jersey: '#8E9BB0', trim: '#DCE6F5', number: '#FFFFFF', shorts: '#66748C', shoe: '#3A4559' };
+function paintCard(canvas, def, imgs, kit, side = 'L') {
   const ctx = canvas.getContext('2d');
   const dpr = Math.min(3, window.devicePixelRatio || 1);
-  const k = document.getElementById('stage').dataset.tiny === '1' ? 0.72 : 1;   // 320px 폭 폰
+  const st = document.getElementById('stage').dataset;
+  const k = st.tiny === '1' ? 0.5 : st.compact === '1' ? 0.56 : 1;
   const W = Math.round(220 * k), H = Math.round(250 * k);
   canvas.width = W * dpr; canvas.height = H * dpr; canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = 'rgba(255,255,255,.08)'; ctx.beginPath(); ctx.ellipse(W / 2, H - 14, 70, 10, 0, 0, Math.PI * 2); ctx.fill();
-  const body = createPlayer(def, 'L');
+  ctx.fillStyle = 'rgba(255,255,255,.08)'; ctx.beginPath(); ctx.ellipse(W / 2, H - 14 * k, 70 * k, 10 * k, 0, 0, Math.PI * 2); ctx.fill();
+  const body = createPlayer(def.random ? { number: '?' } : def, side);
   body.x = W / 2 / (1.15 * k); body.y = (H - 20 * k) / (1.15 * k);
   ctx.save(); ctx.scale(1.15 * k, 1.15 * k);
-  drawPlayer(ctx, body, imgs[def.number], { kit });
+  drawPlayer(ctx, body, def.random ? null : imgs[def.number], { kit: def.random ? MYSTERY_KIT : kit });
+  if (def.random) {
+    const h = headCenter(body);
+    ctx.fillStyle = '#002B6B'; ctx.font = `600 ${Math.round(h.r * 1.7)}px Teko, "Arial Narrow", sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('?', h.x, h.y + h.r * 0.1);
+  }
   ctx.restore();
 }
 
 // 넘겨보기 선수 선택기. onChange(def) 로 현재 선수를 알리고, kitFor(def) 가 카드에 입힐 유니폼을 준다.
-function buildCarousel({ players, imgs, initial, kitFor, onChange }) {
-  let idx = Math.max(0, players.findIndex(p => p.number === initial));
+// side 'R' 은 카드가 왼쪽을 본다. random 이면 맨 앞에 "?"(컴퓨터 상대 랜덤) 칸. exclude() 가 돌려주는 등번호는 건너뛴다(같은 선수끼리 못 붙게).
+// keys = [이전, 다음] 의 e.code: 1인은 방향키, 2인은 왼쪽 A·D / 오른쪽 방향키 (2026-11-07 형준 "왼쪽 반이 1p 오른쪽 2p")
+const RANDOM = { random: true, number: 0, name: '랜덤 상대' };
+function buildCarousel({ players, imgs, initial, kitFor, onChange, side = 'L', random = false, exclude = () => null, keys = ['ArrowLeft', 'ArrowRight'] }) {
+  const list = random ? [RANDOM, ...players] : players;
+  let idx = Math.max(0, list.findIndex(p => p.number === initial));
   const root = el('div', 'picker');
   const car = el('div', 'carousel');
   const prev = el('button', 'arrow prev', '‹'); prev.type = 'button'; prev.setAttribute('aria-label', '이전 선수');
@@ -51,44 +66,50 @@ function buildCarousel({ players, imgs, initial, kitFor, onChange }) {
   car.append(prev, card, next);
   const skill = el('div', 'skill');
   const thumbs = el('div', 'thumbs'); thumbs.setAttribute('role', 'listbox'); thumbs.setAttribute('aria-label', '선수 목록');
-  players.forEach((p, i) => {
-    const b = el('button', 'thumb'); b.type = 'button'; b.setAttribute('role', 'option'); b.setAttribute('aria-label', `${p.name} ${p.number}번`);
-    const img = el('img'); img.src = p.img; img.alt = ''; b.appendChild(img);
+  list.forEach((p, i) => {
+    const b = el('button', p.random ? 'thumb random' : 'thumb', p.random ? '?' : undefined); b.type = 'button'; b.setAttribute('role', 'option');
+    b.setAttribute('aria-label', p.random ? '랜덤' : `${p.name} ${p.number}번`);
+    if (!p.random) { const img = el('img'); img.src = p.img; img.alt = ''; b.appendChild(img); }
     b.addEventListener('click', () => go(i));
     thumbs.appendChild(b);
   });
   root.append(car, skill, thumbs);
 
-  function go(i) {
-    idx = (i + players.length) % players.length;
-    const def = players[idx];
-    paintCard(canvas, def, imgs, kitFor(def));
-    who.innerHTML = `<b class="name">${def.name}</b><span class="num">${def.number}</span>`;
-    const sp = def.special, when = sp.kind === 'oneshot' ? '다음 슛 한 번' : sp.kind === 'instant' ? '즉시' : `${sp.duration}초`;
-    skill.innerHTML = `<div class="skill-head"><span class="skill-tag">필살기</span><span class="skill-when">${when}</span></div><b class="skill-name">${sp.name}</b><p class="skill-desc">${sp.desc}</p>`;
-    [...thumbs.children].forEach((t, k) => t.setAttribute('aria-selected', k === idx));
+  const banned = p => !p.random && p.number === exclude();
+  function go(i, dir = 1) {
+    let k = (i + list.length) % list.length;
+    for (let n = 0; n < list.length && banned(list[k]); n++) k = (k + dir + list.length) % list.length;
+    idx = k;
+    const def = list[idx];
+    paintCard(canvas, def, imgs, def.random ? null : kitFor(def), side);
+    who.innerHTML = def.random ? '<b class="name">랜덤 상대</b>' : `<b class="name">${def.name}</b><span class="num">${def.number}</span>`;
+    if (def.random) {
+      skill.innerHTML = '<div class="skill-head"><span class="skill-tag">필살기</span><span class="skill-when">?</span></div><b class="skill-name">경기마다 다른 선수</b><p class="skill-desc">시작하면 나머지 11명 중 한 명이 나온다</p>';
+    } else {
+      const sp = def.special, when = sp.kind === 'oneshot' ? '다음 슛 한 번' : sp.kind === 'instant' ? '즉시' : `${sp.duration}초`;
+      skill.innerHTML = `<div class="skill-head"><span class="skill-tag">필살기</span><span class="skill-when">${when}</span></div><b class="skill-name">${sp.name}</b><p class="skill-desc">${sp.desc}</p>`;
+    }
+    [...thumbs.children].forEach((t, n) => { t.setAttribute('aria-selected', n === idx); t.disabled = banned(list[n]); });
     onChange(def);
   }
-  prev.addEventListener('click', () => go(idx - 1));
-  next.addEventListener('click', () => go(idx + 1));
+  prev.addEventListener('click', () => go(idx - 1, -1));
+  next.addEventListener('click', () => go(idx + 1, 1));
   // 스와이프. 무대가 90° 눕혀져 있으면 물리적 좌우 = 뷰포트 세로(무대 x = 화면 y) 라 clientY 로 잰다
   let start = null;
   const along = e => (document.getElementById('stage').dataset.rotated === '1' ? e.clientY : e.clientX);
   card.addEventListener('pointerdown', e => { start = along(e); });
-  card.addEventListener('pointerup', e => { if (start === null) return; const dx = along(e) - start; start = null; if (dx > 40) go(idx - 1); else if (dx < -40) go(idx + 1); });
+  card.addEventListener('pointerup', e => { if (start === null) return; const dx = along(e) - start; start = null; if (dx > 40) go(idx - 1, -1); else if (dx < -40) go(idx + 1, 1); });
   card.addEventListener('pointercancel', () => { start = null; });
   go(idx);
-  const onKey = e => { if (e.key === 'ArrowLeft') { e.preventDefault(); go(idx - 1); } if (e.key === 'ArrowRight') { e.preventDefault(); go(idx + 1); } };
-  return { root, current: () => players[idx], refresh: () => go(idx), onKey };
+  const onKey = e => { if (e.code === keys[0]) { e.preventDefault(); go(idx - 1, -1); } else if (e.code === keys[1]) { e.preventDefault(); go(idx + 1, 1); } };
+  // refresh: 유니폼이 바뀌어 다시 그리거나, 왼쪽이 이 선수로 바뀌어 건너뛰어야 할 때(랜덤 칸이 있으면 랜덤으로)
+  return { root, card, current: () => list[idx], refresh: () => go(banned(list[idx]) && random ? 0 : idx), onKey };
 }
 
-function buildLevels(initial, onChange, extra) {
+function buildLevels(initial, onChange) {
   const wrap = el('div', 'pick');
-  const head = el('div', 'pick-head', '<p class="pick-label" id="levelsLabel">난이도</p>');
-  if (extra) head.appendChild(extra);
-  wrap.appendChild(head);
+  wrap.innerHTML = '<p class="pick-label" id="levelsLabel">난이도</p>';
   const levels = el('div', 'levels'); levels.setAttribute('role', 'group'); levels.setAttribute('aria-labelledby', 'levelsLabel');
-  const keys = el('p', 'two-keys', '<span class="grp"><b>1P</b> <kbd>A</kbd><kbd>D</kbd> 이동 · <kbd>W</kbd> 점프 · <kbd>Shift</kbd> 슛</span> <span class="grp"><b>2P</b> <kbd>←</kbd><kbd>→</kbd> 이동 · <kbd>↑</kbd> 점프 · <kbd>Space</kbd> 슛</span>'); keys.hidden = true;
   let cur = initial;
   const paint = () => { const i = LEVELS.findIndex(l => l.id === cur); [...levels.children].forEach((b, k) => { b.setAttribute('aria-pressed', k === i); b.classList.toggle('on', k <= i); }); };
   LEVELS.forEach(l => {
@@ -96,8 +117,8 @@ function buildLevels(initial, onChange, extra) {
     b.addEventListener('click', () => { cur = l.id; paint(); onChange(cur); });
     levels.appendChild(b);
   });
-  wrap.append(levels, keys); paint();
-  return Object.assign(wrap, { setTwo: two => { levels.hidden = two; keys.hidden = !two; head.querySelector('.pick-label').textContent = two ? '2인 대전' : '난이도'; } });
+  wrap.appendChild(levels); paint();
+  return wrap;
 }
 
 // 유니폼 고르기: 카드 밑 작은 셔츠들. 선수가 바뀌면 목록도 바뀐다 (조현우는 골키퍼 4종, 나머지는 필드 5종)
@@ -117,44 +138,6 @@ function buildKits(onChange) {
     }
   }
   return { root: wrap, show };
-}
-
-// 상대 고르기: 난이도 줄 오른쪽 작은 버튼. 기본은 랜덤, 누르면 얼굴 목록(랜덤 + 내 선수 뺀 11명)에서 한 명 (2026-10-31 형준)
-// 2026-11-01 형준 "상대가 랜덤으로 나온다는 표시 같고 선택할 수 있을 느낌이 안 들어" → 랜덤일 땐 "상대 고르기", 끝에 ▾ 화살표, 채운 배경
-const CARET = '<svg class="caret" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-function buildOpponent(initial, onChange) {
-  let cur = initial, mine = null, role = '상대';   // cur: 등번호 또는 null(랜덤). role: 2인 대전이면 '2P 선수'
-  const btn = el('button', 'opp choose'); btn.type = 'button'; btn.setAttribute('aria-haspopup', 'dialog');
-  const paint = () => {
-    const def = cur && byNumber(cur);
-    btn.innerHTML = (def ? `<img class="opp-face" src="${def.img}" alt=""><span>${role}</span><b>${def.name}</b>` : `<i class="opp-face">?</i><b>${role} 고르기</b>`) + CARET;
-    btn.setAttribute('aria-label', `${role} 고르기: 현재 ${def ? def.name : '랜덤'}`);
-  };
-  function open() {
-    const modal = el('div', 'modal'); modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-label', role + ' 선택');
-    const panel = el('div', 'modal-panel', `<p class="pick-label">${role} 선택</p>`);
-    const grid = el('div', 'thumbs');
-    const close = () => { modal.remove(); btn.focus({ preventScroll: true }); };
-    const pick = n => { cur = n; paint(); close(); onChange(cur); };
-    const rnd = el('button', 'thumb random', '?'); rnd.type = 'button'; rnd.setAttribute('aria-label', '랜덤'); rnd.setAttribute('aria-selected', cur === null);
-    rnd.addEventListener('click', () => pick(null));
-    grid.appendChild(rnd);
-    for (const p of PLAYERS.filter(p => p.number !== mine)) {
-      const b = el('button', 'thumb', `<img src="${p.img}" alt="">`); b.type = 'button'; b.setAttribute('aria-label', `${p.name} ${p.number}번`); b.setAttribute('aria-selected', p.number === cur);
-      b.addEventListener('click', () => pick(p.number));
-      grid.appendChild(b);
-    }
-    panel.appendChild(grid); modal.appendChild(panel);
-    modal.addEventListener('click', e => { if (e.target === modal) close(); });
-    modal.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
-    tickOnButtons(modal);
-    overlay.appendChild(modal);
-    (grid.querySelector('[aria-selected="true"]') || rnd).focus({ preventScroll: true });
-  }
-  btn.addEventListener('click', open);
-  paint();
-  // 내 선수가 바뀌면 알린다. 내가 상대로 골라 둔 선수를 고르면 랜덤으로 되돌린다
-  return { button: btn, current: () => cur, setMine: n => { mine = n; if (cur === n) { cur = null; paint(); onChange(cur); } }, setRole: r => { role = r; paint(); } };
 }
 
 // 경기 방식: 1인(컴퓨터 상대) / 2인(한 키보드). 2026-11-07 형준 "2인 모드를 만들어서 선수 두 명이 하게"
@@ -180,34 +163,65 @@ function buildSoundToggle(cls = 'opp sound') {
   return b;
 }
 
-export function showSelect({ imgs, initialNumber, difficulty, kit, opponent = null, two = false, onStart }) {
-  const sheet = el('div', 'sheet select');
-  const left = el('div', 'col left'), right = el('div', 'col right');
-  right.innerHTML = '<div class="brand"><span class="emblem" aria-hidden="true"></span><div class="brand-text"><span class="club">ULSAN HD FC</span><h1><span class="vs">1 VS 1</span> 축구</h1></div></div>';
-  let diff = difficulty;
-  const chosen = { field: KITS[0].id, gk: GK_KITS[0].id };   // 필드·골키퍼 각각 마지막으로 고른 것
+// 선택 화면: 왼쪽 반이 나(1P), 오른쪽 반이 상대 — 1인이면 컴퓨터(AI, 랜덤 "?" 카드 + 난이도), 2인이면 2P(선수 + 유니폼).
+// 가운데 기둥에 엠블럼·VS·"1인 | 2인"·소리·경기 시작 (2026-11-07 형준 "화면 왼쪽 반이 1p 오른쪽 2p였으면, 1인 혼자 ai랑 할 때는 오른쪽을 ai로").
+// 오른쪽은 왼쪽과 같은 선수를 못 고르고, 2P 유니폼은 왼쪽과 다른 계열만(경기의 sideKits 와 같은 규칙). 토글하면 상태를 들고 다시 그린다.
+export function showSelect({ imgs, selection, onStart }) {
   const slot = def => (def.position === 'GK' ? 'gk' : 'field');
-  const init = kitById(kit); if (init) chosen[init.gk ? 'gk' : 'field'] = init.id;
-  const kits = buildKits(id => { chosen[slot(picker.current())] = id; picker.refresh(); });
-  const opp = buildOpponent(opponent, () => {});
-  const mode = buildMode(two, on => { opp.setRole(on ? '2P 선수' : '상대'); levelsRow.setTwo(on); });
-  const picker = buildCarousel({ players: PLAYERS, imgs, initial: initialNumber, kitFor: def => kitById(chosen[slot(def)]),
-    onChange: def => { kits.show(kitsFor(def), chosen[slot(def)]); opp.setMine(def.number); } });
-  left.appendChild(picker.root.querySelector('.carousel'));
-  left.appendChild(kits.root);
-  right.appendChild(picker.root.querySelector('.skill'));
-  right.appendChild(picker.root.querySelector('.thumbs'));
-  const extras = el('div', 'pick-extras'); extras.append(mode.root, opp.button, buildSoundToggle());
-  const levelsRow = buildLevels(diff, d => { diff = d; }, extras);
-  if (two) { opp.setRole('2P 선수'); levelsRow.setTwo(true); }
-  right.appendChild(levelsRow);
-  const start = el('button', 'action', '경기 시작'); start.type = 'button';
-  start.addEventListener('click', () => onStart(picker.current(), diff, chosen[slot(picker.current())], opp.current(), mode.current()));
-  right.appendChild(start);
-  sheet.append(left, right);
-  sheet.addEventListener('keydown', picker.onKey);
-  show(sheet);
-  start.focus({ preventScroll: true });
+  const st = { two: !!selection.two, diff: selection.difficulty, L: { number: selection.number, kit: { field: KITS[0].id, gk: GK_KITS[0].id } }, R: { number: selection.opp, kit: { field: null, gk: null } } };
+  const initL = kitById(selection.kit); if (initL) st.L.kit[initL.gk ? 'gk' : 'field'] = initL.id;
+  const initR = kitById(selection.kitR); if (initR) st.R.kit[initR.gk ? 'gk' : 'field'] = initR.id;
+  const Ldef = () => byNumber(st.L.number);
+  // 2인은 교체가 없으니 지금 입은 것끼리만 안 겹치면 된다: 필드끼리는 다른 계열, 골키퍼끼리는 다른 GK 유니폼, 필드 vs 골키퍼는 뭐든
+  const allowedR = def => { const Lgk = Ldef().position === 'GK'; return def.position === 'GK' ? GK_KITS.filter(k => !(Lgk && k.id === st.L.kit.gk)) : (Lgk ? KITS : KITS.filter(k => k.tone !== kitById(st.L.kit.field).tone)); };
+  const kitForR = def => { const list = allowedR(def); return list.find(k => k.id === st.R.kit[slot(def)]) || list[0]; };
+  const tag = (card, text) => card.prepend(el('span', 'tag', text));
+
+  function render() {
+    const sheet = el('div', 'sheet duel' + (st.two ? ' two' : ''));
+    const row = el('div', 'duel-row');
+    const left = el('div', 'side L'), mid = el('div', 'mid'), right = el('div', 'side R');
+    let pickR = null, kitsR = null;
+    const kitsL = buildKits(id => {
+      st.L.kit[slot(Ldef())] = id; pickL.refresh();
+      if (kitsR) { const d = pickR.current(); kitsR.show(allowedR(d), kitForR(d).id); pickR.refresh(); }   // 계열이 바뀌면 2P 목록도
+    });
+    const pickL = buildCarousel({ players: PLAYERS, imgs, initial: st.L.number, side: 'L', keys: st.two ? ['KeyA', 'KeyD'] : ['ArrowLeft', 'ArrowRight'],
+      kitFor: def => kitById(st.L.kit[slot(def)]),
+      onChange: def => { st.L.number = def.number; kitsL.show(kitsFor(def), st.L.kit[slot(def)]); if (pickR) pickR.refresh(); } });
+    tag(pickL.card, '1P');
+    left.append(pickL.root.querySelector('.carousel'), pickL.root.querySelector('.skill'), pickL.root.querySelector('.thumbs'), kitsL.root);
+
+    if (st.two) {
+      kitsR = buildKits(id => { st.R.kit[slot(pickR.current())] = id; pickR.refresh(); });
+      pickR = buildCarousel({ players: PLAYERS, imgs, initial: st.R.number ?? 0, side: 'R', keys: ['ArrowLeft', 'ArrowRight'], exclude: () => st.L.number,
+        kitFor: kitForR,
+        onChange: def => { st.R.number = def.number; kitsR.show(allowedR(def), kitForR(def).id); } });
+      tag(pickR.card, '2P');
+      right.append(pickR.root.querySelector('.carousel'), pickR.root.querySelector('.skill'), pickR.root.querySelector('.thumbs'), kitsR.root);
+    } else {
+      pickR = buildCarousel({ players: PLAYERS, imgs, initial: st.R.number ?? 0, side: 'R', random: true, keys: [], exclude: () => st.L.number,
+        kitFor: def => allowedR(def)[0],   // 미리 보기용. 경기에선 왼쪽과 다른 계열 중 무작위
+        onChange: def => { st.R.number = def.random ? null : def.number; } });
+      tag(pickR.card, 'AI');
+      right.append(pickR.root.querySelector('.carousel'), pickR.root.querySelector('.skill'), pickR.root.querySelector('.thumbs'), buildLevels(st.diff, d => { st.diff = d; }));
+    }
+
+    mid.innerHTML = '<span class="club">ULSAN HD FC</span><span class="emblem" aria-hidden="true"></span><span class="vs" aria-hidden="true">VS</span>';
+    const mode = buildMode(st.two, on => { st.two = on; render(); });
+    const start = el('button', 'action', '경기 시작'); start.type = 'button';
+    start.addEventListener('click', () => {
+      const Rdef = pickR.current();
+      onStart({ number: st.L.number, difficulty: st.diff, kit: st.L.kit[slot(Ldef())], opp: Rdef.random ? null : Rdef.number, two: st.two, kitR: st.two ? kitForR(Rdef).id : null });
+    });
+    mid.append(mode.root, buildSoundToggle(), start);
+    row.append(left, mid, right);
+    sheet.appendChild(row);
+    if (st.two) sheet.appendChild(el('p', 'two-keys', '<span class="grp"><b>1P</b> <kbd>A</kbd><kbd>D</kbd> 이동 · <kbd>W</kbd> 점프 · <kbd>Shift</kbd> 슛</span> <span class="grp"><b>2P</b> <kbd>←</kbd><kbd>→</kbd> 이동 · <kbd>↑</kbd> 점프 · <kbd>Space</kbd> 슛</span>'));
+    show(sheet, e => { pickL.onKey(e); pickR.onKey(e); });
+    start.focus({ preventScroll: true });
+  }
+  render();
 }
 
 export function showVs(home, away, ms = 1000) {
@@ -234,8 +248,7 @@ export function showSubSelect({ imgs, exclude, kits, onPick, onCancel }) {
   const cancel = el('button', 'action ghost', '닫기'); cancel.type = 'button'; cancel.addEventListener('click', onCancel);
   row.append(ok, cancel); right.appendChild(row);
   sheet.append(left, right);
-  sheet.addEventListener('keydown', picker.onKey);
-  show(sheet);
+  show(sheet, picker.onKey);
   ok.focus({ preventScroll: true });
 }
 
@@ -286,35 +299,33 @@ export function showResult({ match, onAgain, onChange }) {
   sheet.querySelector('[data-act="again"]').focus({ preventScroll: true });
 }
 
-// 전체 흐름
+// 전체 흐름. selection = { number, difficulty, kit, opp, two, kitR }: opp 는 오른쪽(2P 또는 지정한 컴퓨터 상대) 등번호, null 이면 랜덤; kitR 은 2P 유니폼
 export function runFlow({ startMatch, finishSubstitution, imgs }) {
   const saved = load() || {};
   const number = byNumber(saved.number) ? saved.number : 10;
   let selection = { number, difficulty: LEVELS.some(l => l.id === saved.difficulty) ? saved.difficulty : 'first', kit: kitById(saved.kit) ? saved.kit : 'home',
-    opp: byNumber(saved.opp) && saved.opp !== number ? saved.opp : null, two: saved.two === true };   // opp: 고른 상대(2인이면 2P 선수) 등번호, null 이면 랜덤. two: 2인 대전
+    opp: byNumber(saved.opp) && saved.opp !== number ? saved.opp : null, two: saved.two === true, kitR: kitById(saved.kitR) ? saved.kitR : null };
 
   const randomOther = home => { const pool = PLAYERS.filter(p => p.number !== home.number); return pool[Math.floor(Math.random() * pool.length)]; };
 
-  function play(home, difficulty, kit, opp, two) {
-    const away = byNumber(opp) && opp !== home.number ? byNumber(opp) : randomOther(home);
+  function play(sel) {
+    const home = byNumber(sel.number);
+    const away = byNumber(sel.opp) && sel.opp !== home.number ? byNumber(sel.opp) : randomOther(home);
     showVs(home, away).then(() => {
       hideOverlay();
-      startMatch(home, away, difficulty, {
-        kit, twoPlayer: two,
+      startMatch(home, away, sel.difficulty, {
+        kit: sel.kit, kitR: sel.two ? sel.kitR : null, twoPlayer: sel.two,
         onSubRequest: m => showSubSelect({
           imgs, kits: m.kits.L, exclude: [m.used.L.at(-1).number, m.used.R.at(-1).number],
           onPick: d => { hideOverlay(); finishSubstitution(d); },
           onCancel: () => { hideOverlay(); finishSubstitution(null); },
         }),
-        onOver: (m, wait) => setTimeout(() => showResult({ match: m, onAgain: () => play(home, difficulty, kit, opp, two), onChange: toSelect }), wait),
+        onOver: (m, wait) => setTimeout(() => showResult({ match: m, onAgain: () => play(sel), onChange: toSelect }), wait),
       });
     });
   }
   function toSelect() {
-    showSelect({ imgs, initialNumber: selection.number, difficulty: selection.difficulty, kit: selection.kit, opponent: selection.opp, two: selection.two, onStart: (def, diff, kit, opp, two) => {
-      selection = { number: def.number, difficulty: diff, kit, opp, two }; save(selection);
-      play(def, diff, kit, opp, two);
-    } });
+    showSelect({ imgs, selection, onStart: sel => { selection = sel; save(selection); play(sel); } });
   }
   toSelect();
   return { toSelect, play };

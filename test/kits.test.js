@@ -52,6 +52,16 @@ test('sideKits: the AI wears a random kit of the other tone (dark vs light), and
   assert.equal(sideKits('nope').L.field.id, 'home');
 });
 
+// 2026-11-07 형준 "화면 왼쪽 반이 1p 오른쪽 2p": 2인 대전은 오른쪽도 유니폼을 고른다 (kitR). 없거나 엉터리면 전처럼 무작위
+test('sideKits: an explicit right-side kit (2P) is worn as given, field or GK, and a bad id falls back to random', () => {
+  const s = sideKits('home', () => 0, 'fourth');
+  assert.equal(s.R.field.id, 'fourth'); assert.equal(s.R.gk, GK_KITS[1], 'GK slot still random (not mine)');
+  const g = sideKits('home', () => 0, GK_KITS[2].id);
+  assert.equal(g.R.gk, GK_KITS[2]); assert.equal(g.R.field.id, 'away', 'field slot still random of the other tone');
+  assert.equal(sideKits('home', () => 0, 'nope').R.field.id, 'away');
+  assert.equal(sideKits('home', () => 0, null).R.field.id, 'away');
+});
+
 test('wornKit picks the GK kit only for the goalkeeper', () => {
   const s = sideKits('fourth');
   assert.equal(wornKit(s.L, GK), s.L.gk);

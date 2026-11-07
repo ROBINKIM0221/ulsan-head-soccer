@@ -143,7 +143,53 @@ body {
 @keyframes loading-slide { from { transform: translateX(-20%); } to { transform: translateX(270%); } }
 @media (prefers-reduced-motion: reduce) { .loading-bar::after { animation: none; width: 100%; } }
 
-/* ---------- 선수 선택 ---------- */
+/* ---------- 선수 선택: 왼쪽 반 1P, 오른쪽 반 2P/AI, 가운데 기둥 (2026-11-07 형준 "화면 왼쪽 반이 1p 오른쪽 2p") ---------- */
+.sheet.duel { width: min(97%, 1000px); gap: 6px; }
+.duel-row { display: flex; align-items: flex-start; justify-content: center; gap: 12px; width: 100%; }
+.duel .side { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: left; }
+.duel .side .skill { width: 100%; max-width: 330px; }
+.duel .side .pick { max-width: 330px; }
+.duel .mid { flex: none; width: 150px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 30px; }
+.duel .mid .club { font: 700 11px/1 var(--ui); letter-spacing: .06em; color: var(--muted); }
+.duel .mid .vs { font: 600 64px/.85 var(--num); color: var(--gold); letter-spacing: .02em; }
+.duel .mid .action { min-width: 0; width: 100%; padding: 12px 10px; margin-top: 6px; }
+.duel .card { position: relative; }
+.tag { position: absolute; top: 4px; left: 0; font: 800 12px/1 var(--ui); color: var(--navy); background: var(--white); padding: 4px 9px; border-radius: 999px; }
+.side.R .tag { background: var(--gold); }
+.thumb:disabled { opacity: .25; cursor: default; }
+.duel .two-keys { margin: 0; text-align: center; }
+#stage[data-compact="1"] .duel .mid { width: 120px; padding-top: 10px; gap: 5px; }
+#stage[data-compact="1"] .duel .mid .vs { font-size: 44px; }
+#stage[data-compact="1"] .duel .mid .action { padding: 8px; }
+#stage[data-compact="1"] .duel .side { gap: 3px; }
+#stage[data-tiny="1"] .duel-row { gap: 6px; }
+#stage[data-tiny="1"] .duel .mid { width: 92px; padding-top: 4px; gap: 4px; }
+#stage[data-tiny="1"] .duel .mid .vs { font-size: 34px; }
+#stage[data-tiny="1"] .duel .mid .club { display: none; }
+#stage[data-tiny="1"] .duel .mid .emblem { width: 26px; height: 34px; }
+#stage[data-tiny="1"] .duel .side { gap: 2px; }
+#stage[data-tiny="1"] .duel .two-keys { display: none; }
+#stage[data-tiny="1"] .tag { font-size: 10px; padding: 3px 6px; }
+.duel .pick-label { text-align: center; }
+.sheet.duel:not(.two) .side.R .thumbs { grid-template-columns: repeat(7, 42px); }   /* "?" 랜덤 칸까지 13칸 → 7 + 6 */
+/* 폰 가로: 카드 둘이 나란히라 세로가 모자란다 — 카드 작게(paintCard), 설명·라벨 숨김, 썸네일 작게 */
+#stage[data-compact="1"] .duel .skill-desc, #stage[data-compact="1"] .duel .pick-label { display: none; }
+#stage[data-compact="1"] .duel .skill { padding: 6px 10px 7px 12px; }
+#stage[data-compact="1"] .duel .skill-name { font-size: 16px; }
+#stage[data-compact="1"] .duel .who .name { font-size: 20px; }
+#stage[data-compact="1"] .duel .who .num { font-size: 26px; }
+#stage[data-compact="1"] .duel .thumbs { grid-template-columns: repeat(6, 32px); gap: 5px; }
+#stage[data-compact="1"] .duel .thumb { width: 32px; height: 32px; }
+#stage[data-compact="1"] .sheet.duel:not(.two) .side.R .thumbs { grid-template-columns: repeat(7, 32px); }
+#stage[data-tiny="1"] .duel .thumbs { grid-template-columns: repeat(6, 26px); gap: 4px; }
+#stage[data-tiny="1"] .duel .thumb { width: 26px; height: 26px; }
+#stage[data-tiny="1"] .sheet.duel:not(.two) .side.R .thumbs { grid-template-columns: repeat(7, 26px); }
+#stage[data-tiny="1"] .duel .who .name { font-size: 18px; }
+#stage[data-tiny="1"] .duel .who .num { font-size: 22px; }
+#stage[data-tiny="1"] .duel .skill { padding: 4px 10px 5px 12px; }
+#stage[data-tiny="1"] .duel .skill-name { font-size: 15px; }
+
+/* ---------- 교체 선택 (왼쪽 카드 + 오른쪽 정보) ---------- */
 /* 경기 방식 1인 | 2인: 눌린 쪽이 금색 */
 .mode { display: inline-flex; flex: none; border: 1.5px solid rgba(255,255,255,.4); border-radius: 999px; overflow: hidden; }
 .mode button { all: unset; padding: 3px 10px; font: 700 12px var(--ui); color: var(--muted); white-space: nowrap; cursor: pointer; touch-action: manipulation; }
@@ -153,7 +199,7 @@ body {
 .two-keys .grp { display: inline-block; white-space: nowrap; margin-right: 12px; }
 .two-keys b { color: var(--gold); }
 .two-keys kbd { display: inline-grid; place-items: center; min-width: 18px; height: 17px; padding: 0 4px; margin-right: 2px; border-radius: 3px; background: rgba(255,255,255,.92); color: var(--navy); font: 700 10px var(--ui); box-shadow: 0 1.5px 0 rgba(0,43,107,.9); }
-.two-keys[hidden], .levels[hidden], .action[hidden] { display: none; }   /* .action 의 all: unset 이 hidden 의 기본 스타일(display:none)을 지운다 — 공유 버튼이 hidden 인데도 보였다 */
+.action[hidden] { display: none; }   /* .action 의 all: unset 이 hidden 의 기본 스타일(display:none)을 지운다 — 공유 버튼이 hidden 인데도 보였다 */
 .sheet.select { flex-direction: row; align-items: center; justify-content: center; gap: 28px; text-align: left; }
 .sheet.select .col.left { flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .sheet.select .col.right { display: flex; flex-direction: column; gap: 10px; min-width: 0; flex: 1 1 auto; max-width: 520px; }
@@ -211,21 +257,12 @@ body {
 .kit[aria-pressed="true"] span { color: var(--white); font-weight: 800; }
 
 /* 상대 고르기: 난이도 줄 오른쪽 작은 버튼 + 얼굴 목록 모달 */
-.pick-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
-.pick-head .pick-label { margin: 0; }
 .opp { all: unset; display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 4px; white-space: nowrap; border-radius: 999px; border: 1.5px solid rgba(255,255,255,.4); font: 600 12px var(--ui); color: var(--muted); cursor: pointer; touch-action: manipulation; }
 .opp b { color: var(--white); font-weight: 800; }
-.opp.choose { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.75); }   /* 고를 수 있는 버튼: 채운 배경 + 금색 ▾ (소리 토글과 구분) */
-.opp .caret { color: var(--gold); flex: none; }
-.pick-extras { display: flex; gap: 6px; align-items: center; }
 .opp.sound { padding: 3px 10px; }
 .opp.sound[aria-pressed="false"] { opacity: .6; text-decoration: line-through; }
 .sheet.pause .opp.sound { margin-top: 4px; }
 .opp:focus-visible { outline: 3px solid var(--white); outline-offset: 2px; }
-.opp-face { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--gold); color: var(--navy); font: 800 13px var(--ui); object-fit: cover; }
-.modal { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0,20,60,.55); }
-.modal-panel { background: var(--navy); border: 1px solid rgba(255,255,255,.2); border-radius: 16px; padding: 12px 16px 16px; box-shadow: 0 10px 40px rgba(0,0,0,.4); }
-.modal-panel .pick-label { margin-bottom: 8px; }
 .thumb.random { display: grid; place-items: center; background: var(--gold); color: var(--navy); font: 800 20px var(--ui); }
 .thumb.random[aria-selected="true"] { border-color: var(--white); }
 .sub-note { margin: 0; font-size: 13px; color: var(--muted); }
@@ -301,15 +338,9 @@ body {
 #stage[data-tiny="1"] .brand .emblem { width: 26px; height: 34px; }
 #stage[data-tiny="1"] .pick { max-width: 100%; }
 #stage[data-tiny="1"] .pick-label { margin-bottom: 0; font-size: 12px; }
-#stage[data-tiny="1"] .pick-head { margin-bottom: 0; }
 #stage[data-tiny="1"] .opp { font-size: 11px; padding: 2px 8px 2px 3px; gap: 4px; }
 #stage[data-tiny="1"] .opp.sound { padding: 2px 7px; }
-#stage[data-tiny="1"] .pick-extras { gap: 4px; }
-#stage[data-tiny="1"] .pick-head .pick-label { display: none; }   /* 250px 폭엔 1인|2인·상대·소리 알약만 들어간다 */
 #stage[data-tiny="1"] .mode button { padding: 3px 7px; }
-#stage[data-tiny="1"] .opp { padding-right: 7px; }
-#stage[data-tiny="1"] .opp-face { width: 18px; height: 18px; font-size: 11px; }
-#stage[data-tiny="1"] .modal-panel { padding: 8px 12px 12px; }
 #stage[data-tiny="1"] .level { padding: 3px 0 2px; gap: 3px; }
 #stage[data-tiny="1"] .level span { font-size: 10px; letter-spacing: -.02em; }
 #stage[data-tiny="1"] .action { padding: 7px 14px; font-size: 13px; min-width: 0; width: 100%; }

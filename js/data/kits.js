@@ -22,10 +22,13 @@ export const kitsFor = def => (def.position === 'GK' ? GK_KITS : KITS);
 // 양쪽 유니폼. 필드용·GK용을 다 정해 두고, 그리는 순간 선수 포지션에 맞는 쪽을 입는다 (교체로 조현우가 들어와도 자연스럽게).
 // 상대(AI): 내 것과 다른 계열(dark↔light)의 유니폼 중 무작위, GK 는 내 것과 다른 것 중 무작위 (2026-11-01 형준: "상대 유니폼은 그냥 아무거나" → "비슷한 계열끼리는 안겹치게")
 const pickFrom = (rest, rng) => rest[Math.floor(rng() * rest.length)];
-export function sideKits(kitId, rng = Math.random) {
+// kitRId(2인 대전에서 2P 가 고른 것)가 있으면 오른쪽은 그걸 입는다. 필드/GK 중 해당 칸만 바꾸고 나머지 칸은 전처럼 무작위 (2026-11-07 형준 "오른쪽 2p")
+export function sideKits(kitId, rng = Math.random, kitRId = null) {
   const mine = kitById(kitId) || KITS[0];
   const L = mine.gk ? { field: KITS[0], gk: mine } : { field: mine, gk: GK_KITS[0] };
   const R = { field: pickFrom(KITS.filter(k => k.tone !== L.field.tone), rng), gk: pickFrom(GK_KITS.filter(k => k !== L.gk), rng) };
+  const theirs = kitById(kitRId);
+  if (theirs) R[theirs.gk ? 'gk' : 'field'] = theirs;
   return { L, R };
 }
 export const wornKit = (kits, def) => (def.position === 'GK' ? kits.gk : kits.field);

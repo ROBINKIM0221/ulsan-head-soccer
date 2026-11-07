@@ -36,9 +36,9 @@ function layout() {
 
 const game = { match: null, fx: null, loop: null, input: null, imgs: null, paused: false, countdown: null, countdownTimer: null, ui: null, quit: null };
 
-export function startMatch(home, away, difficulty, { kit, onSubRequest, onOver, debugSpecial, twoPlayer = false } = {}) {
+export function startMatch(home, away, difficulty, { kit, kitR = null, onSubRequest, onOver, debugSpecial, twoPlayer = false } = {}) {
   if (game.loop) game.loop.stop();
-  const match = createMatch({ home, away, difficulty, kit, twoPlayer, rng: mulberry32((Date.now() >>> 0) || 1) });
+  const match = createMatch({ home, away, difficulty, kit, kitR, twoPlayer, rng: mulberry32((Date.now() >>> 0) || 1) });
   if (debugSpecial) match.world.players.L.gauge = 100;
   const fx = createFx();
   fx.reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
