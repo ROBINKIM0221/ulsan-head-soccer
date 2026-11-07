@@ -52,10 +52,12 @@ test('two-player: when the right player wins, the party is theirs with VAMOS! an
   assert.equal(eventSound({ type: 'phase', phase: 'over' }, ai), 'lose', '1P: losing still sounds sad');
 });
 
-test('two-player keys: P1 on WASD+F, P2 on arrows+Enter, no key shared; 1P keys unchanged', () => {
+// 2026-11-07 형준 "1p는 슛은 ctrl 키로, 2p는 스페이스바로. 1인 vs ai 플레이도 방향키 이동, 슛은 스페이스바로"
+test('two-player keys: P1 on WASD + left Ctrl, P2 on arrows + Space, no key shared; 1P: arrows + Space to shoot (no Z)', () => {
   for (const side of ['L', 'R']) assert.deepEqual([...new Set(Object.values(KEYS_2P[side]))].sort(), ['jump', 'kick', 'left', 'right'], side);
-  assert.equal(KEYS_2P.L.KeyA, 'left'); assert.equal(KEYS_2P.L.KeyW, 'jump'); assert.equal(KEYS_2P.L.KeyF, 'kick');
-  assert.equal(KEYS_2P.R.ArrowLeft, 'left'); assert.equal(KEYS_2P.R.ArrowUp, 'jump'); assert.equal(KEYS_2P.R.Enter, 'kick');
+  assert.equal(KEYS_2P.L.KeyA, 'left'); assert.equal(KEYS_2P.L.KeyW, 'jump'); assert.equal(KEYS_2P.L.ControlLeft, 'kick');
+  assert.equal(KEYS_2P.R.ArrowLeft, 'left'); assert.equal(KEYS_2P.R.ArrowUp, 'jump'); assert.equal(KEYS_2P.R.Space, 'kick');
+  assert.equal(KEYS_2P.L.ControlRight, undefined, 'right Ctrl sits next to the arrows: not P1 shoot');
   assert.ok(!Object.keys(KEYS_2P.L).some(k => k in KEYS_2P.R), 'disjoint');
-  assert.equal(KEYS.ArrowLeft, 'left'); assert.equal(KEYS.KeyA, 'left'); assert.equal(KEYS.KeyZ, 'kick');
+  assert.equal(KEYS.ArrowLeft, 'left'); assert.equal(KEYS.ArrowUp, 'jump'); assert.equal(KEYS.Space, 'kick'); assert.equal(KEYS.KeyZ, undefined);
 });
