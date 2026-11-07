@@ -36,20 +36,21 @@ function layout() {
 
 const game = { match: null, fx: null, loop: null, input: null, imgs: null, paused: false, countdown: null, countdownTimer: null, ui: null, quit: null };
 
-export function startMatch(home, away, difficulty, { kit, onSubRequest, onOver, debugSpecial } = {}) {
+export function startMatch(home, away, difficulty, { kit, onSubRequest, onOver, debugSpecial, twoPlayer = false } = {}) {
   if (game.loop) game.loop.stop();
-  const match = createMatch({ home, away, difficulty, kit, rng: mulberry32((Date.now() >>> 0) || 1) });
+  const match = createMatch({ home, away, difficulty, kit, twoPlayer, rng: mulberry32((Date.now() >>> 0) || 1) });
   if (debugSpecial) match.world.players.L.gauge = 100;
   const fx = createFx();
   fx.reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   game.match = match; game.fx = fx;
-  game.input.setEnabled(true);
+  game.input.setEnabled(true); game.input.setTwoPlayer(twoPlayer);
+  stage.classList.toggle('two', twoPlayer);   // CSS: 터치 패드 숨기고 2인용 키 안내
   subBtn.disabled = false; menuBtn.disabled = false;
+  subBtn.style.display = twoPlayer ? 'none' : '';   // 2인은 교체 없음
 
   let overNotified = false;
   const step = dt => {
-    const inputs = game.input.read();
-    const events = stepMatch(match, inputs, dt);
+    const events = stepMatch(match, game.input.read('L'), dt, twoPlayer ? game.input.read('R') : undefined);
     pushEvents(fx, events, match);
     updateFx(fx, match, dt);
     for (const e of events) {
@@ -135,12 +136,12 @@ async function boot() {
   window.addEventListener('keydown', e => { if (e.key === 'Escape') pauseMatch(); });   // 시트가 떠 있을 때의 Esc 는 시트가 먼저 먹는다
   const dbg = params.get('debug');
   if (dbg === '1' || dbg === 'result' || dbg === 'sub') {
-    // 선택 화면 없이 바로: 이동경 vs 야고 (1군). ?special=1 이면 L 게이지 100 으로 시작, &kit=third 로 유니폼
+    // 선택 화면 없이 바로: 이동경 vs 야고 (1군). ?special=1 이면 L 게이지 100 으로 시작, &kit=third 로 유니폼, &two=1 이면 2인 대전
     hideOverlay();   // index.html 의 로딩 화면은 선택 화면이 덮어쓰는데, 디버그는 선택 화면이 없다
     const home = byNumber(Number(params.get('home') || 10)), away = byNumber(Number(params.get('away') || 99));
     game.quit = () => location.reload();
     const match = startMatch(home, away, params.get('difficulty') || 'first', {
-      kit: params.get('kit') || 'home', debugSpecial: params.get('special') === '1',
+      kit: params.get('kit') || 'home', debugSpecial: params.get('special') === '1', twoPlayer: params.get('two') === '1',
       onSubRequest: m => showSubSelect({ imgs: game.imgs, kits: m.kits.L, exclude: [m.used.L.at(-1).number, m.used.R.at(-1).number],
         onPick: d => { hideOverlay(); finishSubstitution(d); }, onCancel: () => { hideOverlay(); finishSubstitution(null); } }),
       onOver: (m, wait) => setTimeout(() => showResult({ match: m, onAgain: () => location.reload(), onChange: () => location.reload() }), wait),

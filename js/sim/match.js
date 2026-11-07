@@ -5,9 +5,10 @@ import { createAiState, decide, shouldSubstitute, pickSubstitute } from './ai.js
 import { activateSpecial, updateSpecials, specialHooks, endSpecial } from './specials.js';
 import { sideKits } from '../data/kits.js';
 
-export function createMatch({ home, away, difficulty = 'first', rng = Math.random, kit = 'home' }) {
+// twoPlayer: 오른쪽도 사람(stepMatch 의 inputsR). AI·난이도 속도 보정·교체가 꺼진다 (2026-11-07 형준 "2인 모드", "ai 모드는 그대로 유지하면서")
+export function createMatch({ home, away, difficulty = 'first', rng = Math.random, kit = 'home', twoPlayer = false }) {
   return {
-    world: createWorld(home, away),
+    world: createWorld(home, away), twoPlayer,
     clock: MATCH.LEN, phase: 'kickoff', phaseT: MATCH.GOAL_PAUSE,
     scores: { L: 0, R: 0 }, subUsed: { L: false, R: false }, used: { L: [home], R: [away] },
     difficulty, rng, ai: createAiState(difficulty, rng), result: null, pendingSub: null,
@@ -36,7 +37,7 @@ function autoSpecial(match, side, events) {
   }
 }
 
-export function stepMatch(match, inputsL, dt) {
+export function stepMatch(match, inputsL, dt, inputsR = NO_INPUT) {
   if (match.phase === 'sub' || match.phase === 'over') return [];
   const events = [];
   const { world } = match;
@@ -51,15 +52,15 @@ export function stepMatch(match, inputsL, dt) {
   }
 
   // play | golden
-  if (inputsL.sub && requestSubstitute(match, 'L')) { events.push({ type: 'phase', phase: 'sub' }); return events; }
+  if (!match.twoPlayer && inputsL.sub && requestSubstitute(match, 'L')) { events.push({ type: 'phase', phase: 'sub' }); return events; }
   match.clock -= dt;
-  const inputsR = decide(world, 'R', match.ai, dt);
+  const inR = match.twoPlayer ? inputsR : decide(world, 'R', match.ai, dt);
   autoSpecial(match, 'L', events);
   autoSpecial(match, 'R', events);
   events.push(...updateSpecials(match, dt));
-  world.players.R.mods.speed *= DIFFICULTY[match.difficulty].speed;
+  if (!match.twoPlayer) world.players.R.mods.speed *= DIFFICULTY[match.difficulty].speed;
 
-  const phys = stepPhysics(world, { L: inputsL, R: inputsR }, dt, specialHooks(match));
+  const phys = stepPhysics(world, { L: inputsL, R: inR }, dt, specialHooks(match));
   for (const e of phys) {
     events.push(e);
     if (e.type === 'touch') {
@@ -77,7 +78,7 @@ export function stepMatch(match, inputsL, dt) {
     }
   }
 
-  if (shouldSubstitute(match)) events.push(substitute(match, 'R', pickSubstitute(match, match.rng)));
+  if (!match.twoPlayer && shouldSubstitute(match)) events.push(substitute(match, 'R', pickSubstitute(match, match.rng)));
 
   if (match.clock <= 0) {
     if (match.phase === 'play' && match.scores.L === match.scores.R) {

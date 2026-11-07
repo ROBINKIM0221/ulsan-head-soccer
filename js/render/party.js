@@ -48,7 +48,7 @@ export function updateParty(party, match, dt) {
       b.y = FIELD.GROUND - hop; b.onGround = hop === 0;
     }
   }
-  if (party.side === 'L' && party.t < PARTY_LEN - 1) {   // 색종이는 내가 이겼을 때만 (2026-11-01 형준 "졌을때는 색종이도 안나오고")
+  if ((party.side === 'L' || match.twoPlayer) && party.t < PARTY_LEN - 1) {   // 색종이는 내가 이겼을 때만 (2026-11-01 형준 "졌을때는 색종이도 안나오고"); 2인이면 누가 이겨도
     for (let i = 0; i < 2; i++) party.confetti.push({ x: Math.random() * FIELD.W, y: -10, vx: (Math.random() - 0.5) * 80, vy: 160 + Math.random() * 200, rot: Math.random() * Math.PI * 2, vr: (Math.random() - 0.5) * 10, color: COLORS[(party.confetti.length + i) % 3], age: 0 });
   }
   for (const q of party.confetti) { q.age += dt; q.x += (q.vx + Math.sin(q.age * 4 + q.rot) * 50) * dt; q.y += q.vy * dt; q.rot += q.vr * dt; }
@@ -64,7 +64,7 @@ export function drawParty(ctx, party, match, imgs, t) {
   for (const m of party.members) drawPlayer(ctx, m.body, imgs[m.body.def.number], { kit: wornKit(match.kits[party.side], m.body.def), t, cheer: m.arrived });
   // 0.3초 뒤 하늘 한가운데 큰 글자가 커지며 나타난다. 이기면 금색 VAMOS! 가 박자에 들썩이고, 지면 회청색 LOSE 가 가만히 (2026-11-01 형준 "졌을땐 바모스 뜨면 안돼", "아쉬운 노래 나오면서 LOSE 뜨게")
   if (party.t > 0.3) {
-    const won = party.side === 'L', word = won ? 'VAMOS!' : 'LOSE';
+    const won = party.side === 'L' || !!match.twoPlayer, word = won ? 'VAMOS!' : 'LOSE';   // 2인: 둘 다 우리 선수니 늘 VAMOS!
     const grow = Math.min(1, (party.t - 0.3) / 0.35), k = grow * (won ? 1 + 0.05 * Math.sin(party.t * BEAT) : 1);
     ctx.save(); ctx.translate(FIELD.W / 2, 250); ctx.scale(k, k); ctx.rotate(won ? -0.04 : 0.03);
     ctx.font = '600 170px Teko, "Arial Narrow", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';

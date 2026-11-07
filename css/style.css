@@ -91,6 +91,11 @@ body {
 .keys kbd.z { width: 16px; height: 15px; font-size: 10px; }
 .keys em { font-style: normal; margin-right: 6px; }
 @media (hover: hover) and (pointer: fine) { .keys { display: flex; } }
+/* 2인 대전: 터치 패드 없이 키보드만, 안내는 양쪽 키 (2026-11-07 형준) */
+.keys b { color: var(--gold); font-weight: 800; margin-right: 2px; }
+.keys i { width: 12px; }
+.keys kbd.wide { width: auto; padding: 0 5px; }
+#stage:not(.two) .keys.two, #stage.two .keys.one, #stage.two .pad { display: none; }
 
 /* ---------- 안내·오버레이 ---------- */
 #hint {
@@ -140,6 +145,16 @@ body {
 @media (prefers-reduced-motion: reduce) { .loading-bar::after { animation: none; width: 100%; } }
 
 /* ---------- 선수 선택 ---------- */
+/* 경기 방식 1인 | 2인: 눌린 쪽이 금색 */
+.mode { display: inline-flex; flex: none; border: 1.5px solid rgba(255,255,255,.4); border-radius: 999px; overflow: hidden; }
+.mode button { all: unset; padding: 3px 10px; font: 700 12px var(--ui); color: var(--muted); white-space: nowrap; cursor: pointer; touch-action: manipulation; }
+.mode button[aria-pressed="true"] { background: var(--gold); color: var(--navy); font-weight: 800; }
+.mode button:focus-visible { outline: 3px solid var(--white); outline-offset: -3px; }
+.two-keys { margin: 4px 0 0; font: 600 12px/1.9 var(--ui); color: var(--muted); }
+.two-keys .grp { display: inline-block; white-space: nowrap; margin-right: 12px; }
+.two-keys b { color: var(--gold); }
+.two-keys kbd { display: inline-grid; place-items: center; min-width: 18px; height: 17px; padding: 0 4px; margin-right: 2px; border-radius: 3px; background: rgba(255,255,255,.92); color: var(--navy); font: 700 10px var(--ui); box-shadow: 0 1.5px 0 rgba(0,43,107,.9); }
+.two-keys[hidden], .levels[hidden], .action[hidden] { display: none; }   /* .action 의 all: unset 이 hidden 의 기본 스타일(display:none)을 지운다 — 공유 버튼이 hidden 인데도 보였다 */
 .sheet.select { flex-direction: row; align-items: center; justify-content: center; gap: 28px; text-align: left; }
 .sheet.select .col.left { flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .sheet.select .col.right { display: flex; flex-direction: column; gap: 10px; min-width: 0; flex: 1 1 auto; max-width: 520px; }
@@ -199,7 +214,7 @@ body {
 /* 상대 고르기: 난이도 줄 오른쪽 작은 버튼 + 얼굴 목록 모달 */
 .pick-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
 .pick-head .pick-label { margin: 0; }
-.opp { all: unset; display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 4px; border-radius: 999px; border: 1.5px solid rgba(255,255,255,.4); font: 600 12px var(--ui); color: var(--muted); cursor: pointer; touch-action: manipulation; }
+.opp { all: unset; display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 4px; white-space: nowrap; border-radius: 999px; border: 1.5px solid rgba(255,255,255,.4); font: 600 12px var(--ui); color: var(--muted); cursor: pointer; touch-action: manipulation; }
 .opp b { color: var(--white); font-weight: 800; }
 .opp.choose { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.75); }   /* 고를 수 있는 버튼: 채운 배경 + 금색 ▾ (소리 토글과 구분) */
 .opp .caret { color: var(--gold); flex: none; }
@@ -291,6 +306,9 @@ body {
 #stage[data-tiny="1"] .opp { font-size: 11px; padding: 2px 8px 2px 3px; gap: 4px; }
 #stage[data-tiny="1"] .opp.sound { padding: 2px 7px; }
 #stage[data-tiny="1"] .pick-extras { gap: 4px; }
+#stage[data-tiny="1"] .pick-head .pick-label { display: none; }   /* 250px 폭엔 1인|2인·상대·소리 알약만 들어간다 */
+#stage[data-tiny="1"] .mode button { padding: 3px 7px; }
+#stage[data-tiny="1"] .opp { padding-right: 7px; }
 #stage[data-tiny="1"] .opp-face { width: 18px; height: 18px; font-size: 11px; }
 #stage[data-tiny="1"] .modal-panel { padding: 8px 12px 12px; }
 #stage[data-tiny="1"] .level { padding: 3px 0 2px; gap: 3px; }

@@ -44,7 +44,7 @@ export function eventSound(e, match) {
     case 'phase':
       if (e.phase === 'play') return 'whistle';
       if (e.phase === 'golden') return 'golden';
-      if (e.phase === 'over') return match.result === 'win' ? 'win' : match.result === 'lose' ? 'lose' : 'over';
+      if (e.phase === 'over') return match.result === 'win' || (match.twoPlayer && match.result === 'lose') ? 'win' : match.result === 'lose' ? 'lose' : 'over';   // 2인: 오른쪽이 이겨도 승리 노래
       return null;
     default: return null;
   }
