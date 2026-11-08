@@ -10,7 +10,7 @@ export const soundLog = [];   // 최근 재생한 이름 (검사용, 최대 50)
 const T = (f0, f1, t, g, at = 0, type = 'sine') => ({ k: 'tone', f0, f1, t, g, at, type });
 const N = (t, g, at = 0, lp = 8000, hp = 0, swell = 0) => ({ k: 'noise', t, g, at, lp, hp, swell });
 const W = (t, at = 0) => ({ k: 'whistle', t, at });
-const FINAL = [W(0.15), W(0.15, 0.2), W(0.6, 0.4)];   // 종료 휘슬 삑·삑·삐이
+const FINAL = [W(0.17), W(0.17, 0.3), W(0.95, 0.62)];   // 종료 휘슬 삑·삑·삐이 (긴 것이 1.57초에 끝난다; 승리·패배 음악은 그 0.1초 전부터)
 
 export const RECIPES = {
   swing:   [N(0.07, 0.12, 0, 3000, 400)],                                   // 헛스윙 휙
@@ -23,11 +23,11 @@ export const RECIPES = {
   catch:   [N(0.08, 0.2, 0, 8000, 2000), T(600, 300, 0.12, 0.15)],
   knock:   [T(320, 70, 0.3, 0.35), N(0.05, 0.2)],
   sub:     [W(0.12), W(0.12, 0.17)],
-  whistle: [W(0.4)],
+  whistle: [W(0.45)],
   golden:  [T(880, 880, 0.12, 0.18, 0, 'triangle'), T(1108, 1108, 0.35, 0.18, 0.12, 'triangle')],
   over:    FINAL,
-  win:     [...FINAL, N(4.0, 0.45, 0.3, 1800, 150, 0.6), T(523, 523, 0.12, 0.12, 0.9, 'square'), T(659, 659, 0.12, 0.12, 1.02, 'square'), T(784, 784, 0.12, 0.12, 1.14, 'square'), T(1046, 1046, 0.6, 0.14, 1.26, 'square')],   // 휘슬 + 관중 함성 + 팡파르
-  lose:    [...FINAL, T(466, 466, 0.4, 0.14, 0.9, 'sawtooth'), T(440, 440, 0.4, 0.14, 1.3, 'sawtooth'), T(415, 415, 0.4, 0.14, 1.7, 'sawtooth'), T(392, 330, 1.1, 0.14, 2.1, 'sawtooth')],   // 휘슬 + 아쉬운 트롬본 네 음(반음씩 내려가다 마지막은 축 처짐; 2026-11-01 형준 "아쉬운 노래")
+  win:     [...FINAL, N(4.0, 0.45, 0.3, 1800, 150, 0.6), T(523, 523, 0.12, 0.12, 1.47, 'square'), T(659, 659, 0.12, 0.12, 1.59, 'square'), T(784, 784, 0.12, 0.12, 1.71, 'square'), T(1046, 1046, 0.6, 0.14, 1.83, 'square')],   // 휘슬 + 관중 함성 + 팡파르
+  lose:    [...FINAL, T(466, 466, 0.4, 0.14, 1.47, 'sawtooth'), T(440, 440, 0.4, 0.14, 1.87, 'sawtooth'), T(415, 415, 0.4, 0.14, 2.27, 'sawtooth'), T(392, 330, 1.1, 0.14, 2.67, 'sawtooth')],   // 휘슬 + 아쉬운 트롬본 네 음(반음씩 내려가다 마지막은 축 처짐; 2026-11-01 형준 "아쉬운 노래")
   tick:    [T(1300, 1300, 0.04, 0.1)],                                       // 버튼
 };
 
@@ -94,13 +94,42 @@ function playNoise(s, at) {
   env(g, at, s.g, s.t, s.swell || 0.005);
   src.connect(hp).connect(lp).connect(g).connect(master); src.start(at); src.stop(at + s.t + 0.02);
 }
-function playWhistle(s, at) {   // 살짝 어긋난 두 음이 떨리는 심판 호루라기
-  for (const f of [2300, 2345]) {
-    const o = ctx.createOscillator(), g = ctx.createGain();
-    o.type = 'sine'; o.frequency.value = f;
-    env(g, at, 0.1, s.t, 0.01);
-    o.connect(g).connect(master); o.start(at); o.stop(at + s.t + 0.02);
+// 심판 호루라기. 2026-11-08 형준 "킥오프 소리랑 경기 끝났을때 소리랑 좀 바꿔줘"(사인파 둘이 "좀 가짜 같아서") → 후보 넷을 들려주고 고른 C: 콩알 호루라기 + 경기장 울림.
+// 콩알이 굴러 바람을 끊는 떨림(세기 LFO, 불 때마다 속도가 조금 다름) + 기본음 근처 바람 잡음과 높은 쉭, 불기 시작할 때 음이 올라오고 숨이 빠지며 처진다. 울림은 reverbBus.
+const PEA = { f: 2550, partials: [[1, 1], [2, 0.08], [3, 0.03]], trill: 30, depth: 0.6, breath: 0.35, chiff: 0.05, drop: 0.04, vol: 0.28 };
+function playWhistle(s, at) {
+  const dur = s.t, stop = at + dur + 0.2;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(PEA.vol, at + 0.012);
+  g.gain.linearRampToValueAtTime(PEA.vol * 0.8, at + dur); g.gain.exponentialRampToValueAtTime(0.0001, at + dur + 0.09);
+  const trem = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain();
+  trem.gain.value = 1 - PEA.depth / 2; lfo.frequency.value = PEA.trill * (0.94 + Math.random() * 0.12); lg.gain.value = PEA.depth / 2;
+  lfo.connect(lg).connect(trem.gain); lfo.start(at); lfo.stop(stop);
+  g.connect(trem).connect(reverbBus());
+  for (const [ratio, amp] of PEA.partials) {
+    const o = ctx.createOscillator(), f = PEA.f * ratio, og = ctx.createGain(); og.gain.value = amp;
+    o.frequency.setValueAtTime(f * (1 - PEA.chiff), at); o.frequency.exponentialRampToValueAtTime(f, at + 0.05);
+    o.frequency.setValueAtTime(f, at + dur - 0.02); o.frequency.exponentialRampToValueAtTime(f * (1 - PEA.drop), at + dur + 0.09);
+    o.connect(og).connect(g); o.start(at); o.stop(stop);
   }
+  for (const [type, freq, q, amp] of [['bandpass', PEA.f, 4, PEA.breath], ['highpass', 3500, 1, PEA.breath * 0.25]]) {
+    const n = ctx.createBufferSource(), fl = ctx.createBiquadFilter(), ng = ctx.createGain();
+    n.buffer = noiseBuffer(); n.loop = true; fl.type = type; fl.frequency.value = freq; fl.Q.value = q; ng.gain.value = amp;
+    n.connect(fl).connect(ng).connect(g); n.start(at); n.stop(stop);
+  }
+}
+let verb = null;
+function reverbBus() {   // 경기장 울림: 1.6초 동안 사그라드는 잡음을 임펄스로 쓰는 값싼 리버브. 호루라기만 거친다 (건조한 소리 + 울림 0.6)
+  if (verb) return verb;
+  const len = Math.floor(ctx.sampleRate * 1.6), ir = ctx.createBuffer(2, len, ctx.sampleRate);
+  for (let c = 0; c < 2; c++) {
+    const d = ir.getChannelData(c); let y = 0;
+    for (let i = 0; i < len; i++) { const x = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.4)); y += 0.4 * (x - y); d[i] = y; }   // 한 극 저역 통과로 높은 울림을 깎는다
+  }
+  const conv = ctx.createConvolver(); conv.buffer = ir;
+  const wet = ctx.createGain(); wet.gain.value = 0.6;
+  verb = ctx.createGain(); verb.connect(master); verb.connect(conv); conv.connect(wet).connect(master);
+  return verb;
 }
 
 // 이름으로 재생. 꺼져 있거나 아직 소리를 낼 수 없으면 false

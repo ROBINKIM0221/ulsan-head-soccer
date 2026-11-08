@@ -45,6 +45,25 @@ test('without an AudioContext (node) sfx is a safe no-op, and the switch persist
   assert.equal(sfx('nope'), false);
 });
 
+// 2026-11-08 형준 "킥오프 소리랑 경기 끝났을때 소리랑 좀 바꿔줘"(좀 가짜 같아서) → 후보 넷을 들려주고 C(콩알 호루라기 + 경기장 울림)를 골랐다.
+// 킥오프 "삑" 0.45초, 종료 "삑·삑·삐이"(짧게 둘, 길게 하나). 팡파르·트롬본은 긴 휘슬이 끝나기 0.1초 전에 시작, 함성은 휘슬 도중에 부풀어 오른다
+test('whistles: kickoff is one 0.45s blast; full time is short-short-long, and the win/lose tunes start as the long blast ends', () => {
+  const kick = RECIPES.whistle;
+  assert.equal(kick.length, 1); assert.equal(kick[0].k, 'whistle'); assert.ok(Math.abs(kick[0].t - 0.45) < 1e-9, 'kickoff ' + kick[0].t);
+  const w = RECIPES.over.filter(s => s.k === 'whistle');
+  assert.equal(w.length, 3);
+  assert.ok(w[0].t < 0.25 && w[1].t < 0.25 && w[2].t >= 0.9, 'short, short, long: ' + w.map(s => s.t));
+  assert.ok(w[0].at + w[0].t < w[1].at && w[1].at + w[1].t < w[2].at, 'blasts do not overlap');
+  const end = w[2].at + w[2].t;
+  for (const name of ['win', 'lose']) {
+    assert.deepEqual(RECIPES[name].slice(0, 3), RECIPES.over, name + ' starts with the final whistle');
+    const first = RECIPES[name].filter(s => s.k === 'tone')[0];
+    assert.ok(Math.abs(first.at - (end - 0.1)) < 1e-9, name + ' tune at ' + first.at + ', whistle ends ' + end);
+  }
+  const crowd = RECIPES.win.find(s => s.k === 'noise');
+  assert.ok(crowd.at > w[0].at && crowd.at < end, 'crowd swells during the whistles');
+});
+
 // 2026-11-01 형준 "아쉬운 노래 나오면서 LOSE": 패배는 휘슬 뒤 반음씩 내려가는 트롬본 네 음, 마지막은 축 처진다 (전엔 풀 죽은 두 음)
 test('lose: after the whistle a sad tune of at least 4 descending notes, the last one drooping', () => {
   const notes = RECIPES.lose.filter(s => s.k === 'tone');
