@@ -1,23 +1,24 @@
 // 화면 흐름: 선수 선택(넘겨보기) → VS → 경기 → (교체 선택) → 결과. 전부 #overlay 안의 DOM.
 import { PLAYERS, byNumber } from '../data/players.js';
-import { KITS, GK_KITS, kitById, kitsFor, wornKit } from '../data/kits.js';
+import { KITS, GK_KITS, kitById, kitsFor, wornKit, sideKits } from '../data/kits.js';
 import { sfx, soundEnabled, setSoundEnabled } from '../sound.js';
 import { createPlayer, headCenter } from '../sim/physics.js';
 import { drawPlayer } from '../render/characters.js';
 import { shareText } from './text.js';
 import { DIFFICULTY, DIFFICULTY_ORDER } from '../sim/constants.js';
 
-const overlay = document.getElementById('overlay');
+const overlay = document.getElementById('overlay'), stageEl = document.getElementById('stage');
 const LEVELS = DIFFICULTY_ORDER.map(id => ({ id, name: DIFFICULTY[id].name }));
 const STORE = 'uhd11.select';
 
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
-export function hideOverlay() { overlay.hidden = true; overlay.innerHTML = ''; sheetKeys = null; }
+// #stage.sheet-open: 시트가 떠 있는 동안 조작 버튼·점수판 옆 버튼을 숨긴다 (전엔 흐린 배경에 얼룩처럼 비쳤다)
+export function hideOverlay() { overlay.hidden = true; overlay.innerHTML = ''; sheetKeys = null; stageEl.classList.remove('sheet-open'); }
 const tickOnButtons = node => node.addEventListener('click', e => { if (e.target.closest('button')) sfx('tick'); });   // 시트 안 모든 버튼에 틱 소리
 // 시트의 키 넘기기(onKey)는 창 전체에서 받는다: 유니폼 버튼처럼 눌리면 다시 그려지는 버튼은 포커스를 body 로 떨어뜨려 시트 위 리스너가 못 받는다
 let sheetKeys = null;
 window.addEventListener('keydown', e => { if (sheetKeys && !overlay.hidden) sheetKeys(e); });
-function show(node, onKey = null) { tickOnButtons(node); overlay.innerHTML = ''; overlay.appendChild(node); overlay.hidden = false; sheetKeys = onKey; }
+function show(node, onKey = null) { tickOnButtons(node); overlay.innerHTML = ''; overlay.appendChild(node); overlay.hidden = false; sheetKeys = onKey; stageEl.classList.add('sheet-open'); }
 
 const load = () => { try { return JSON.parse(localStorage.getItem(STORE)) || null; } catch { return null; } };
 const save = v => { try { localStorage.setItem(STORE, JSON.stringify(v)); } catch { /* 사생활 모드 등 */ } };
@@ -25,12 +26,14 @@ const save = v => { try { localStorage.setItem(STORE, JSON.stringify(v)); } catc
 // 선택 카드: 경기 속 모습 그대로(입을 유니폼, 서 있는 자세, 머리도 경기처럼 컷아웃). 2026-11-03 형준: 왼쪽 큰 카드는 동그란 사진 대신 누끼로, 오른쪽 작은 얼굴들은 동그라미 그대로.
 // 컷아웃은 머리 원보다 위로 더 올라오므로(머리카락) 1.25 → 1.15 배로 살짝 줄여 캔버스 위에서 잘리지 않게 한다.
 // side 'R' 은 경기처럼 왼쪽을 본다. def.random(컴퓨터 상대 랜덤)이면 회색 선수에 물음표 머리. 폰 가로(카드 둘이 나란히)에서는 작게.
+// zoom: 카드 배율(VS·결과 화면은 더 크게). pose: 'cheer' 두 팔 번쩍, 'sad' 풀썩 기울어짐.
 const MYSTERY_KIT = { jersey: '#8E9BB0', trim: '#DCE6F5', number: '#FFFFFF', shorts: '#66748C', shoe: '#3A4559' };
-function paintCard(canvas, def, imgs, kit, side = 'L') {
+function paintCard(canvas, def, imgs, kit, side = 'L', { zoom = 1, pose = null } = {}) {
   const ctx = canvas.getContext('2d');
-  const dpr = Math.min(3, window.devicePixelRatio || 1);
-  const st = document.getElementById('stage').dataset;
-  const k = st.tiny === '1' ? 0.5 : st.compact === '1' ? 0.56 : 1;
+  const us = parseFloat(stageEl.style.getPropertyValue('--us')) || 1;   // 큰 화면에서 시트를 키우는 배율: 그만큼 더 촘촘히 그려야 또렷하다
+  const dpr = Math.min(4, (window.devicePixelRatio || 1) * us);
+  const st = stageEl.dataset;
+  const k = (st.tiny === '1' ? 0.5 : st.compact === '1' ? 0.56 : 1) * zoom;
   const W = Math.round(220 * k), H = Math.round(250 * k);
   canvas.width = W * dpr; canvas.height = H * dpr; canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -38,8 +41,9 @@ function paintCard(canvas, def, imgs, kit, side = 'L') {
   ctx.fillStyle = 'rgba(255,255,255,.08)'; ctx.beginPath(); ctx.ellipse(W / 2, H - 14 * k, 70 * k, 10 * k, 0, 0, Math.PI * 2); ctx.fill();
   const body = createPlayer(def.random ? { number: '?' } : def, side);
   body.x = W / 2 / (1.15 * k); body.y = (H - 20 * k) / (1.15 * k);
+  if (pose === 'sad') body.stun = 0.38;
   ctx.save(); ctx.scale(1.15 * k, 1.15 * k);
-  drawPlayer(ctx, body, def.random ? null : imgs[def.number], { kit: def.random ? MYSTERY_KIT : kit });
+  drawPlayer(ctx, body, def.random ? null : imgs[def.number], { kit: def.random ? MYSTERY_KIT : kit, cheer: pose === 'cheer' });
   if (def.random) {
     const h = headCenter(body);
     ctx.fillStyle = '#002B6B'; ctx.font = `600 ${Math.round(h.r * 1.7)}px Teko, "Arial Narrow", sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -121,6 +125,18 @@ function buildLevels(initial, onChange) {
   return wrap;
 }
 
+// 셔츠 아이콘(SVG): 몸통은 상의 색(레트로는 세로 줄무늬), 깃과 소매 끝은 트림 색, 어두운 바탕에서도 보이게 옅은 흰 테두리
+const SHIRT = 'M14 2.5 5 6 1 14.5l6 3 3-4V32h20V13.5l3 4 6-3L35 6l-9-3.5c-1.5 2.6-3.6 3.9-6 3.9s-4.5-1.3-6-3.9Z';
+let shirtSeq = 0;
+function shirtSvg(k) {
+  const id = 'sh' + (++shirtSeq);
+  const stripes = k.stripe ? [11, 17.5, 24].map(x => `<rect x="${x}" y="0" width="3.5" height="34" fill="${k.stripe}"/>`).join('') : '';
+  return `<svg class="shirt" viewBox="0 0 40 34" aria-hidden="true"><clipPath id="${id}"><path d="${SHIRT}"/></clipPath>`
+    + `<g clip-path="url(#${id})"><rect width="40" height="34" fill="${k.jersey}"/>${stripes}`
+    + `<path d="M1 14.5l6 3M39 14.5l-6 3" stroke="${k.trim}" stroke-width="5"/><path d="M14 2.5c1.5 2.6 3.6 3.9 6 3.9s4.5-1.3 6-3.9" fill="none" stroke="${k.trim}" stroke-width="3.4"/></g>`
+    + `<path d="${SHIRT}" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
+}
+
 // 유니폼 고르기: 카드 밑 작은 셔츠들. 선수가 바뀌면 목록도 바뀐다 (조현우는 골키퍼 4종, 나머지는 필드 5종)
 function buildKits(onChange) {
   const wrap = el('div', 'pick kits-pick');
@@ -131,7 +147,7 @@ function buildKits(onChange) {
     label.textContent = list === GK_KITS ? '골키퍼 유니폼' : '유니폼';
     row.innerHTML = '';
     for (const k of list) {
-      const b = el('button', 'kit', `<i class="shirt" style="--j:${k.jersey};--t:${k.trim}${k.stripe ? ';--s:' + k.stripe : ''}"></i><span>${k.name}</span>`); b.type = 'button';
+      const b = el('button', 'kit', `${shirtSvg(k)}<span>${k.name}</span>`); b.type = 'button';
       b.setAttribute('aria-label', `${k.name} 유니폼`); b.setAttribute('aria-pressed', k.id === cur);
       b.addEventListener('click', () => { show(list, k.id); onChange(k.id); });
       row.appendChild(b);
@@ -222,12 +238,19 @@ export function showSelect({ imgs, selection, onStart }) {
   render();
 }
 
-export function showVs(home, away, ms = 1000) {
+// VS 화면: 경기 속 모습 그대로의 큰 캐릭터 둘이 금색 사선을 사이에 두고 마주 본다. 양옆에서 미끄러져 들어오고 VS 가 쾅 찍힌다
+// (2026-11-12 형준 "UI랑 게임 최대한 예뻐보이게"; 전엔 작은 동그란 사진 둘과 VS 글자, 1초). kits = { L, R } 는 경기에서 입을 유니폼, tags 는 [왼쪽, 오른쪽] 꼬리표.
+export function showVs({ home, away, kits, imgs, tags = ['1P', 'AI'] }, ms = 1500) {
   const sheet = el('div', 'sheet vs');
-  sheet.innerHTML = `
-    <div class="face"><img src="${home.img}" alt=""><b>${home.name}</b><span>${home.number}</span></div>
-    <div class="vs-mark">VS</div>
-    <div class="face away"><img src="${away.img}" alt=""><b>${away.name}</b><span>${away.number}</span></div>`;
+  const side = (cls, def, kit, tag) => {
+    const box = el('div', 'vs-side ' + cls), canvas = el('canvas'); canvas.setAttribute('aria-hidden', 'true');
+    paintCard(canvas, def, imgs, kit, cls, { zoom: 1.5 * (parseFloat(stageEl.style.getPropertyValue('--us')) || 1) });   // VS 시트는 zoom 을 안 쓰니 배율을 직접 곱한다
+    box.append(el('span', 'tag', tag), canvas, el('div', 'vs-cap', `<span class="num">${def.number}</span><b class="name">${def.name}</b><span class="sk">${def.special.name}</span>`));
+    return box;
+  };
+  const mark = el('div', 'vs-mark', 'VS'); mark.setAttribute('aria-hidden', 'true');
+  sheet.append(side('L', home, kits.L, tags[0]), mark, side('R', away, kits.R, tags[1]));
+  sheet.setAttribute('aria-label', `${home.name} 대 ${away.name}`);
   show(sheet);
   return new Promise(res => setTimeout(res, ms));
 }
@@ -266,7 +289,7 @@ export function showPause({ onResume, onQuit }) {
   sheet.querySelector('[data-act="resume"]').focus({ preventScroll: true });
 }
 
-export function showResult({ match, onAgain, onChange }) {
+export function showResult({ match, imgs, onAgain, onChange }) {
   const sheet = el('div', 'sheet result');
   const verdict = match.twoPlayer ? (match.result === 'draw' ? '무승부' : `${match.used[match.result === 'win' ? 'L' : 'R'].at(-1).name} 승리`)   // 2인: 이긴 선수 이름
     : match.result === 'win' ? '승리' : match.result === 'lose' ? '패배' : '무승부';
@@ -274,15 +297,27 @@ export function showResult({ match, onAgain, onChange }) {
   const tally = side => { const t = {}; for (const g of match.goals) if (g.side === side) t[g.number] = (t[g.number] || 0) + 1; return t; };
   const lineup = side => { const t = tally(side); return match.used[side].map(d => `<div class="chip"><img src="${d.img}" alt=""><b>${d.name}</b><span class="g${t[d.number] ? '' : ' none'}"><em>${t[d.number] || 0}</em>골</span></div>`).join('<i class="sub-arrow" aria-hidden="true">→</i>'); };
   sheet.innerHTML = `
+    <div class="result-main">
     <span class="emblem" aria-hidden="true"></span>
     <p class="verdict ${match.twoPlayer && match.result !== 'draw' ? 'win' : match.result}">${verdict}</p>
     <p class="score"><span>${match.scores.L}</span><em>-</em><span>${match.scores.R}</span></p>
-    <div class="lineup"><div class="side">${lineup('L')}</div><div class="side away">${lineup('R')}</div></div></div>
+    <div class="lineup"><div class="side">${lineup('L')}</div><div class="side away">${lineup('R')}</div></div>
     <div class="row">
       <button class="action" type="button" data-act="again">다시 하기</button>
       <button class="action ghost" type="button" data-act="change">선수 바꾸기</button>
       <button class="action ghost" type="button" data-act="share" hidden>결과 공유</button>
+    </div>
     </div>`;
+  // 양옆에 마지막까지 뛴 두 선수: 이긴 쪽은 두 팔 번쩍 들고 폴짝폴짝, 진 쪽은 풀썩 (2026-11-12 형준 "UI랑 게임 최대한 예뻐보이게")
+  if (imgs) {
+    const figure = s => {
+      const won = match.result === (s === 'L' ? 'win' : 'lose'), lost = match.result === (s === 'L' ? 'lose' : 'win');
+      const def = match.used[s].at(-1), canvas = el('canvas', 'result-fig ' + s + (won ? ' won' : lost ? ' lost' : '')); canvas.setAttribute('aria-hidden', 'true');
+      paintCard(canvas, def, imgs, wornKit(match.kits[s], def), s, { zoom: stageEl.dataset.tiny === '1' ? 1.05 : 1.25, pose: won ? 'cheer' : lost ? 'sad' : null });
+      return canvas;
+    };
+    sheet.prepend(figure('L')); sheet.append(figure('R'));
+  }
   sheet.querySelector('[data-act="again"]').addEventListener('click', onAgain);
   sheet.querySelector('[data-act="change"]').addEventListener('click', onChange);
   const share = sheet.querySelector('[data-act="share"]');
@@ -298,7 +333,7 @@ export function showResult({ match, onAgain, onChange }) {
 }
 
 // 전체 흐름. selection = { number, difficulty, kit, opp, two, kitR }: opp 는 오른쪽(2P 또는 지정한 컴퓨터 상대) 등번호, null 이면 랜덤; kitR 은 2P 유니폼
-export function runFlow({ startMatch, finishSubstitution, imgs }) {
+export function runFlow({ startMatch, finishSubstitution, imgs, onIdle }) {
   const saved = load() || {};
   const number = byNumber(saved.number) ? saved.number : 10;
   let selection = { number, difficulty: LEVELS.some(l => l.id === saved.difficulty) ? saved.difficulty : 'first', kit: kitById(saved.kit) ? saved.kit : 'home',
@@ -309,20 +344,25 @@ export function runFlow({ startMatch, finishSubstitution, imgs }) {
   function play(sel) {
     const home = byNumber(sel.number);
     const away = byNumber(sel.opp) && sel.opp !== home.number ? byNumber(sel.opp) : randomOther(home);
-    showVs(home, away).then(() => {
+    // 오른쪽 유니폼을 여기서 정한다: 2인은 고른 것, 컴퓨터는 경기 규칙(sideKits: 내 것과 다른 계열 중 무작위)대로 뽑아 VS 화면과 경기가 같은 옷이 되게
+    onIdle?.();   // "다시 하기"로 와도 VS 화면 뒤는 지난 경기의 마지막 장면이 아니라 빈 경기장
+    const picked = sideKits(sel.kit, Math.random, sel.two ? sel.kitR : null);
+    const kitR = wornKit(picked.R, away).id;
+    showVs({ home, away, kits: { L: wornKit(picked.L, home), R: wornKit(picked.R, away) }, imgs, tags: ['1P', sel.two ? '2P' : 'AI'] }).then(() => {
       hideOverlay();
       startMatch(home, away, sel.difficulty, {
-        kit: sel.kit, kitR: sel.two ? sel.kitR : null, twoPlayer: sel.two,
+        kit: sel.kit, kitR, twoPlayer: sel.two,
         onSubRequest: m => showSubSelect({
           imgs, kits: m.kits.L, exclude: [m.used.L.at(-1).number, m.used.R.at(-1).number],
           onPick: d => { hideOverlay(); finishSubstitution(d); },
           onCancel: () => { hideOverlay(); finishSubstitution(null); },
         }),
-        onOver: (m, wait) => setTimeout(() => showResult({ match: m, onAgain: () => play(sel), onChange: toSelect }), wait),
+        onOver: (m, wait) => setTimeout(() => showResult({ match: m, imgs, onAgain: () => play(sel), onChange: toSelect }), wait),
       });
     });
   }
   function toSelect() {
+    onIdle?.();   // 지난 경기 장면을 지우고 빈 경기장을 배경으로
     showSelect({ imgs, selection, onStart: sel => { selection = sel; save(selection); play(sel); } });
   }
   toSelect();

@@ -181,6 +181,15 @@ function drawGloves(ctx, b, h, kit) {
   }
 }
 
+// 발밑 그림자: 땅(y)에 붙어 있고, 높이 뜰수록(lift) 작고 옅어진다. 선수·공이 잔디에 서 있는 느낌과 공이 떨어질 자리를 준다 (2026-11-12)
+export function drawShadow(ctx, x, y, lift, rx) {
+  const k = Math.max(0.4, 1 - Math.max(0, lift) / 560);
+  ctx.save(); ctx.fillStyle = `rgba(0,40,16,${(0.26 * k).toFixed(3)})`;
+  ctx.beginPath(); ctx.ellipse(x, y, rx * k, rx * 0.2 * k, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+}
+// 선수 그림자: 신발 바닥은 몸 상자 바닥(b.y)보다 14px(×크기) 위에 있다 (drawBody 의 다리·신발 치수)
+export const drawPlayerShadow = (ctx, b, groundY) => drawShadow(ctx, b.x, groundY - 12 * b.scale, groundY - b.y, 36 * b.scale);
+
 export function drawBall(ctx, ball, rotation = 0) {
   const r = ball.r;
   ctx.save();
@@ -195,6 +204,12 @@ export function drawBall(ctx, ball, rotation = 0) {
   ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.arc(0, 0, r - 0.75, 0, Math.PI * 2); ctx.stroke();
   ctx.restore();
+  // 아래쪽 그늘: 공이 굴러도 빛은 늘 위에서 온다 (회전을 푼 뒤에 덮는다)
+  const shade = ctx.createRadialGradient(ball.x - r * 0.35, ball.y - r * 0.4, r * 0.25, ball.x, ball.y, r);
+  if (shade && shade.addColorStop) {
+    shade.addColorStop(0, 'rgba(0,20,60,0)'); shade.addColorStop(1, 'rgba(0,20,60,.26)');
+    ctx.save(); ctx.fillStyle = shade; ctx.beginPath(); ctx.arc(ball.x, ball.y, r, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  }
 }
 
 export { PHYS };

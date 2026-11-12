@@ -1,15 +1,19 @@
+/* Teko 600 (숫자·VS·GOAL). 라틴 글자만 든 7.8KB 파일을 같이 싣는다 (SIL OFL, fonts/OFL-Teko.txt) */
+@font-face { font-family: Teko; font-style: normal; font-weight: 600; font-display: swap; src: url(../fonts/teko-600-latin.woff2) format('woff2'); }
+
 :root {
   --blue:  #004098;
   --navy:  #002B6B;
   --gold:  #FFC72C;
   --white: #FFFFFF;
   --muted: #B9CBE8;
+  --night: #072A66;   /* 캔버스가 그려지기 전·시트 뒤의 바탕 */
   --ui:  "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
   --num: Teko, "Arial Narrow", sans-serif;
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; background: var(--blue); overflow: hidden; }
+html, body { margin: 0; height: 100%; background: var(--night); overflow: hidden; }
 body {
   font-family: var(--ui);
   color: var(--white);
@@ -23,57 +27,62 @@ body {
 #stage {
   position: fixed; left: 0; top: 0;
   display: flex; align-items: center; justify-content: center;
-  background: var(--blue);
+  background: var(--night);
   overflow: hidden;
 }
 #arena { position: relative; flex: none; }
-#game { display: block; background: #5FB8F5; border-radius: 6px; }
+#game { position: absolute; display: block; }   /* JS 가 무대 전체 크기로 키우고 #arena 밖으로 내민다 (경기장 바깥 여백에도 그림) */
 
-/* ---------- 조작 버튼: 캔버스 아래 양 모서리에 반투명으로 겹친다 ---------- */
+/* ---------- 조작 버튼: 무대(화면) 아래 양 모서리에 반투명 유리처럼 겹친다. 화면이 16:9 보다 넓으면 경기장 바깥 여백으로 나간다 ---------- */
 .pad {
-  position: absolute; bottom: 10px;
+  position: absolute; bottom: max(10px, env(safe-area-inset-bottom));
   display: flex; align-items: flex-end; gap: 10px;
 }
-.pad.left { left: 10px; }
-.pad.right { right: 10px; }
-#stage[data-rotated="1"] .pad.left { left: max(10px, env(safe-area-inset-top)); }        /* 눕힌 상태: 무대 왼쪽이 화면 위(노치) */
-#stage[data-rotated="1"] .pad.right { right: max(10px, env(safe-area-inset-bottom)); }
+.pad.left { left: max(12px, env(safe-area-inset-left)); }
+.pad.right { right: max(12px, env(safe-area-inset-right)); }
+#stage[data-rotated="1"] .pad { bottom: 10px; }
+#stage[data-rotated="1"] .pad.left { left: max(12px, env(safe-area-inset-top)); }        /* 눕힌 상태: 무대 왼쪽이 화면 위(노치) */
+#stage[data-rotated="1"] .pad.right { right: max(12px, env(safe-area-inset-bottom)); }
+#stage.sheet-open .pad, #stage.sheet-open .sub, #stage.sheet-open .keys { visibility: hidden; }   /* 시트 뒤 흐린 배경에 얼룩처럼 비치지 않게 */
 
 .ctl {
   all: unset;
   position: relative;
-  width: 64px; height: 64px; border-radius: 50%;
+  --d: clamp(58px, calc(var(--sh, 400px) * .165), 88px);   /* 지름: 무대 높이의 1/6 (작은 폰 58, 태블릿 88) */
+  width: var(--d); height: var(--d); border-radius: 50%;
   display: grid; place-items: center;
-  background: rgba(0,43,107,.28);
-  border: 2px solid rgba(255,255,255,.7);
+  background: rgba(6,30,82,.3);
+  border: 2px solid rgba(255,255,255,.8);
+  box-shadow: 0 3px 12px rgba(0,20,60,.3), inset 0 1px 0 rgba(255,255,255,.28);
   color: var(--white); font: 800 15px var(--ui);
   text-shadow: 0 1px 2px rgba(0,0,0,.5);
   touch-action: none; cursor: pointer;
   transition: transform .06s, background .06s;
 }
-.ctl .glyph { font-size: 24px; }
-.ctl.down, .ctl:active { background: rgba(255,255,255,.35); transform: scale(.94); }
+.ctl .glyph { font-size: calc(var(--d) * .36); }
+.ctl.down, .ctl:active { background: rgba(255,255,255,.42); transform: scale(.93); }
 .ctl:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
-.ctl.kick { background: rgba(255,199,44,.3); border-color: var(--gold); }
+.ctl.kick { background: rgba(255,199,44,.28); border-color: var(--gold); }
+.ctl.kick.down, .ctl.kick:active { background: rgba(255,199,44,.62); }
 
 /* 점프는 가장 자주 누르니 조금 더 크게 (오른손 엄지 바로 밑, 맨 오른쪽) */
-.ctl.jump { width: 78px; height: 78px; font-size: 17px; }
+.ctl.jump { --d: clamp(70px, calc(var(--sh, 400px) * .2), 106px); font-size: 17px; }
 
-/* 교체 버튼: 위 가운데 점수판 옆 (캔버스 기준) */
+/* 교체 버튼: 위 가운데 점수판 옆. 위치·크기가 경기장 배율(--k)을 따라가서 작은 폰에서도 이름표와 겹치지 않는다 (전엔 고정 px 라 겹쳤다) */
 .sub {
   all: unset;
-  position: absolute; top: 10px; left: calc(50% + 116px);
-  padding: 10px 18px; border-radius: 999px;
+  position: absolute; top: calc(14px * var(--k, 1) - var(--by, 0px)); left: calc(50% + 130px * var(--k, 1));
+  padding: clamp(7px, calc(11px * var(--k, 1)), 12px) clamp(11px, calc(19px * var(--k, 1)), 20px); border-radius: 999px;
   background: var(--gold); border: 2px solid var(--white);
-  color: var(--navy); font: 800 16px var(--ui); letter-spacing: -.01em;
+  color: var(--navy); font: 800 clamp(12px, calc(17px * var(--k, 1)), 18px) var(--ui); letter-spacing: -.01em; white-space: nowrap;
   box-shadow: 0 2px 8px rgba(0,0,0,.25);
   touch-action: manipulation; cursor: pointer;
 }
 .sub::before { content: '⇄ '; font-weight: 900; }
-.sub:disabled { opacity: .35; cursor: default; box-shadow: none; }
+.sub:disabled { background: rgba(0,27,77,.42); border-color: rgba(255,255,255,.3); color: rgba(255,255,255,.5); cursor: default; box-shadow: none; }   /* 남색 유리: 전엔 반투명 금색이 하늘과 섞여 탁했다 */
 .sub:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 /* 메뉴(일시정지) 버튼: 점수판 반대편, 교체와 구분되게 남색 */
-.sub.menu { left: auto; right: calc(50% + 116px); background: rgba(0,43,107,.7); border-color: rgba(255,255,255,.7); color: var(--white); }
+.sub.menu { left: auto; right: calc(50% + 130px * var(--k, 1)); background: rgba(0,27,77,.78); border-color: rgba(255,255,255,.7); color: var(--white); }
 .sub.menu::before { content: 'II '; letter-spacing: .04em; }
 .sub.menu:focus-visible { outline-color: var(--white); }
 
@@ -81,7 +90,7 @@ body {
 #stage.kb .pad { display: none; }
 
 /* 노트북 안내: 마우스 기기에서만 캔버스 아래 가운데에 아주 작은 키캡 (2026-10-31 형준: "아주 작게 키보드 모양으로 방향키랑 z키") */
-.keys { display: none; position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); align-items: center; gap: 6px; color: rgba(255,255,255,.8); font: 600 10px var(--ui); pointer-events: none; }
+.keys { display: none; position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); align-items: center; gap: 6px; padding: 5px 12px 5px 10px; border-radius: 999px; background: rgba(0,27,77,.55); color: rgba(255,255,255,.88); font: 600 10px var(--ui); white-space: nowrap; pointer-events: none; }
 .keys .arrows { display: grid; grid-template-columns: repeat(3, 14px); gap: 2px; }
 .keys .arrows kbd:nth-child(1) { grid-area: 1 / 2; }   /* 역T: ↑ 위 가운데, 아래 ← ↓ → */
 .keys .arrows kbd:nth-child(2) { grid-area: 2 / 1; }
@@ -89,6 +98,7 @@ body {
 .keys .arrows kbd:nth-child(4) { grid-area: 2 / 3; }
 .keys kbd { display: grid; place-items: center; width: 14px; height: 13px; border-radius: 3px; background: rgba(255,255,255,.92); color: var(--navy); font: 700 9px var(--ui); box-shadow: 0 1.5px 0 rgba(0,43,107,.9); }
 .keys em { font-style: normal; margin-right: 6px; }
+.keys em:last-child { margin-right: 0; }
 @media (hover: hover) and (pointer: fine) { .keys { display: flex; } }
 /* 2인 대전: 터치 패드 없이 키보드만, 안내는 양쪽 키 (2026-11-07 형준) */
 .keys b { color: var(--gold); font-weight: 800; margin-right: 2px; }
@@ -105,11 +115,12 @@ body {
 }
 #hint[hidden] { display: none; }
 
+/* 시트 뒤: 흐린 경기장 위에 남색 막 (위쪽이 조금 더 어둡다) */
 #overlay {
   position: absolute; inset: 0;
   display: grid; place-items: center;
-  background: rgba(0,43,107,.86);
-  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  background: linear-gradient(180deg, rgba(3,22,64,.84), rgba(0,36,96,.9));
+  -webkit-backdrop-filter: blur(7px); backdrop-filter: blur(7px);
   overflow-y: auto;
 }
 #overlay[hidden] { display: none; }
@@ -117,6 +128,7 @@ body {
 
 /* ---------- 시트 공통 ---------- */
 .sheet { width: min(94%, 900px); max-height: 96%; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.sheet.duel, .sheet.result, .sheet.pause, .sheet.select { zoom: var(--us, 1); }   /* 큰 화면(노트북·모니터)에서는 시트를 키운다. JS 가 --us 를 준다 */
 .emblem { display: block; width: 44px; height: 57px; background: url(../img/emblem.png) center / contain no-repeat; flex: none; }
 .brand { display: flex; align-items: center; gap: 12px; }
 .brand-text { display: flex; flex-direction: column; }
@@ -131,14 +143,20 @@ body {
   transition: transform .1s;
 }
 .action:active { transform: scale(.97); }
-.action:focus-visible { outline: 3px solid var(--white); outline-offset: 3px; }
+.action:focus-visible { outline: 2px solid rgba(255,255,255,.9); outline-offset: 3px; }
+@media (hover: none) { .action:focus-visible { outline: none; } }   /* 터치 기기: 자동으로 잡힌 포커스 테두리가 버튼을 겹테로 만든다 */
 .action.ghost { background: transparent; color: var(--white); border: 2px solid rgba(255,255,255,.55); }
 .row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 
 /* ---------- 첫 화면(사진 로딩 중): 엠블럼·제목 아래 금색 바가 왔다 갔다 ---------- */
-#overlay:has(.sheet.loading) { background: #0D3F7E; }   /* 반투명이면 밑의 조작 버튼이 흐릿하게 비친다. 색은 선택 화면의 반투명 남색과 같은 값 */
-.sheet.loading { gap: 22px; }
-.loading-bar { display: block; width: 140px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.18); overflow: hidden; }
+/* 크기는 뷰포트 짧은 변(vmin = 무대 높이) 기준: JS 가 data-compact 를 달기 전 첫 그림부터 같은 크기라 덜컹거리지 않는다 */
+.sheet.loading { gap: clamp(16px, 6vmin, 28px); }
+#stage #overlay .sheet.loading .brand { gap: clamp(12px, 4.4vmin, 20px); }
+#stage #overlay .sheet.loading .emblem { display: block; width: clamp(50px, 19vmin, 78px); height: clamp(65px, 24.6vmin, 101px); }
+#stage #overlay .sheet.loading .brand .club { display: block; font-size: clamp(11px, 3.7vmin, 15px); margin-bottom: clamp(5px, 2vmin, 9px); }
+#stage #overlay .sheet.loading .brand h1 { font-size: clamp(22px, 8.4vmin, 34px); gap: clamp(8px, 2.8vmin, 12px); }
+#stage #overlay .sheet.loading .brand h1 .vs { font-size: clamp(40px, 15vmin, 62px); }
+.loading-bar { display: block; width: clamp(150px, 52vmin, 230px); height: 4px; border-radius: 2px; background: rgba(255,255,255,.18); overflow: hidden; }
 .loading-bar::after { content: ''; display: block; width: 40%; height: 100%; border-radius: 2px; background: var(--gold); animation: loading-slide 1s ease-in-out infinite alternate; }
 @keyframes loading-slide { from { transform: translateX(-20%); } to { transform: translateX(270%); } }
 @media (prefers-reduced-motion: reduce) { .loading-bar::after { animation: none; width: 100%; } }
@@ -252,7 +270,7 @@ body {
 .kit { all: unset; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px 8px 4px; border-radius: 10px; border: 2px solid transparent; cursor: pointer; touch-action: manipulation; }
 .kit[aria-pressed="true"] { border-color: var(--gold); background: rgba(255,255,255,.08); }
 .kit:focus-visible { outline: 3px solid var(--white); outline-offset: 2px; }
-.shirt { width: 34px; height: 30px; background: linear-gradient(90deg, var(--t) 0 16%, transparent 16% 84%, var(--t) 84%), repeating-linear-gradient(90deg, var(--j) 0 4px, var(--s, var(--j)) 4px 8px); clip-path: polygon(28% 0, 72% 0, 100% 26%, 88% 44%, 80% 38%, 80% 100%, 20% 100%, 20% 38%, 12% 44%, 0 26%); }
+.shirt { display: block; width: 38px; height: 32px; filter: drop-shadow(0 2px 3px rgba(0,16,50,.35)); }
 .kit span { font-size: 12px; font-weight: 600; color: var(--muted); }
 .kit[aria-pressed="true"] span { color: var(--white); font-weight: 800; }
 
@@ -272,17 +290,36 @@ body {
 .sheet.pause h1 { margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -.02em; }
 
 /* ---------- VS ---------- */
-.sheet.vs { flex-direction: row; justify-content: center; gap: 40px; }
-.face { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.face img { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid var(--white); }
-.face.away img { border-color: var(--muted); }
-.face b { font-size: 22px; font-weight: 800; }
-.face span { font: 600 28px var(--num); color: var(--gold); line-height: .9; }
-.vs-mark { font: 600 96px var(--num); color: var(--gold); line-height: .8; }
+/* 큰 캐릭터 둘이 금색 사선을 사이에 두고 마주 본다. 사선이 위에서 내려 긋고, 양옆에서 미끄러져 들어오고, VS 가 쾅 찍힌다 */
+.sheet.vs { position: relative; width: 100%; height: 100%; max-height: none; flex-direction: row; align-items: center; justify-content: center; gap: 0; overflow: hidden; }
+.sheet.vs::before { content: ''; position: absolute; left: 50%; top: -12%; width: max(112px, 15%); height: 124%; background: linear-gradient(180deg, #FFD95E, var(--gold) 50%, #F0AE00); box-shadow: 0 0 0 7px rgba(0,22,66,.38); transform: translateX(-50%) skewX(-12deg); animation: vs-slash .3s cubic-bezier(.2,.9,.3,1) both; }
+.vs-side { position: relative; z-index: 1; flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.vs-side.L { padding-right: 7%; animation: vs-in-l .42s cubic-bezier(.2,.9,.3,1) both; }
+.vs-side.R { padding-left: 7%; animation: vs-in-r .42s cubic-bezier(.2,.9,.3,1) both; }
+.vs-side .tag { position: static; margin-bottom: 2px; font-size: calc(13px * var(--us, 1)); }
+.vs-side.R .tag { background: var(--gold); }
+.vs-side canvas { display: block; }
+.vs-cap { display: flex; align-items: baseline; flex-wrap: wrap; justify-content: center; column-gap: 10px; }
+.vs-cap .num { font: 600 calc(56px * var(--us, 1))/.9 var(--num); color: var(--gold); }
+.vs-cap .name { font-size: calc(38px * var(--us, 1)); font-weight: 800; letter-spacing: -.02em; }
+.vs-cap .sk { flex-basis: 100%; margin-top: 5px; text-align: center; font: 700 calc(15px * var(--us, 1))/1.2 var(--ui); color: var(--muted); }
+.vs-mark { position: absolute; z-index: 2; left: 50%; top: 50%; font: 600 calc(150px * var(--us, 1))/.8 var(--num); color: var(--navy); transform: translate(-50%, -46%); animation: vs-slam .42s .16s cubic-bezier(.2,1.5,.4,1) both; }
+@keyframes vs-slash { from { transform: translateX(-50%) skewX(-12deg) scaleY(0); } to { transform: translateX(-50%) skewX(-12deg) scaleY(1); } }
+@keyframes vs-in-l { from { transform: translateX(-70px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes vs-in-r { from { transform: translateX(70px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes vs-slam { from { transform: translate(-50%, -46%) scale(2.4); opacity: 0; } to { transform: translate(-50%, -46%) scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .sheet.vs::before, .vs-side.L, .vs-side.R, .vs-mark { animation: none; } }
 
 /* ---------- 결과 ---------- */
-.sheet.result { gap: 10px; }
-.verdict { margin: 0; font-size: 44px; font-weight: 800; letter-spacing: -.02em; }
+/* 가운데 판정·점수·선수별 골·버튼, 양옆에 마지막까지 뛴 두 선수(이긴 쪽 만세·폴짝, 진 쪽 풀썩) */
+.sheet.result { flex-direction: row; justify-content: center; gap: 6px; width: min(97%, 1040px); }
+.result-main { display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0; }
+.result-fig { flex: none; display: block; }
+.result-fig.won { animation: fig-hop .44s cubic-bezier(.3,0,.7,1) infinite alternate; }
+.result-fig.lost { filter: saturate(.7) brightness(.92); }
+@keyframes fig-hop { from { transform: translateY(4px); } to { transform: translateY(-16px); } }
+@media (prefers-reduced-motion: reduce) { .result-fig.won { animation: none; } }
+.verdict { margin: 0; font-size: 46px; font-weight: 800; letter-spacing: -.02em; }
 .verdict.win { color: var(--gold); }
 .verdict.lose, .verdict.draw { color: var(--white); }
 .score { margin: 0; display: flex; align-items: baseline; gap: 14px; font: 600 72px var(--num); line-height: .8; }
@@ -314,8 +351,10 @@ body {
 #stage[data-compact="1"] .shirt { width: 28px; height: 24px; }
 #stage[data-compact="1"] .kit { padding: 4px 7px 3px; }
 #stage[data-compact="1"] .kit span { font-size: 11px; }
-#stage[data-compact="1"] .face img { width: 90px; height: 90px; }
-#stage[data-compact="1"] .vs-mark { font-size: 72px; }
+#stage[data-compact="1"] .vs-mark { font-size: 98px; }
+#stage[data-compact="1"] .vs-cap .num { font-size: 38px; }
+#stage[data-compact="1"] .vs-cap .name { font-size: 26px; }
+#stage[data-compact="1"] .vs-cap .sk { font-size: 13px; margin-top: 3px; }
 #stage[data-compact="1"] .verdict { font-size: 34px; }
 #stage[data-compact="1"] .score { font-size: 56px; }
 
@@ -350,7 +389,7 @@ body {
 #stage[data-tiny="1"] .kits-pick .pick-label { margin-bottom: 0; }
 #stage[data-tiny="1"] .sub-note { font-size: 11px; }
 #stage[data-tiny="1"] .sheet.pause h1 { font-size: 22px; }
-#stage[data-tiny="1"] .sheet.result { gap: 6px; }
+#stage[data-tiny="1"] .result-main { gap: 6px; }
 #stage[data-tiny="1"] .sheet.result .emblem { display: none; }
 #stage[data-tiny="1"] .verdict { font-size: 26px; }
 #stage[data-tiny="1"] .score { font-size: 44px; }
@@ -365,6 +404,7 @@ body {
 #stage[data-tiny="1"] .sub-arrow { margin-top: 12px; font-size: 14px; }
 #stage[data-tiny="1"] .sheet.result .row { gap: 6px; flex-wrap: nowrap; }
 #stage[data-tiny="1"] .sheet.result .action { width: auto; min-width: 0; padding: 7px 12px; font-size: 13px; }
-#stage[data-tiny="1"] .face img { width: 70px; height: 70px; }
-#stage[data-tiny="1"] .face b { font-size: 16px; }
-#stage[data-tiny="1"] .vs-mark { font-size: 56px; }
+#stage[data-tiny="1"] .vs-mark { font-size: 80px; }
+#stage[data-tiny="1"] .vs-cap .num { font-size: 32px; }
+#stage[data-tiny="1"] .vs-cap .name { font-size: 22px; }
+#stage[data-tiny="1"] .vs-cap .sk { font-size: 12px; margin-top: 2px; }

@@ -5,7 +5,7 @@
 import { FIELD } from '../sim/constants.js';
 import { createPlayer } from '../sim/physics.js';
 import { PLAYERS } from '../data/players.js';
-import { drawPlayer } from './characters.js';
+import { drawPlayer, drawPlayerShadow } from './characters.js';
 import { wornKit } from '../data/kits.js';
 
 export const PARTY_LEN = 4.2;   // 초. 이 뒤에 결과 화면 (2026-10-31 형준: "방방 뛰면서 다같이 환호" → 모인 뒤 뛸 시간을 더 준다)
@@ -16,7 +16,8 @@ const hopAt = (t, m = { beat: BEAT, phase: 0, hop: HOP }) => Math.max(0, Math.si
 const COLORS = ['#FFC72C', '#FFFFFF', '#004098'];
 const EDGE = 60, GAP = 70, SPACE = (FIELD.W - 2 * EDGE - 2 * GAP) / 10;   // 가장자리·이긴 선수 양옆을 비우고 남은 폭에 벤치 10명을 고르게 (약 102px)
 
-export function startParty(match) {
+// bleedX·bleedY: 경기장 바깥으로 보이는 폭(논리 px). 벤치 선수들은 보이는 곳 밖에서 달려오고, 색종이는 화면 맨 위에서 떨어진다
+export function startParty(match, bleedX = 0, bleedY = 0) {
   const side = match.result === 'lose' ? 'R' : 'L', { L, R } = match.world.players, star = match.world.players[side];
   const bench = PLAYERS.filter(p => p.number !== L.def.number && p.number !== R.def.number);
   // 이긴 선수 왼쪽에 들어갈 자리 수만큼 왼쪽에, 나머지는 오른쪽에 깐다(왼쪽부터 오름차순). 가장자리에 서 있어도 한쪽에 몰려 겹치지 않는다
@@ -25,12 +26,12 @@ export function startParty(match) {
   const members = bench.map((def, i) => {
     const fromLeft = i % 2 === 0, k = Math.floor(i / 2) + 1;   // 번갈아 양쪽에서, 뒤에 올수록 멀리서 출발해 더 바깥 자리에 선다
     const body = createPlayer(def, side);
-    body.x = fromLeft ? -70 - k * 40 : FIELD.W + 70 + k * 40;
+    body.x = fromLeft ? -bleedX - 70 - k * 40 : FIELD.W + bleedX + 70 + k * 40;   // 화면 밖에서 출발 (넓은 폰은 경기장 바깥 여백까지 보인다)
     body.facing = fromLeft ? 1 : -1;
     return { body, target: slots[fromLeft ? 5 - k : 4 + k], delay: i * 0.08, arrived: false,
       beat: 5.4 + (i % 4) * 0.5, phase: (i * 0.9) % 1.5, hop: 90 + (i % 3) * 12 };
   });
-  return { t: 0, side, members, confetti: [] };
+  return { t: 0, side, members, confetti: [], bleedX, bleedY };
 }
 
 export function updateParty(party, match, dt) {
@@ -49,7 +50,8 @@ export function updateParty(party, match, dt) {
     }
   }
   if ((party.side === 'L' || match.twoPlayer) && party.t < PARTY_LEN - 1) {   // 색종이는 내가 이겼을 때만 (2026-11-01 형준 "졌을때는 색종이도 안나오고"); 2인이면 누가 이겨도
-    for (let i = 0; i < 2; i++) party.confetti.push({ x: Math.random() * FIELD.W, y: -10, vx: (Math.random() - 0.5) * 80, vy: 160 + Math.random() * 200, rot: Math.random() * Math.PI * 2, vr: (Math.random() - 0.5) * 10, color: COLORS[(party.confetti.length + i) % 3], age: 0 });
+    const bx = party.bleedX || 0;
+    for (let i = 0; i < 2; i++) party.confetti.push({ x: -bx + Math.random() * (FIELD.W + 2 * bx), y: -10 - (party.bleedY || 0), vx: (Math.random() - 0.5) * 80, vy: 160 + Math.random() * 200, rot: Math.random() * Math.PI * 2, vr: (Math.random() - 0.5) * 10, color: COLORS[(party.confetti.length + i) % 3], age: 0 });
   }
   for (const q of party.confetti) { q.age += dt; q.x += (q.vx + Math.sin(q.age * 4 + q.rot) * 50) * dt; q.y += q.vy * dt; q.rot += q.vr * dt; }
   party.confetti = party.confetti.filter(q => q.y < FIELD.GROUND + 10);
@@ -61,6 +63,7 @@ export const partyView = (party, side, p) => side === party.side
   : { ...p, stun: 1, pinned: false, active: null };
 
 export function drawParty(ctx, party, match, imgs, t) {
+  for (const m of party.members) drawPlayerShadow(ctx, m.body, FIELD.GROUND);
   for (const m of party.members) drawPlayer(ctx, m.body, imgs[m.body.def.number], { kit: wornKit(match.kits[party.side], m.body.def), t, cheer: m.arrived });
   // 0.3초 뒤 하늘 한가운데 큰 글자가 커지며 나타난다. 이기면 금색 VAMOS! 가 박자에 들썩이고, 지면 회청색 LOSE 가 가만히 (2026-11-01 형준 "졌을땐 바모스 뜨면 안돼", "아쉬운 노래 나오면서 LOSE 뜨게")
   if (party.t > 0.3) {
