@@ -87,12 +87,9 @@ function buildCarousel({ players, imgs, initial, kitFor, onChange, side = 'L', r
     const def = list[idx];
     paintCard(canvas, def, imgs, def.random ? null : kitFor(def), side);
     who.innerHTML = def.random ? '<b class="name">랜덤 상대</b>' : `<b class="name">${def.name}</b><span class="num">${def.number}</span>`;
-    if (def.random) {
-      skill.innerHTML = '<div class="skill-head"><span class="skill-tag">필살기</span><span class="skill-when">?</span></div><b class="skill-name">경기마다 다른 선수</b><p class="skill-desc">시작하면 나머지 11명 중 한 명이 나온다</p>';
-    } else {
-      const sp = def.special, when = sp.kind === 'oneshot' ? '다음 슛 한 번' : sp.kind === 'instant' ? '즉시' : `${sp.duration}초`;
-      skill.innerHTML = `<div class="skill-head"><span class="skill-tag">필살기</span><span class="skill-when">${when}</span></div><b class="skill-name">${sp.name}</b><p class="skill-desc">${sp.desc}</p>`;
-    }
+    // 필살기 카드: 꼬리표와 이름이 한 줄, 그 아래 한 줄 설명. 발동 조건 칩("다음 슛 한 번"·"6초"·"즉시")은 뺐다 (2026-11-12 형준 "이 내용은 그냥 필요 없을 것 같아서")
+    const [skillName, skillDesc] = def.random ? ['경기마다 다른 선수', '시작하면 나머지 11명 중 한 명이 나온다'] : [def.special.name, def.special.desc];
+    skill.innerHTML = `<div class="skill-head"><span class="skill-tag">필살기</span><b class="skill-name">${skillName}</b></div><p class="skill-desc">${skillDesc}</p>`;
     [...thumbs.children].forEach((t, n) => { t.setAttribute('aria-selected', n === idx); t.disabled = banned(list[n]); });
     onChange(def);
   }
@@ -314,6 +311,7 @@ export function showResult({ match, imgs, onAgain, onChange }) {
       const won = match.result === (s === 'L' ? 'win' : 'lose'), lost = match.result === (s === 'L' ? 'lose' : 'win');
       const def = match.used[s].at(-1), canvas = el('canvas', 'result-fig ' + s + (won ? ' won' : lost ? ' lost' : '')); canvas.setAttribute('aria-hidden', 'true');
       paintCard(canvas, def, imgs, wornKit(match.kits[s], def), s, { zoom: stageEl.dataset.tiny === '1' ? 1.05 : 1.25, pose: won ? 'cheer' : lost ? 'sad' : null });
+      canvas.style.maxWidth = canvas.style.width; canvas.style.width = '100%'; canvas.style.height = 'auto';   // 칸이 좁으면(16:9 폰) 그만큼 줄어든다
       return canvas;
     };
     sheet.prepend(figure('L')); sheet.append(figure('R'));
