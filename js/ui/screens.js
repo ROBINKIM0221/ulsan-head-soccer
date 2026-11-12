@@ -88,7 +88,7 @@ function buildCarousel({ players, imgs, initial, kitFor, onChange, side = 'L', r
     paintCard(canvas, def, imgs, def.random ? null : kitFor(def), side);
     who.innerHTML = def.random ? '<b class="name">랜덤 상대</b>' : `<b class="name">${def.name}</b><span class="num">${def.number}</span>`;
     // 필살기 카드: 꼬리표와 이름이 한 줄, 그 아래 한 줄 설명. 발동 조건 칩("다음 슛 한 번"·"6초"·"즉시")은 뺐다 (2026-11-12 형준 "이 내용은 그냥 필요 없을 것 같아서")
-    const [skillName, skillDesc] = def.random ? ['경기마다 다른 선수', '시작하면 나머지 11명 중 한 명이 나온다'] : [def.special.name, specialLine(def.special)];
+    const [skillName, skillDesc] = def.random ? ['경기마다 다른 선수', '시작하면 나머지 11명 중 한 명 등장'] : [def.special.name, specialLine(def.special)];
     skill.innerHTML = `<div class="skill-head"><span class="skill-tag">필살기</span><b class="skill-name">${skillName}</b></div><p class="skill-desc">${skillDesc}</p>`;
     [...thumbs.children].forEach((t, n) => { t.setAttribute('aria-selected', n === idx); t.disabled = banned(list[n]); });
     onChange(def);
