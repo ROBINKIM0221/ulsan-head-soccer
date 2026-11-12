@@ -1,5 +1,8 @@
 // 한국어 문장 도우미. DOM 없음.
 
+// 필살기 카드의 설명 한 줄: 지속형(buff)은 끝에 지속시간 "(5초)". 한 방형(다음 슛 한 번)과 즉발은 시간이 없다 (2026-11-12 형준 "(5초) 이런식으로 지속시간 써줘")
+export const specialLine = sp => (sp.kind === 'buff' ? `${sp.desc} (${sp.duration}초)` : sp.desc);
+
 // 마지막 글자에 받침이 있으면 [받침 있을 때, 없을 때] 중 앞의 조사를 붙인다. 한글이 아니면 받침 없는 쪽.
 export function josa(word, [withTail, noTail]) {
   const c = word.charCodeAt(word.length - 1);

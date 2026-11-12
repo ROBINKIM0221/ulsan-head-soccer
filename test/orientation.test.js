@@ -40,13 +40,13 @@ test('stageMetrics: phones up to 480px tall get the compact sheet layout (iPhone
   assert.equal(stageMetrics(932, 430).us, sheetZoom(932, 430, true));
 });
 
-// 시트 배율: 가장 큰 시트는 2인 선택 화면 — 폰 배치 358px, 큰 화면 배치 577px (scratchpad fit-sweep 으로 브라우저에서 잰 값). 어느 높이에서도 96% 안에 들어와야 한다.
+// 시트 배율: 가장 큰 시트는 2인 선택 화면 — 폰 배치 358px, 큰 화면 배치 597px(설명이 두 줄인 선수일 때; 브라우저에서 잰 값). 어느 높이에서도 96% 안에 들어와야 한다.
 test('sheetZoom: grows on big screens, shrinks on short or narrow windows, and the tallest sheet always fits', () => {
   near(sheetZoom(1920, 1080, false), 1.459, 0.001); near(sheetZoom(1366, 657, false), 1); near(sheetZoom(1024, 768, false), 1);
   near(sheetZoom(3840, 2160, false), 1.6);   // 상한
-  near(sheetZoom(960, 540, false), 540 / 610, 0.001); near(sheetZoom(800, 600, false), 0.8);   // 낮은 창, 좁은 창
+  near(sheetZoom(960, 540, false), 540 / 640, 0.001); near(sheetZoom(800, 600, false), 0.8);   // 낮은 창, 좁은 창
   for (const h of [340, 360, 375, 390, 412, 430, 448, 479]) { const z = sheetZoom(h * 2.1, h, true); assert.ok(358 * z <= h * 0.96 && z >= 0.9 && z <= 1.2, `compact ${h}: ${z}`); }
-  for (const h of [480, 540, 600, 657, 720, 768, 900, 1080]) { const z = sheetZoom(h * 16 / 9, h, false); assert.ok(577 * z <= h * 0.96, `full ${h}: ${z}`); }
+  for (const h of [480, 540, 600, 657, 720, 768, 900, 1080]) { const z = sheetZoom(h * 16 / 9, h, false); assert.ok(597 * z <= h * 0.95, `full ${h}: ${z}`); }
   near(sheetZoom(667, 375, true), 667 / 700, 0.001);   // 16:9 폰은 폭이 먼저 모자란다
   near(sheetZoom(658, 320, true), 1);                  // tiny 배치는 320px 에 맞춰 둔 그대로
 });

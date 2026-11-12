@@ -4,7 +4,7 @@ import { KITS, GK_KITS, kitById, kitsFor, wornKit, sideKits } from '../data/kits
 import { sfx, soundEnabled, setSoundEnabled } from '../sound.js';
 import { createPlayer, headCenter } from '../sim/physics.js';
 import { drawPlayer } from '../render/characters.js';
-import { shareText } from './text.js';
+import { shareText, specialLine } from './text.js';
 import { DIFFICULTY, DIFFICULTY_ORDER } from '../sim/constants.js';
 
 const overlay = document.getElementById('overlay'), stageEl = document.getElementById('stage');
@@ -88,7 +88,7 @@ function buildCarousel({ players, imgs, initial, kitFor, onChange, side = 'L', r
     paintCard(canvas, def, imgs, def.random ? null : kitFor(def), side);
     who.innerHTML = def.random ? '<b class="name">랜덤 상대</b>' : `<b class="name">${def.name}</b><span class="num">${def.number}</span>`;
     // 필살기 카드: 꼬리표와 이름이 한 줄, 그 아래 한 줄 설명. 발동 조건 칩("다음 슛 한 번"·"6초"·"즉시")은 뺐다 (2026-11-12 형준 "이 내용은 그냥 필요 없을 것 같아서")
-    const [skillName, skillDesc] = def.random ? ['경기마다 다른 선수', '시작하면 나머지 11명 중 한 명이 나온다'] : [def.special.name, def.special.desc];
+    const [skillName, skillDesc] = def.random ? ['경기마다 다른 선수', '시작하면 나머지 11명 중 한 명이 나온다'] : [def.special.name, specialLine(def.special)];
     skill.innerHTML = `<div class="skill-head"><span class="skill-tag">필살기</span><b class="skill-name">${skillName}</b></div><p class="skill-desc">${skillDesc}</p>`;
     [...thumbs.children].forEach((t, n) => { t.setAttribute('aria-selected', n === idx); t.disabled = banned(list[n]); });
     onChange(def);
@@ -181,7 +181,8 @@ function buildSoundToggle(cls = 'opp sound') {
 // 오른쪽은 왼쪽과 같은 선수를 못 고른다. 2P 유니폼은 왼쪽과 상관없이 전부(2026-11-08 형준 "2p 유니폼도 5개 중에 고르게"; 그 전엔 다른 계열만). 토글하면 상태를 들고 다시 그린다.
 export function showSelect({ imgs, selection, onStart }) {
   const slot = def => (def.position === 'GK' ? 'gk' : 'field');
-  const st = { two: !!selection.two, diff: selection.difficulty, L: { number: selection.number, kit: { field: KITS[0].id, gk: GK_KITS[0].id } }, R: { number: selection.opp, kit: { field: KITS[1].id, gk: GK_KITS[0].id } } };   // 2P 기본은 어웨이: 1P 기본 홈과 안 겹치게
+  const st = { two: !!selection.two, diff: selection.difficulty, L: { number: selection.number, kit: { field: KITS[0].id, gk: GK_KITS[0].id } }, R: { number: selection.opp, kit: { field: KITS[1].id, gk: GK_KITS[0].id } },   // 2P: 선수와 유니폼. 기본은 어웨이(1P 기본 홈과 안 겹치게)
+    ai: selection.ai ?? null };   // 1인 모드의 컴퓨터 상대 등번호. null = 랜덤(기본). 2P 선수와 따로 둔다: 2인에서 1인으로 넘겨도 랜덤 상대가 기본 (2026-11-12 형준 "1인은 디폴트가 랜덤상대로")
   const initL = kitById(selection.kit); if (initL) st.L.kit[initL.gk ? 'gk' : 'field'] = initL.id;
   const initR = kitById(selection.kitR); if (initR) st.R.kit[initR.gk ? 'gk' : 'field'] = initR.id;
   const Ldef = () => byNumber(st.L.number);
@@ -211,9 +212,9 @@ export function showSelect({ imgs, selection, onStart }) {
       tag(pickR.card, '2P');
       right.append(pickR.root.querySelector('.carousel'), pickR.root.querySelector('.skill'), pickR.root.querySelector('.thumbs'), kitsR.root);
     } else {
-      pickR = buildCarousel({ players: PLAYERS, imgs, initial: st.R.number ?? 0, side: 'R', random: true, keys: [], exclude: () => st.L.number,
+      pickR = buildCarousel({ players: PLAYERS, imgs, initial: st.ai ?? 0, side: 'R', random: true, keys: [], exclude: () => st.L.number,
         kitFor: aiKit,   // 미리 보기용. 경기에선 왼쪽과 다른 계열 중 무작위
-        onChange: def => { st.R.number = def.random ? null : def.number; } });
+        onChange: def => { st.ai = def.random ? null : def.number; } });
       tag(pickR.card, 'AI');
       right.append(pickR.root.querySelector('.carousel'), pickR.root.querySelector('.skill'), pickR.root.querySelector('.thumbs'), buildLevels(st.diff, d => { st.diff = d; }));
     }
@@ -222,8 +223,8 @@ export function showSelect({ imgs, selection, onStart }) {
     const mode = buildMode(st.two, on => { st.two = on; render(); });
     const start = el('button', 'action', '경기 시작'); start.type = 'button';
     start.addEventListener('click', () => {
-      const Rdef = pickR.current();
-      onStart({ number: st.L.number, difficulty: st.diff, kit: st.L.kit[slot(Ldef())], opp: Rdef.random ? null : Rdef.number, two: st.two, kitR: st.two ? st.R.kit[slot(Rdef)] : null });
+      const p2 = byNumber(st.R.number);   // 2P 선수 (2인 화면을 한 번도 안 열었으면 없을 수 있다)
+      onStart({ number: st.L.number, difficulty: st.diff, kit: st.L.kit[slot(Ldef())], opp: st.R.number ?? null, ai: st.ai, two: st.two, kitR: p2 ? st.R.kit[slot(p2)] : null });
     });
     mid.append(mode.root, buildSoundToggle(), start);
     row.append(left, mid, right);
@@ -330,18 +331,20 @@ export function showResult({ match, imgs, onAgain, onChange }) {
   sheet.querySelector('[data-act="again"]').focus({ preventScroll: true });
 }
 
-// 전체 흐름. selection = { number, difficulty, kit, opp, two, kitR }: opp 는 오른쪽(2P 또는 지정한 컴퓨터 상대) 등번호, null 이면 랜덤; kitR 은 2P 유니폼
+// 전체 흐름. selection = { number, difficulty, kit, opp, ai, two, kitR }: opp·kitR 은 2P 선수와 유니폼, ai 는 1인 모드에서 지정한 컴퓨터 상대(null 이면 랜덤).
+// ai 는 저장하지 않는다: 다시 열면 1인은 늘 랜덤 상대에서 시작한다 (2026-11-12 형준 "1인은 디폴트가 랜덤상대로"; 전엔 지정한 상대가 저장돼 다음에도 그 선수가 떠 있었다)
 export function runFlow({ startMatch, finishSubstitution, imgs, onIdle }) {
   const saved = load() || {};
   const number = byNumber(saved.number) ? saved.number : 10;
   let selection = { number, difficulty: LEVELS.some(l => l.id === saved.difficulty) ? saved.difficulty : 'first', kit: kitById(saved.kit) ? saved.kit : 'home',
-    opp: byNumber(saved.opp) && saved.opp !== number ? saved.opp : null, two: saved.two === true, kitR: kitById(saved.kitR) ? saved.kitR : null };
+    opp: byNumber(saved.opp) && saved.opp !== number ? saved.opp : null, ai: null, two: saved.two === true, kitR: kitById(saved.kitR) ? saved.kitR : null };
 
   const randomOther = home => { const pool = PLAYERS.filter(p => p.number !== home.number); return pool[Math.floor(Math.random() * pool.length)]; };
 
   function play(sel) {
     const home = byNumber(sel.number);
-    const away = byNumber(sel.opp) && sel.opp !== home.number ? byNumber(sel.opp) : randomOther(home);
+    const pick = sel.two ? sel.opp : sel.ai;   // 오른쪽: 2인이면 2P 선수, 1인이면 지정한 컴퓨터 상대(없으면 랜덤)
+    const away = byNumber(pick) && pick !== home.number ? byNumber(pick) : randomOther(home);
     // 오른쪽 유니폼을 여기서 정한다: 2인은 고른 것, 컴퓨터는 경기 규칙(sideKits: 내 것과 다른 계열 중 무작위)대로 뽑아 VS 화면과 경기가 같은 옷이 되게
     onIdle?.();   // "다시 하기"로 와도 VS 화면 뒤는 지난 경기의 마지막 장면이 아니라 빈 경기장
     const picked = sideKits(sel.kit, Math.random, sel.two ? sel.kitR : null);
@@ -361,7 +364,7 @@ export function runFlow({ startMatch, finishSubstitution, imgs, onIdle }) {
   }
   function toSelect() {
     onIdle?.();   // 지난 경기 장면을 지우고 빈 경기장을 배경으로
-    showSelect({ imgs, selection, onStart: sel => { selection = sel; save(selection); play(sel); } });
+    showSelect({ imgs, selection, onStart: sel => { selection = sel; save({ ...sel, ai: undefined }); play(sel); } });
   }
   toSelect();
   return { toSelect, play };
