@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FIELD, PHYS, DT, MATCH, NO_INPUT } from '../js/sim/constants.js';
-import { headCenter, footPoint } from '../js/sim/physics.js';
-import { createMatch, stepMatch } from '../js/sim/match.js';
+import { headCenter, footPoint, resetKickoff } from '../js/sim/physics.js';
+import { createMatch, stepMatch, substitute } from '../js/sim/match.js';
 import { mulberry32 } from '../js/sim/rng.js';
 import { byNumber } from '../js/data/players.js';
 
@@ -105,29 +105,41 @@ test('curve: next kick leaves at 55deg/1050, passes through the opponent briefly
   assert.equal(b.flight, null); assert.equal(b.curveAx, 0); assert.equal(b.passThrough, null);
 });
 
-// 2026-11-01 형준 "최석현은 원래 상대방 미끄러지는거니까 살짝 더 오래": 넘어짐 1초 → 1.3초
-// 2026-11-02 형준 "최석현 발동 시간을 좀 늘려야겠는데": 0.35초 → 0.5초, 같은 속도라 약 257px
-test('slide: dashes about 257px in .5s, kicks the ball once, knocks the opponent down for 1.3s', () => {
-  const m = ready(96); const L = m.world.players.L, R = m.world.players.R; const b = m.world.ball;
-  L.x = 400; R.x = 1160;
-  const x0 = L.x;
+// 2026-11-13 형준 "슬라이딩이 잘 안나오는데, 그냥 필살기를 바꾸면 좋겠다" → "오프사이드 트랩… 이거 해보자": 상대가 1.5초 그 자리에 선다.
+// (전 필살기 슬라이딩은 게이지가 차는 순간 앞에 공·상대가 없으면 아무 일도 없어 보였다. 이건 어디서 터져도 효과가 난다.)
+const twoP = (homeNo, awayNo) => { const m = ready(homeNo, awayNo); m.twoPlayer = true; return m; };   // 오른쪽 입력을 직접 준다
+const both = (m, seconds, inR) => { const ev = []; for (let i = 0, n = Math.round(seconds / DT); i < n; i++) ev.push(...stepMatch(m, NO_INPUT, DT, inR)); return ev; };
+test('offside trap: wherever the opponent is, they stand still for 1.5s (no move, jump or kick), then play on', () => {
+  const m = twoP(96, 10); const L = m.world.players.L, R = m.world.players.R;
+  L.x = 200; R.x = 900;                                   // 멀리 떨어져 있어도 걸린다
+  const ev = fire(m);
+  assert.ok(ev.some(e => e.type === 'special' && e.side === 'L' && e.id === 'offside'));
+  const mash = inp({ left: true, jump: true, kick: true });
+  const frozenEv = both(m, 1.4, mash);
+  assert.equal(R.x, 900); assert.equal(R.onGround, true, 'did not jump');
+  assert.ok(!frozenEv.some(e => e.type === 'kick' && e.side === 'R'), 'did not kick');
+  assert.ok(R.frozen > 0 && L.active && L.active.id === 'offside');
+  const after = both(m, 0.3, mash);
+  assert.equal(R.frozen, 0); assert.equal(L.active, null);
+  assert.ok(R.x < 880, `moves again: ${R.x}`);
+  assert.ok(after.some(e => e.type === 'kick' && e.side === 'R'), 'kicks again');
+});
+
+test('offside trap: caught in the air they drop straight down; a kickoff or the user being substituted lifts it', () => {
+  const m = twoP(96, 10); const R = m.world.players.R;
+  R.x = 900;
+  both(m, 0.2, inp({ left: true, jump: true }));          // 왼쪽으로 달리며 뛰어오른 순간
+  assert.equal(R.onGround, false);
+  const x0 = R.x;
   fire(m);
-  run(m, 0.5);
-  assert.ok(Math.abs((L.x - x0) - 257) < 14, `slid ${L.x - x0}`);
-  assert.equal(L.active, null, 'instant special over');
+  both(m, 1.0, inp({ left: true }));
+  assert.equal(R.x, x0, 'no drift in the air'); assert.equal(R.onGround, true, 'landed');
 
-  const m2 = ready(96); const L2 = m2.world.players.L; const b2 = m2.world.ball;
-  L2.x = 400;
-  Object.assign(b2, { held: null, x: 500, y: FIELD.GROUND - PHYS.BALL_R, vx: 0, vy: 0 });
-  fire(m2);
-  let kickV = null;
-  run(m2, 0.35, NO_INPUT, (m) => { const bb = m.world.ball; if (!kickV && speed(bb) > 700) kickV = { vx: bb.vx, vy: bb.vy }; });
-  assert.ok(kickV && kickV.vx > 0 && kickV.vy < 0, `ball kicked forward-up: ${JSON.stringify(kickV)}`);
+  resetKickoff(m.world);                                   // 골을 먹고 다시 서면 묶여 있지 않다
+  assert.equal(R.frozen, 0);
 
-  const m3 = ready(96); const L3 = m3.world.players.L, R3 = m3.world.players.R;
-  L3.x = 400; R3.x = 480;
-  let peak = 0;
-  const ev = fire(m3).concat(run(m3, 0.35, NO_INPUT, m => { peak = Math.max(peak, m.world.players.R.stun); }));
-  assert.ok(ev.some(e => e.type === 'knockdown' && e.side === 'R'));
-  assert.ok(peak > 1.2 && peak <= 1.3, `stun ${peak}`);
+  const m2 = twoP(96, 10); fire(m2);
+  assert.ok(m2.world.players.R.frozen > 1.4);
+  substitute(m2, 'L', byNumber(19));                       // 진행 중인 필살기 효과는 교체 순간 끝난다
+  assert.equal(m2.world.players.R.frozen, 0);
 });

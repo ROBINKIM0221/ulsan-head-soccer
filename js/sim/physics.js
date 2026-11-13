@@ -11,7 +11,7 @@ export function createPlayer(def, side) {
     side, def,
     x: side === 'L' ? 320 : 960, y: FIELD.GROUND, vx: 0, vy: 0, onGround: true,
     facing: side === 'L' ? 1 : -1, scale: 1,
-    kickCooldown: 0, kickAnim: 0, stun: 0, pinned: false, forcedVx: null, noSeparate: false, lastTouchT: -1,
+    kickCooldown: 0, kickAnim: 0, stun: 0, frozen: 0, pinned: false, forcedVx: null, noSeparate: false, lastTouchT: -1,   // frozen: 오프사이드 트랩에 걸려 서 있을 남은 시간(초)
     gauge: 0, active: null, mods: defaultMods(),
   };
 }
@@ -31,7 +31,7 @@ export function resetKickoff(world) {
   for (const side of ['L', 'R']) {
     const p = world.players[side];
     p.x = side === 'L' ? 320 : 960; p.y = FIELD.GROUND; p.vx = 0; p.vy = 0; p.onGround = true;
-    p.kickCooldown = 0; p.kickAnim = 0; p.stun = 0; p.pinned = false; p.forcedVx = null; p.noSeparate = false;
+    p.kickCooldown = 0; p.kickAnim = 0; p.stun = 0; p.frozen = 0; p.pinned = false; p.forcedVx = null; p.noSeparate = false;
   }
   Object.assign(world.ball, createBall());
   world.goalLatch = false;
@@ -167,9 +167,11 @@ export function stepPhysics(world, inputs, dt, hooks = {}) {
     p.kickCooldown = Math.max(0, p.kickCooldown - dt);
     p.kickAnim = Math.max(0, p.kickAnim - dt);
     p.stun = Math.max(0, p.stun - dt);
+    p.frozen = Math.max(0, p.frozen - dt);
     if (p.pinned) { p.vx = 0; }
-    else if (p.forcedVx !== null) { p.vx = p.forcedVx; } // 슬라이딩·기관차 돌진: 입력 무시
+    else if (p.forcedVx !== null) { p.vx = p.forcedVx; } // 기관차 돌진: 입력 무시
     else if (p.stun > 0) { p.vx *= 0.9; }               // 넘어진 동안은 밀린 속도만 잦아든다
+    else if (p.frozen > 0) { p.vx = 0; }                // 오프사이드 트랩: 그 자리에 선다(입력 무시). 공중이면 그대로 떨어진다
     else {
       p.vx = ((inp.right ? 1 : 0) - (inp.left ? 1 : 0)) * PHYS.MOVE * p.mods.speed;
       if (inp.jump && p.onGround && p.mods.canJump) { p.vy = -PHYS.JUMP * p.mods.jump; p.onGround = false; }
@@ -207,7 +209,7 @@ export function stepPhysics(world, inputs, dt, hooks = {}) {
   for (const side of ['L', 'R']) {
     const p = world.players[side];
     const inp = inputs[side] || NO_INPUT;
-    if (!inp.kick || p.kickCooldown > 0 || p.stun > 0 || p.pinned) continue;
+    if (!inp.kick || p.kickCooldown > 0 || p.stun > 0 || p.frozen > 0 || p.pinned) continue;
     p.kickCooldown = PHYS.KICK_COOLDOWN; p.kickAnim = 0.25;
     events.push({ type: 'kick', side });
     const f = footPoint(p);

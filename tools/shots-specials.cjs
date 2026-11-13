@@ -7,7 +7,7 @@ const BASE = 'http://127.0.0.1:8766/';
 const OUT = process.argv[2] || 'shots/specials';
 fs.mkdirSync(OUT, { recursive: true });
 
-const PLAYERS = [[10, 'laser'], [11, 'sprint'], [14, 'curve'], [15, 'highjump'], [19, 'giant'], [21, 'catch'], [24, 'magnet'], [26, 'spirit'], [38, 'press'], [55, 'train'], [96, 'slide'], [99, 'cannon']];
+const PLAYERS = [[10, 'laser'], [11, 'sprint'], [14, 'curve'], [15, 'highjump'], [19, 'giant'], [21, 'catch'], [24, 'magnet'], [26, 'spirit'], [38, 'press'], [55, 'train'], [96, 'offside'], [99, 'cannon']];
 
 (async () => {
   const browser = await chromium.launch({ channel: 'chrome' });

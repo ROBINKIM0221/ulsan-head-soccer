@@ -133,7 +133,7 @@ export const SPECIALS = {
     update(m, s, dt) {
       const p = me(m, s);
       p.mods.speed *= 1.3; p.mods.jump *= 1.2;
-      p.stun = 0;                                            // 슬라이딩·대포·몸싸움에 넘어지지 않는다
+      p.stun = 0;                                            // 대포·몸싸움에 넘어지지 않는다 (오프사이드 트랩에는 선다: 넘어지는 것이 아니다)
       return slipOnContact(m, s, dt);
     },
   },
@@ -208,22 +208,13 @@ export const SPECIALS = {
     },
   },
 
-  // ── 즉발 ──
-  // 0.5초 동안 약 257px 미끄러진다(초속 515; 2026-11-02 형준 "발동 시간을 좀 늘려야겠는데": 0.35초·180px → 0.5초). 공은 1000 으로 걷어내고, 상대는 1.3초 넘어진다 (각 1회)
-  slide: {
-    activate(m, s) { const p = me(m, s); p.forcedVx = dir(s) * 515; p.active.data = { kicked: false, hit: false }; },
-    update(m, s) {
-      const p = me(m, s), d = p.active.data, b = m.world.ball, o = me(m, opp(s));
-      const ev = [];
-      if (!d.kicked && !b.held && !b.attached && Math.hypot(b.x - (p.x + dir(s) * 30), b.y - (p.y - 20)) < 60) {
-        b.vx = dir(s) * 1000 * Math.cos(rad(35)); b.vy = -1000 * Math.sin(rad(35)); d.kicked = true;
-      }
-      if (!d.hit && Math.abs(o.x - p.x) < PHYS.BODY_W + 10 && o.y > FIELD.GROUND - PHYS.BODY_H) {
-        o.stun = Math.max(o.stun, 1.3); d.hit = true; ev.push({ type: 'knockdown', side: opp(s) });   // 2026-11-01 형준: 1→1.3초 "살짝 더 오래"
-      }
-      return ev;
-    },
-    end(m, s) { me(m, s).forcedVx = null; },
+  // 오프사이드 트랩 (최석현): 부심 깃발이 올라가고 상대가 1.5초 그 자리에 선다 — 이동·점프·킥 불가, 공중이면 그대로 떨어진다. 몸은 그대로라 공은 맞고 튄다.
+  // 2026-11-13 형준 "슬라이딩이 잘 안나오는데, 그냥 필살기를 바꾸면 좋겠다" → 후보 넷 중 "오프사이드 트랩… 이거 해보자".
+  // 전 필살기 슬라이딩(0.5초 미끄러지며 공을 걷어내고 상대를 넘어뜨림)은 게이지가 차는 순간 앞에 공·상대가 없으면 헛돌았다. 이건 어디서 터져도 효과가 보인다.
+  // 묶인 시간은 상대 몸의 frozen 이고 물리가 센다: 킥오프 재배치가 지우고(골을 먹고도 묶여 있지 않게), 최석현이 교체로 나가면 end 가 푼다. 돌진 중인 기관차는 못 세운다.
+  offside: {
+    activate(m, s) { me(m, opp(s)).frozen = me(m, s).active.t; },
+    end(m, s) { me(m, opp(s)).frozen = 0; },
   },
 };
 

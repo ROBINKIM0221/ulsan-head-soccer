@@ -27,16 +27,14 @@
 </head>
 <body>
 <div id="stage" class="sheet-open">
-  <!-- #arena: 화면 한가운데 16:9 경기장 자리. 캔버스는 여기서 화면 전체로 넘쳐 나간다(바깥 여백에도 경기장 그림) -->
-  <div id="arena">
+  <!-- 캔버스는 무대(화면) 전체를 덮는다. 점수판 옆 버튼과 키 안내는 그 위 가운데 -->
   <canvas id="game" width="1280" height="720" aria-label="경기장"></canvas>
   <button class="sub" data-btn="sub" type="button" aria-label="선수 교체">교체</button>
   <button class="sub menu" type="button" aria-label="일시정지 메뉴" disabled>메뉴</button>
   <div class="keys one" aria-label="키보드: 방향키로 이동·점프, Space 로 슛"><span class="arrows"><kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd></span><em>이동 · 점프</em><kbd class="wide">Space</kbd><em>슛</em></div>
   <div class="keys two" aria-label="2인: 1P 는 A D 이동, W 점프, Tab 슛. 2P 는 방향키 이동·점프, Space 슛"><b>1P</b><kbd>A</kbd><kbd>D</kbd><em>이동</em><kbd>W</kbd><em>점프</em><kbd class="wide">Tab</kbd><em>슛</em><i></i><b>2P</b><kbd>←</kbd><kbd>→</kbd><em>이동</em><kbd>↑</kbd><em>점프</em><kbd class="wide">Space</kbd><em>슛</em></div>
-  </div>
 
-  <!-- 조작 버튼: 화면 아래 양 모서리. 화면이 16:9 보다 넓으면 경기장 바깥 여백으로 나가 골문을 덜 가린다 -->
+  <!-- 조작 버튼: 화면 아래 양 모서리 -->
   <div class="pad left" aria-label="이동">
     <button class="ctl" data-btn="left" type="button" aria-label="왼쪽으로"><span class="glyph">◀</span></button>
     <button class="ctl" data-btn="right" type="button" aria-label="오른쪽으로"><span class="glyph">▶</span></button>

@@ -26,14 +26,12 @@ body {
 /* 항상 가로인 무대. 세로 뷰포트면 JS 가 90° 눕힌다 */
 #stage {
   position: fixed; left: 0; top: 0;
-  display: flex; align-items: center; justify-content: center;
   background: var(--night);
   overflow: hidden;
 }
-#arena { position: relative; flex: none; }
-#game { position: absolute; display: block; }   /* JS 가 무대 전체 크기로 키우고 #arena 밖으로 내민다 (경기장 바깥 여백에도 그림) */
+#game { position: absolute; left: 0; top: 0; display: block; }   /* 무대 전체를 덮는다 (크기는 JS) */
 
-/* ---------- 조작 버튼: 무대(화면) 아래 양 모서리에 반투명 유리처럼 겹친다. 화면이 16:9 보다 넓으면 경기장 바깥 여백으로 나간다 ---------- */
+/* ---------- 조작 버튼: 무대(화면) 아래 양 모서리에 반투명 유리처럼 겹친다 ---------- */
 .pad {
   position: absolute; bottom: max(10px, env(safe-area-inset-bottom));
   display: flex; align-items: flex-end; gap: 10px;
@@ -68,10 +66,10 @@ body {
 /* 점프는 가장 자주 누르니 조금 더 크게 (오른손 엄지 바로 밑, 맨 오른쪽) */
 .ctl.jump { --d: clamp(70px, calc(var(--sh, 400px) * .2), 106px); font-size: 17px; }
 
-/* 교체 버튼: 위 가운데 점수판 옆. 위치·크기가 경기장 배율(--k)을 따라가서 작은 폰에서도 이름표와 겹치지 않는다 (전엔 고정 px 라 겹쳤다) */
+/* 교체 버튼: 화면 맨 위 가운데 점수판 옆. 위치·크기가 경기장 배율(--k)을 따라가서 작은 폰에서도 이름표와 겹치지 않는다 (전엔 고정 px 라 겹쳤다) */
 .sub {
   all: unset;
-  position: absolute; top: calc(14px * var(--k, 1) - var(--by, 0px)); left: calc(50% + 130px * var(--k, 1));
+  position: absolute; top: calc(14px * var(--k, 1)); left: calc(50% + 130px * var(--k, 1));
   padding: clamp(7px, calc(11px * var(--k, 1)), 12px) clamp(11px, calc(19px * var(--k, 1)), 20px); border-radius: 999px;
   background: var(--gold); border: 2px solid var(--white);
   color: var(--navy); font: 800 clamp(12px, calc(17px * var(--k, 1)), 18px) var(--ui); letter-spacing: -.01em; white-space: nowrap;

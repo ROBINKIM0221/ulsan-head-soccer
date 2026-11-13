@@ -101,13 +101,13 @@ test('gauge: +TOUCH per touch, +PERFECT per perfect header, fires at 100', () =>
 });
 
 test('gauge gain scales with the player\'s special.gaugeRate', () => {
-  const m = createMatch({ home: byNumber(14), away: P99, difficulty: 'first', rng: mulberry32(1) });   // 이진현 0.5
+  const m = createMatch({ home: byNumber(55), away: P99, difficulty: 'first', rng: mulberry32(1) });   // 토마스 0.75 (이진현 0.45 는 2026-11-13 기본 속도로 돌아갔다)
   toPlay(m);
   const L = m.world.players.L, h = headCenter(L);
   m.world.players.R.x = 1160;
   Object.assign(m.world.ball, { held: null, x: h.x, y: h.y - h.r - PHYS.BALL_R - 5, vx: 0, vy: 200 });
   run(m, 0.1);
-  assert.equal(L.gauge, GAUGE.TOUCH * 0.45);
+  assert.equal(L.gauge, GAUGE.TOUCH * 0.75);
 });
 
 test('the special fires automatically when the gauge reaches 100, never while one is active', () => {

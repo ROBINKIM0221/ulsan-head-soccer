@@ -9,7 +9,8 @@ const ROOF_Y = 150, STAND_TOP = 205, TIER_Y = 243, STAND_BOTTOM = 440, LED_TOP =
 const SEAT = 9;       // 좌석 간격(가로·세로)
 const BLOCK = 13;     // 좌석 13칸마다 통로 한 칸: 글자 하나(10칸) + 사이(3칸)와 같은 주기라 통로가 글자를 자르지 않는다
 const MARGIN = 12;    // 화면 흔들림에도 가장자리가 비지 않게 보이는 곳보다 조금 더 그린다
-export const DEFAULT_VIEW = { s: 1, ox: 0, oy: 0, bleedX: 0, bleedY: 0 };
+export const DEFAULT_VIEW = { s: 1, ox: 0, oy: 0, bleedX: 0, top: 0, bottom: H };   // 16:9 화면: 여백도 잘림도 없다 (view 의 뜻은 ui/orientation.js)
+export const TOUCHLINE_Y = GRASS_TOP + 18;   // 먼 쪽 터치라인
 
 // "ULSAN" 5×7 글자. 좌석 2×2 칸이 한 점이라 글자 하나가 10×14 칸.
 const GLYPHS = {
@@ -110,8 +111,8 @@ function paintStatic(ctx, x0, x1, y0, y1) {
   boardShadow.addColorStop(0, 'rgba(0,30,10,.3)'); boardShadow.addColorStop(1, 'rgba(0,30,10,0)');
   ctx.fillStyle = boardShadow; full(GRASS_TOP, 14);
   ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 4;
-  ctx.beginPath(); ctx.moveTo(x0, GRASS_TOP + 18); ctx.lineTo(x1, GRASS_TOP + 18); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(W / 2, GRASS_TOP + 18); ctx.lineTo(W / 2, y1); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x0, TOUCHLINE_Y); ctx.lineTo(x1, TOUCHLINE_Y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(W / 2, TOUCHLINE_Y); ctx.lineTo(W / 2, y1); ctx.stroke();
   ctx.beginPath(); ctx.ellipse(W / 2, GROUND - 30, 150, 44, 0, 0, Math.PI * 2); ctx.stroke();
   ctx.beginPath(); ctx.arc(W / 2, GROUND - 30, 5, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
 }
@@ -172,8 +173,8 @@ export function drawPosts(ctx) {
 let cache = null, cacheKey = '', cacheOx = 0, cacheOy = 0;
 // dx·dy: 화면 흔들림(논리 px). 배경은 캔버스 픽셀에 딱 맞춰 붙인다 (다시 늘리지 않아 또렷하다)
 export function drawStadium(ctx, t, view = DEFAULT_VIEW, dx = 0, dy = 0) {
-  const x0 = -view.bleedX - MARGIN, x1 = W + view.bleedX + MARGIN, y0 = -view.bleedY - MARGIN, y1 = H + view.bleedY + MARGIN;
-  const key = `${view.s}|${view.bleedX}|${view.bleedY}`;
+  const x0 = -view.bleedX - MARGIN, x1 = W + view.bleedX + MARGIN, y0 = view.top - MARGIN, y1 = view.bottom + MARGIN;   // 보이는 곳만 (위아래가 잘린 화면은 그만큼 덜 그린다)
+  const key = `${view.s}|${view.bleedX}|${view.top}|${view.bottom}`;
   if (!cache || cacheKey !== key) {
     cache = document.createElement('canvas');
     cacheOx = Math.round(-x0 * view.s); cacheOy = Math.round(-y0 * view.s);

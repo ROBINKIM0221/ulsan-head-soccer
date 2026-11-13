@@ -1,9 +1,10 @@
 // 한 프레임을 그린다: 경기장 → 필살기 바닥 표시 → 그림자 → 선수 → 공 → 효과 → HUD → 필살기 컷인 → 글자 팝.
 // 2026-11-12 형준 "UI랑 게임 최대한 예뻐보이게": 발밑 그림자, 남색 유리판 HUD(이름표·점수판), 골 플래시·관중석 카메라 플래시·튀는 조각,
-// 필살기 컷인 띠, 빠른 공 잔상·착지 먼지·맞는 순간 고리. 화면은 fx.view(경기장 바깥 여백)까지 채운다.
+// 필살기 컷인 띠, 빠른 공 잔상·착지 먼지·맞는 순간 고리. 화면은 fx.view(ui/orientation.js: 좌우 여백 bleedX, 화면 위·아래 끝 top·bottom)에 맞춰 채운다:
+// 위가 잘린 화면(top > 0)에서는 HUD 가 화면 맨 위로 내려오고, 가운데 글자·컷인도 조금 내려오며(drop), 화면 위로 나간 공은 화살표로 알린다.
 import { FIELD, PHYS } from '../sim/constants.js';
 import { headCenter, footPoint } from '../sim/physics.js';
-import { drawStadium, drawGoals, drawPosts, drawCrowdFlashes, DEFAULT_VIEW } from './stadium.js';
+import { drawStadium, drawGoals, drawPosts, drawCrowdFlashes, DEFAULT_VIEW, TOUCHLINE_Y } from './stadium.js';
 import { drawPlayer, drawBall, drawShadow, drawPlayerShadow } from './characters.js';
 import { wornKit } from '../data/kits.js';
 import { SLIP_SPECIALS } from '../sim/specials.js';
@@ -16,6 +17,8 @@ const UI = '"Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Malgun Go
 const NUM = 'Teko, "Arial Narrow", sans-serif';
 const FLASH = 0.22;                    // 골 플래시 길이(초)
 const CUT_CENTER_Y = 0.44;             // 컷아웃 그림에서 머리 중심의 세로 위치 (characters.js 와 같은 값)
+const drop = view => Math.max(0, view.top) * 0.6;   // 위가 잘린 화면: HUD 가 내려온 만큼(top) 그 아래 가운데 글자·컷인·교체 보드도 조금 내린다
+const other = side => (side === 'L' ? 'R' : 'L');
 
 export function createFx() {
   return { particles: [], pops: [], shake: 0, ballRot: 0, lastBallX: null, subBoard: null, ghosts: [], trail: [], party: null,
@@ -28,7 +31,7 @@ function pop(fx, text, x, y, { size = 48, color = GOLD, life = 0.8, rise = 40, g
 
 // 경기 이벤트를 연출로 바꾼다
 export function pushEvents(fx, events, match) {
-  const w = match.world, b = w.ball;
+  const w = match.world, b = w.ball, d = drop(fx.view);
   for (const e of events) {
     const snd = eventSound(e, match); if (snd) sfx(snd);
     switch (e.type) {
@@ -38,8 +41,8 @@ export function pushEvents(fx, events, match) {
         break;
       case 'goal': {
         const name = byNumber(match.used[e.scorer].at(-1).number).name;
-        pop(fx, 'GOAL', FIELD.W / 2, 236, { size: 150, color: GOLD, life: 1.2, rise: 16, glow: true });
-        pop(fx, name, FIELD.W / 2, 338, { size: 34, color: WHITE, life: 1.2, rise: 16, plate: true });   // 관중석 흰 글자와 겹치지 않게 남색 판 위에
+        pop(fx, 'GOAL', FIELD.W / 2, 236 + d, { size: 150, color: GOLD, life: 1.2, rise: 16, glow: true });
+        pop(fx, name, FIELD.W / 2, 338 + d, { size: 34, color: WHITE, life: 1.2, rise: 16, plate: true });   // 관중석 흰 글자와 겹치지 않게 남색 판 위에
         fx.shake = 0.35; fx.flash = FLASH; fx.crowd = 1.5;
         const gx = e.scorer === 'L' ? FIELD.W - 50 : 50, dir = e.scorer === 'L' ? -1 : 1;   // 골문에서 금·흰 조각이 튄다
         for (let i = 0; i < 34; i++) fx.sparks.push({ x: gx, y: FIELD.GROUND - 50 - Math.random() * 130, vx: dir * (120 + Math.random() * 520), vy: -260 - Math.random() * 520,
@@ -49,15 +52,16 @@ export function pushEvents(fx, events, match) {
       case 'special': {
         fx.cutin = { side: e.side, def: w.players[e.side].def, age: 0, life: 1.1 };   // 얼굴과 필살기 이름이 옆에서 미끄러져 들어오는 띠
         if (e.id === 'giant') fx.shake = 0.3;
+        if (e.id === 'offside') pop(fx, 'OFFSIDE', w.players[other(e.side)].x, 296, { size: 50, color: GOLD, life: 1.1, rise: 14 });   // 깃발(drawOffside) 위에 뜬다
         break;
       }
       case 'catch': pop(fx, 'CATCH', headCenter(w.players[e.side]).x, 380, { size: 40, color: WHITE }); break;
       case 'knockdown': case 'knockback': { const h = headCenter(w.players[e.side]); pop(fx, '!', h.x, h.y - h.r - 20, { size: 56, color: WHITE, life: 0.6 }); break; }
       case 'sub': fx.subBoard = { out: e.out, in: e.in, t: 0.8 }; break;
       case 'phase':
-        if (e.phase === 'play' && match.clock >= 59.9) pop(fx, 'KICK OFF', FIELD.W / 2, 300, { size: 104, color: WHITE, life: 0.9, rise: 16, glow: true });
-        if (e.phase === 'golden') pop(fx, '골든골!', FIELD.W / 2, 300, { size: 68, color: GOLD, life: 1.2, rise: 16, glow: true });
-        if (e.phase === 'over' && match.result !== 'draw') fx.party = startParty(match, fx.view.bleedX, fx.view.bleedY);   // 이긴 쪽 세레모니 (져도 상대 팀이 한다)
+        if (e.phase === 'play' && match.clock >= 59.9) pop(fx, 'KICK OFF', FIELD.W / 2, 300 + d, { size: 104, color: WHITE, life: 0.9, rise: 16, glow: true });
+        if (e.phase === 'golden') pop(fx, '골든골!', FIELD.W / 2, 300 + d, { size: 68, color: GOLD, life: 1.2, rise: 16, glow: true });
+        if (e.phase === 'over' && match.result !== 'draw') fx.party = startParty(match, fx.view.bleedX, fx.view.top);   // 이긴 쪽 세레모니 (져도 상대 팀이 한다)
         break;
     }
   }
@@ -89,7 +93,6 @@ export function updateFx(fx, match, dt) {
       if (Math.random() < 0.5) fx.particles.push({ x: p.x - p.facing * 30 * p.scale, y: p.y - 110 * p.scale, vx: (Math.random() - .5) * 40, vy: -100, r: 5 + Math.random() * 5, life: 0.8, age: 0 });
     }
     if (p.active.id === 'sprint') { fx.ghostTick = (fx.ghostTick || 0) + 1; if (fx.ghostTick % 8 === 0) fx.ghosts.push({ x: p.x, y: p.y, scale: p.scale, facing: p.facing, def: p.def, age: 0, life: 0.3, side }); }
-    if (p.active.id === 'slide' && p.onGround) fx.particles.push({ x: p.x - p.facing * 20, y: p.y, vx: -p.facing * 80, vy: -140 - Math.random() * 80, r: 3, life: 0.4, age: 0, color: '#3E9A3E' });
     // 높이뛰기: 땅을 박차는 순간 발밑 먼지
     if (p.active.id === 'highjump' && !p.onGround && p.vy < -600 && Math.random() < 0.6) {
       fx.particles.push({ x: p.x + (Math.random() - .5) * 40, y: FIELD.GROUND - 4, vx: (Math.random() - .5) * 120, vy: -40 - Math.random() * 60, r: 4 + Math.random() * 4, life: 0.5, age: 0, color: 'rgba(220,210,180,.9)' });
@@ -179,9 +182,9 @@ function drawScoreboard(ctx, match, still) {
   }
 }
 
-// 화면이 16:9 보다 세로로 길면(위 여백) HUD 를 그만큼 올려 화면 맨 위에 붙인다. 점수판 옆 DOM 버튼도 CSS(--by)로 같이 올라간다
+// HUD 는 늘 화면 맨 위: 위 여백이 있으면 그만큼 올리고(top < 0), 위가 잘렸으면 그만큼 내린다(top > 0). 점수판 옆 DOM 버튼도 화면 맨 위 기준이다 (css .sub)
 function drawHud(ctx, match, t, view, still) {
-  ctx.save(); ctx.translate(0, -view.bleedY);
+  ctx.save(); ctx.translate(0, view.top);
   for (const side of ['L', 'R']) {
     const def = match.used[side].at(-1);
     drawNamePlate(ctx, side, def, match.world.players[side], wornKit(match.kits[side], def), t);
@@ -190,10 +193,10 @@ function drawHud(ctx, match, t, view, still) {
   ctx.restore();
 }
 
-function drawSubBoard(ctx, board) {
+function drawSubBoard(ctx, board, view) {
   const a = Math.min(1, board.t / 0.2);
   ctx.save(); ctx.globalAlpha = a;
-  const x = FIELD.W / 2 - 130, y = 280;
+  const x = FIELD.W / 2 - 130, y = 280 + drop(view);
   ctx.save(); rr(ctx, x, y, 260, 110, 14); ctx.clip();
   ctx.fillStyle = NAVY; ctx.fillRect(x, y, 130, 110);
   ctx.fillStyle = GOLD; ctx.fillRect(x + 130, y, 130, 110);
@@ -206,9 +209,53 @@ function drawSubBoard(ctx, board) {
   ctx.restore();
 }
 
+// 화면 위로 나간 공: 금색 화살표와 작은 공으로 어디쯤 떠 있는지 알려 준다 (발밑 그림자는 그대로 떨어질 자리를 보여 준다).
+// 화면 맨 위가 아니라 HUD 띠 바로 아래에 그린다: 맨 위는 이름표·점수판과 그 옆 DOM 버튼(메뉴·교체)이 덮는다
+function drawBallMarker(ctx, x, top) {
+  const y = top + 114;   // 점수판 아래 끝(108) 밑
+  ctx.save(); ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = NAVY;
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 18, y + 20); ctx.lineTo(x - 18, y + 20); ctx.closePath(); ctx.stroke(); ctx.fillStyle = GOLD; ctx.fill();
+  ctx.beginPath(); ctx.arc(x, y + 36, 10, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = WHITE; ctx.fill();
+  ctx.restore();
+}
+
+// 오프사이드 트랩에 걸린 선수(p): 발밑을 지나는 금색 판정선(먼 터치라인에서 화면 아래까지)과, 그 선 끝 터치라인에 서서 깃발을 번쩍 든 부심.
+// 선수보다 먼저 그려서 부심은 큰 머리 뒤로 어깨와 깃발만 솟는다. age: 걸린 뒤 지난 초(깃발 든 팔이 0.16초에 올라간다), still: 움직임 줄이기(팔은 처음부터 위, 깃발이 펄럭이지 않는다)
+// 깃발은 부심 깃발 그대로 금색·빨강 네 칸: 빨강은 관중석 띠와 이 깃발에만 쓴다.
+const REF = { skin: '#F2C9A4', hair: '#2A211C', shirt: '#F3E13A', dark: '#15181D', line: '#0F2452', red: '#D03B46', stick: '#F4F7FA' };
+function drawOffside(ctx, p, age, t, view, still) {
+  const x = p.x, ty = TOUCHLINE_Y, d = x < FIELD.W / 2 ? 1 : -1;   // d: 깃발 천이 날리는 쪽(화면 안쪽)
+  const up = still ? 1 : 1 - Math.pow(1 - Math.min(1, age / 0.16), 3), wave = still ? 0 : Math.sin(t * 13) * 3;
+  const limb = (x0, y0, x1, y1, w, color) => {   // 진한 테두리를 두른 굵은 선
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = REF.line; ctx.lineWidth = w + 5; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    ctx.strokeStyle = color; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+  };
+  const outline = () => { ctx.lineWidth = 2.5; ctx.strokeStyle = REF.line; ctx.stroke(); };
+  ctx.save(); ctx.globalAlpha = Math.min(1, age / 0.08, p.frozen / 0.15); ctx.lineJoin = 'round';
+  ctx.fillStyle = 'rgba(255,199,44,.22)'; ctx.fillRect(x - 13, ty, 26, view.bottom + 20 - ty);   // 판정선: 옅은 띠 + 가운데 선
+  ctx.fillStyle = GOLD; ctx.fillRect(x - 2, ty, 4, view.bottom + 20 - ty);
+  limb(x - 6, ty - 26, x - 6, ty - 5, 7, REF.dark); limb(x + 6, ty - 26, x + 6, ty - 5, 7, REF.dark);   // 다리
+  rr(ctx, x - 14, ty - 44, 28, 20, 6); ctx.fillStyle = REF.dark; ctx.fill(); outline();                    // 반바지
+  limb(x - d * 15, ty - 76, x - d * 20, ty - 50, 7, REF.shirt);                                            // 내린 팔
+  rr(ctx, x - 16, ty - 86, 32, 46, 11); ctx.fillStyle = REF.shirt; ctx.fill(); outline();                  // 윗옷
+  ctx.beginPath(); ctx.arc(x, ty - 101, 15, 0, Math.PI * 2); ctx.fillStyle = REF.skin; ctx.fill(); outline();   // 머리
+  ctx.beginPath(); ctx.arc(x, ty - 103, 15, Math.PI * 1.05, Math.PI * 1.95); ctx.closePath(); ctx.fillStyle = REF.hair; ctx.fill();
+  // 깃발 든 팔: 어깨를 축으로 옆(110°)에서 머리 위(0°)로 올라간다. 팔 30 + 깃대 46, 깃대 끝에 30×22 깃발
+  ctx.translate(x + d * 14, ty - 76); ctx.rotate(d * (1 - up) * 1.9);
+  limb(0, -30, 0, -76, 3, REF.stick);
+  ctx.save(); ctx.transform(1, d * wave / 30, 0, 1, 0, 0);
+  for (const [i, j] of [[0, 0], [1, 0], [0, 1], [1, 1]]) { ctx.fillStyle = (i + j) % 2 ? REF.red : GOLD; ctx.fillRect(d * i * 15, -76 + j * 11, d * 15, 11); }
+  ctx.beginPath(); ctx.rect(0, -76, d * 30, 22); outline();
+  ctx.restore();
+  limb(0, 0, 0, -30, 7, REF.shirt);
+  ctx.beginPath(); ctx.arc(0, -31, 5, 0, Math.PI * 2); ctx.fillStyle = REF.skin; ctx.fill(); outline();
+  ctx.restore();
+}
+
 // 필살기 컷인: 발동한 선수 쪽 화면 끝에서 남색 띠가 미끄러져 들어온다. 얼굴 컷아웃 + "필살기" 꼬리표 + 이름 + 필살기 이름.
 function drawCutin(ctx, c, imgs, view, still) {
-  const right = c.side === 'R', H = 104, y = 140, inner = right ? FIELD.W - 650 : 650, outer = right ? FIELD.W + view.bleedX + 30 : -view.bleedX - 30;
+  const right = c.side === 'R', H = 104, y = 140 + drop(view), inner = right ? FIELD.W - 650 : 650, outer = right ? FIELD.W + view.bleedX + 30 : -view.bleedX - 30;
   const tin = still ? 1 : Math.min(1, c.age / 0.16), ease = 1 - Math.pow(1 - tin, 3), out = Math.max(0, (c.age - (c.life - 0.2)) / 0.2);
   const d = right ? 1 : -1;   // 바깥쪽 방향
   ctx.save();
@@ -239,14 +286,18 @@ function drawCutin(ctx, c, imgs, view, still) {
   ctx.restore();
 }
 
+// 보이는 화면 전체(여백 포함)를 지금 fillStyle 로 덮는다
+const fillScreen = (ctx, view) => ctx.fillRect(-view.bleedX - 30, view.top - 30, FIELD.W + 2 * view.bleedX + 60, view.bottom - view.top + 60);
+
 // 백그라운드에서 돌아왔을 때의 카운트다운 숫자 (루프가 멈춘 채 그리므로 팝이 아니라 직접 그린다)
 export function drawCountdown(ctx, n, view = DEFAULT_VIEW) {
   ctx.save();
-  ctx.fillStyle = 'rgba(0,43,107,.45)'; ctx.fillRect(-view.bleedX - 20, -view.bleedY - 20, FIELD.W + 2 * view.bleedX + 40, FIELD.H + 2 * view.bleedY + 40);
+  const cy = (view.top + view.bottom) / 2;   // 보이는 화면의 한가운데
+  ctx.fillStyle = 'rgba(0,43,107,.45)'; fillScreen(ctx, view);
   ctx.font = `600 220px ${NUM}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.lineWidth = 14; ctx.strokeStyle = NAVY; ctx.strokeText(String(n), FIELD.W / 2, FIELD.H / 2 - 20);
-  ctx.fillStyle = GOLD; ctx.fillText(String(n), FIELD.W / 2, FIELD.H / 2 - 20);
-  ctx.font = `700 28px ${UI}`; ctx.fillStyle = WHITE; ctx.fillText('곧 이어집니다', FIELD.W / 2, FIELD.H / 2 + 120);
+  ctx.lineWidth = 14; ctx.strokeStyle = NAVY; ctx.strokeText(String(n), FIELD.W / 2, cy - 20);
+  ctx.fillStyle = GOLD; ctx.fillText(String(n), FIELD.W / 2, cy - 20);
+  ctx.font = `700 28px ${UI}`; ctx.fillStyle = WHITE; ctx.fillText('곧 이어집니다', FIELD.W / 2, cy + 120);
   ctx.restore();
 }
 
@@ -268,9 +319,10 @@ export function drawFrame(ctx, match, imgs, fx, t) {
   if (fx.crowd > 0) drawCrowdFlashes(ctx, t, Math.min(1, fx.crowd / 0.9), view);
   drawGoals(ctx);
 
-  // 바닥 표시: 압박 그물, 자석 원, 롱스로인 낙하 그림자
+  // 바닥 표시: 오프사이드 판정선과 부심, 압박 그물, 자석 원, 롱스로인 낙하 그림자
   for (const side of ['L', 'R']) {
     const p = w.players[side];
+    if (p.frozen > 0) { const u = w.players[other(side)]; drawOffside(ctx, p, u.active && u.active.id === 'offside' ? u.def.special.duration - u.active.t : 1, t, view, !!fx.reduceMotion); }
     if (p.mods.press) {
       ctx.save(); ctx.strokeStyle = 'rgba(0,43,107,.55)'; ctx.lineWidth = 2;
       for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(p.x - 60 + i * 20, p.y - 10); ctx.lineTo(p.x - 40 + i * 20, p.y + 22); ctx.stroke(); ctx.beginPath(); ctx.moveTo(p.x + 60 - i * 20, p.y - 10); ctx.lineTo(p.x + 40 - i * 20, p.y + 22); ctx.stroke(); }
@@ -338,11 +390,11 @@ export function drawFrame(ctx, match, imgs, fx, t) {
   if (fx.party) drawParty(ctx, fx.party, match, imgs, t);
   drawPosts(ctx);
   if (fx.flash > 0) {   // 골 플래시
-    ctx.save(); ctx.globalAlpha = 0.42 * (fx.flash / FLASH); ctx.fillStyle = WHITE;
-    ctx.fillRect(-view.bleedX - 30, -view.bleedY - 30, FIELD.W + 2 * view.bleedX + 60, FIELD.H + 2 * view.bleedY + 60); ctx.restore();
+    ctx.save(); ctx.globalAlpha = 0.42 * (fx.flash / FLASH); ctx.fillStyle = WHITE; fillScreen(ctx, view); ctx.restore();
   }
   drawHud(ctx, match, t, view, !!fx.reduceMotion);
-  if (fx.subBoard) drawSubBoard(ctx, fx.subBoard);
+  if (b.y + b.r < view.top) drawBallMarker(ctx, b.x, view.top);   // 위가 잘린 화면에서 공이 화면 위로 나갔다 (천장은 논리 y=0 그대로)
+  if (fx.subBoard) drawSubBoard(ctx, fx.subBoard, view);
   if (fx.cutin) drawCutin(ctx, fx.cutin, imgs, view, !!fx.reduceMotion);
   // 글자 팝
   for (const p of fx.pops) {

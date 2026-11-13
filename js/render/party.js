@@ -16,8 +16,8 @@ const hopAt = (t, m = { beat: BEAT, phase: 0, hop: HOP }) => Math.max(0, Math.si
 const COLORS = ['#FFC72C', '#FFFFFF', '#004098'];
 const EDGE = 60, GAP = 70, SPACE = (FIELD.W - 2 * EDGE - 2 * GAP) / 10;   // 가장자리·이긴 선수 양옆을 비우고 남은 폭에 벤치 10명을 고르게 (약 102px)
 
-// bleedX·bleedY: 경기장 바깥으로 보이는 폭(논리 px). 벤치 선수들은 보이는 곳 밖에서 달려오고, 색종이는 화면 맨 위에서 떨어진다
-export function startParty(match, bleedX = 0, bleedY = 0) {
+// bleedX: 경기장 좌우 바깥으로 보이는 폭, top: 화면 위 끝의 논리 y(위 여백이 있으면 음수, 잘렸으면 양수). 벤치 선수들은 보이는 곳 밖에서 달려오고, 색종이는 화면 맨 위에서 떨어진다
+export function startParty(match, bleedX = 0, top = 0) {
   const side = match.result === 'lose' ? 'R' : 'L', { L, R } = match.world.players, star = match.world.players[side];
   const bench = PLAYERS.filter(p => p.number !== L.def.number && p.number !== R.def.number);
   // 이긴 선수 왼쪽에 들어갈 자리 수만큼 왼쪽에, 나머지는 오른쪽에 깐다(왼쪽부터 오름차순). 가장자리에 서 있어도 한쪽에 몰려 겹치지 않는다
@@ -31,7 +31,7 @@ export function startParty(match, bleedX = 0, bleedY = 0) {
     return { body, target: slots[fromLeft ? 5 - k : 4 + k], delay: i * 0.08, arrived: false,
       beat: 5.4 + (i % 4) * 0.5, phase: (i * 0.9) % 1.5, hop: 90 + (i % 3) * 12 };
   });
-  return { t: 0, side, members, confetti: [], bleedX, bleedY };
+  return { t: 0, side, members, confetti: [], bleedX, top };
 }
 
 export function updateParty(party, match, dt) {
@@ -51,7 +51,7 @@ export function updateParty(party, match, dt) {
   }
   if ((party.side === 'L' || match.twoPlayer) && party.t < PARTY_LEN - 1) {   // 색종이는 내가 이겼을 때만 (2026-11-01 형준 "졌을때는 색종이도 안나오고"); 2인이면 누가 이겨도
     const bx = party.bleedX || 0;
-    for (let i = 0; i < 2; i++) party.confetti.push({ x: -bx + Math.random() * (FIELD.W + 2 * bx), y: -10 - (party.bleedY || 0), vx: (Math.random() - 0.5) * 80, vy: 160 + Math.random() * 200, rot: Math.random() * Math.PI * 2, vr: (Math.random() - 0.5) * 10, color: COLORS[(party.confetti.length + i) % 3], age: 0 });
+    for (let i = 0; i < 2; i++) party.confetti.push({ x: -bx + Math.random() * (FIELD.W + 2 * bx), y: (party.top || 0) - 10, vx: (Math.random() - 0.5) * 80, vy: 160 + Math.random() * 200, rot: Math.random() * Math.PI * 2, vr: (Math.random() - 0.5) * 10, color: COLORS[(party.confetti.length + i) % 3], age: 0 });
   }
   for (const q of party.confetti) { q.age += dt; q.x += (q.vx + Math.sin(q.age * 4 + q.rot) * 50) * dt; q.y += q.vy * dt; q.rot += q.vr * dt; }
   party.confetti = party.confetti.filter(q => q.y < FIELD.GROUND + 10);
@@ -69,7 +69,7 @@ export function drawParty(ctx, party, match, imgs, t) {
   if (party.t > 0.3) {
     const won = party.side === 'L' || !!match.twoPlayer, word = won ? 'VAMOS!' : 'LOSE';   // 2인: 둘 다 우리 선수니 늘 VAMOS!
     const grow = Math.min(1, (party.t - 0.3) / 0.35), k = grow * (won ? 1 + 0.05 * Math.sin(party.t * BEAT) : 1);
-    ctx.save(); ctx.translate(FIELD.W / 2, 250); ctx.scale(k, k); ctx.rotate(won ? -0.04 : 0.03);
+    ctx.save(); ctx.translate(FIELD.W / 2, 250 + Math.max(0, party.top || 0) * 0.6); ctx.scale(k, k); ctx.rotate(won ? -0.04 : 0.03);   // 위가 잘린 화면은 HUD 가 내려온 만큼 글자도 조금 내린다
     ctx.font = '600 170px Teko, "Arial Narrow", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.lineWidth = 16; ctx.lineJoin = 'round'; ctx.strokeStyle = '#002B6B'; ctx.strokeText(word, 0, 0);
     ctx.fillStyle = won ? '#FFC72C' : '#B7C3D6'; ctx.fillText(word, 0, 0); ctx.restore();

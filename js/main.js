@@ -34,7 +34,7 @@ const game = { match: null, fx: null, loop: null, input: null, imgs: null, pause
 
 function layout() {
   const r = fitStage(stage, canvas);
-  game.view = r.view;                    // 그릴 때의 시야: 경기장(16:9) 바깥 여백까지
+  game.view = r.view;                    // 그릴 때의 시야: 좌우 여백과 화면 위·아래 끝 (ui/orientation.js)
   if (game.fx) game.fx.view = r.view;
   repaint();                             // 캔버스 크기를 바꾸면 지워진다
   if (r.rotated && !layout.hinted) {
