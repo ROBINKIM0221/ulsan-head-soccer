@@ -1,5 +1,5 @@
 // 필살기. 공통 뼈대(발동·지속·종료)는 아래쪽, 각 필살기의 효과는 SPECIALS 표. 수치는 설계서 9절.
-import { FIELD, PHYS } from './constants.js';
+import { FIELD, PHYS, DT } from './constants.js';
 import { defaultMods, headCenter } from './physics.js';
 
 const dir = side => (side === 'L' ? 1 : -1);          // 상대 골문 방향
@@ -19,6 +19,7 @@ function flightOver(b, data, dirX) {
 // 몸싸움 미끄러짐(거인·높이뛰기·투지): 발동 중 몸이 닿은 상대는 0.8초 넘어지고 320px/s 로 밀린다. 한 번 넘어뜨리면 1.5초 동안은 다시 안 건드린다.
 // 2026-11-01 형준 "김영권 정승현 조현택 최석현은 부딪히면 상대방 미끄러지는것도 추가". 기관차에 붙들린 상대는 제외.
 const SLIP = 0.8, SLIP_COOL = 1.5;
+const CURVE_V = 1050, CURVE_CLOSE = 190, CURVE_AIM_Y = 480, CURVE_MIN_AX = 250, CURVE_MIN_VX = 350;   // 커브 슛 조준 (curve.onKick)
 export const SLIP_SPECIALS = ['giant', 'highjump', 'spirit'];   // 화면이 발밑 고리로 '지금 닿으면 미끄러진다'를 보여 주는 데 쓴다
 function slipOnContact(m, s, dt) {
   const p = me(m, s), o = me(m, opp(s)), d = p.active.data;
@@ -107,15 +108,32 @@ export const SPECIALS = {
     end(m, s) { const b = m.world.ball; if (b.flight === 'laser') { b.flight = null; b.passThrough = null; b.noGravityT = 0; } },
   },
 
-  // 다음 킥: 55°·1050 으로 띄우고 상대 골문 쪽으로 가로 가속 900, 처음 0.35초만 상대 통과
+  // 다음 킥: 55°·1050 으로 띄우고 상대 골문 쪽으로 휘어(가로 가속) 크로스바 밑으로 떨어진다. 처음 0.35초만 상대를 통과한다 (밸런스 2026-10-31: 통과가 상시면 승률 97%).
+  // 조준(2026-11-13 형준, 슛의 22%만 골이라고 알리자 "ㄱㄱ"): 전엔 가속이 900 고정이라 자기 진영에서 차야 들어가고 중간 거리에서는 크로스바를 넘었다.
+  // 이제 띄우는 높이는 그대로 두고, 공 앞끝이 골라인에 닿는 자리에서 내려오는 공의 높이가 CURVE_AIM_Y 가 되도록 가로 초속과 가속을 푼다.
+  // 멀면 55° 그대로 떠서 골문 쪽으로 가속해 휘어 들어가고(가속 CURVE_MIN_AX 이상), 가까워질수록 가로 초속을 줄이며, CURVE_MIN_VX 까지 줄이고도 남으면 가속이 음수가 되어 뚝 떨어진다.
+  // (초속 하한: 그보다 느리게 띄우면 공이 찬 선수 자기 머리에 맞는다.)
+  // 골라인에서 CURVE_CLOSE 안쪽이면 띄우지 않고 20°로 낮게 깔아 찬다(공중에서 차도 크로스바에 안 걸린다). 막는 법은 그대로: 골문 앞을 지키거나 뛰어서 머리로.
   curve: {
     onKick(m, s) {
-      const p = me(m, s), b = m.world.ball;
+      const p = me(m, s), b = m.world.ball, d = dir(s);
       if (!p.active.armed) return false;
       p.active.armed = false; p.active.t = 2.5; p.active.data.left = false; p.active.data.flightT = 0;
-      // 밸런스 2026-10-31: 62°·1000·900 → 55°·1050·1100, 머리 위를 넘는 처음 0.35초만 상대를 통과한다 (승률 28%→27%→97%)
-      b.vx = dir(s) * 1050 * Math.cos(rad(55)); b.vy = -1050 * Math.sin(rad(55));
-      b.flight = 'curve'; b.curveAx = 900 * dir(s); b.passThrough = opp(s);   // 가속 1100→900: 자기 진영에서 차면 골문 앞에 떨어진다
+      const dist = ((d > 0 ? FIELD.W - FIELD.GOAL_DEPTH - b.r : FIELD.GOAL_DEPTH + b.r) - b.x) * d;   // 공 앞끝이 골라인에 닿는 자리까지
+      const close = dist <= CURVE_CLOSE, deg = close ? 20 : 55;
+      let vx = CURVE_V * Math.cos(rad(deg)), ax = 900;
+      const vy0 = -CURVE_V * Math.sin(rad(deg));
+      if (!close) {
+        // 떠서 AIM_Y 로 다시 내려올 때까지 물리(stepPhysics 의 공)와 같은 식으로 센다. 그동안 가로로 가는 거리 = s1·초속 + s2·가속
+        let vy = vy0, y = b.y, s1 = 0, s2 = 0, u = 1, w = 0;
+        for (let i = 0; i < 480 && !(vy > 0 && y >= CURVE_AIM_Y); i++) {
+          vy = (vy + PHYS.BALL_GRAVITY * DT) * PHYS.DRAG; y += vy * DT;
+          u *= PHYS.DRAG; w = (w + DT) * PHYS.DRAG; s1 += u * DT; s2 += w * DT;
+        }
+        vx = Math.max(CURVE_MIN_VX, Math.min(vx, (dist - CURVE_MIN_AX * s2) / s1)); ax = (dist - vx * s1) / s2;
+      }
+      b.vx = d * vx; b.vy = vy0;
+      b.flight = 'curve'; b.curveAx = ax * d; b.passThrough = opp(s);
       return true;
     },
     update(m, s, dt) {

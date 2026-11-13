@@ -78,7 +78,7 @@ test('a goal pauses 1s, scores, gives the conceding side the CONCEDE gauge bonus
 });
 
 test('gauge: +TOUCH per touch, +PERFECT per perfect header, fires at 100', () => {
-  const m = mk(); toPlay(m);
+  const m = mk({ home: P19 }); toPlay(m);   // 게이지 배율이 1인 선수로 잰다 (이동경은 2026-11-13 부터 0.45배)
   const L = m.world.players.L, h = headCenter(L);
   m.world.players.R.x = 1160; m.world.players.R.y = FIELD.GROUND;
   Object.assign(m.world.ball, { held: null, x: h.x, y: h.y - h.r - PHYS.BALL_R - 5, vx: 0, vy: 200 });
@@ -86,7 +86,7 @@ test('gauge: +TOUCH per touch, +PERFECT per perfect header, fires at 100', () =>
   assert.equal(L.gauge, GAUGE.TOUCH);
 
   // 퍼펙트: 공중에서 위앞쪽 30°, 상대속도 600
-  const m2 = mk(); toPlay(m2); const L2 = m2.world.players.L;
+  const m2 = mk({ home: P19 }); toPlay(m2); const L2 = m2.world.players.L;
   m2.world.players.R.x = 1160;
   L2.onGround = false; L2.y = FIELD.GROUND - 60; L2.vy = 0;
   const h2 = headCenter(L2), a = Math.PI / 6, nx = Math.sin(a), ny = -Math.cos(a), d = h2.r + PHYS.BALL_R + 1;

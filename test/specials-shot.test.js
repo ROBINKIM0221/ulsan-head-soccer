@@ -89,20 +89,54 @@ test('laser: expires unarmed after 6s without a kick', () => {
   assert.ok(Math.abs(speed(m.world.ball) - PHYS.KICK_SPEED) < 10, 'ordinary kick afterwards');
 });
 
-test('curve: next kick leaves at 55deg/1050, passes through the opponent briefly and accelerates toward the goal at 1100', () => {
+test('curve: from midfield the next kick leaves at 55deg/1050, passes through the opponent briefly and accelerates toward the goal', () => {
   const m = ready(14); const L = m.world.players.L; const b = m.world.ball;
   fire(m);
   L.x = 400; ballAtFoot(m);
   run(m, DT, inp({ kick: true }));
   const deg = Math.atan2(-b.vy, b.vx) * 180 / Math.PI;
   assert.ok(Math.abs(deg - 55) < 1.5, `angle ${deg}`); assert.ok(Math.abs(speed(b) - 1050) < 10, `speed ${speed(b)}`);
-  assert.equal(b.flight, 'curve'); assert.equal(b.curveAx, 900); assert.equal(b.passThrough, 'R');
+  assert.equal(b.flight, 'curve'); assert.ok(b.curveAx > 250 && b.curveAx < 900, `aimed acceleration ${b.curveAx}`); assert.equal(b.passThrough, 'R');
   const vx0 = b.vx;
   run(m, 0.5);
-  assert.ok(b.vx - vx0 > 300, `horizontal gain ${b.vx - vx0}`);    // 900×0.5 minus drag
+  assert.ok(b.vx - vx0 > 100, `horizontal gain ${b.vx - vx0}`);    // 가속×0.5 에서 공기 저항을 뺀 만큼
   assert.equal(b.passThrough, null, 'pass-through only for the first .35s');
   for (let t = 0; t < 4 && b.flight && m.phase !== 'kickoff'; t += DT) run(m, DT);
   assert.equal(b.flight, null); assert.equal(b.curveAx, 0); assert.equal(b.passThrough, null);
+});
+
+// 2026-11-13 형준: 커브 슛이 골이 되는 비율이 22%(가속이 고정이라 자기 진영에서 차야 들어가고 중간 거리에서는 크로스바를 넘는다)라고 알리고 조준을 추천하자 "ㄱㄱ".
+// 이제 어디서 차든 내려오는 공이 크로스바 밑을 지난다. x 는 자기 골라인에서 잰 거리(오른쪽 선수는 거울상), keeper 는 상대가 서 있을 자리(없으면 방해 안 되는 곳), 둘 다 가만히 있는다.
+function curveFrom(x, { right = false, keeper = null, ballY = FIELD.GROUND - PHYS.BALL_R, off = 45 } = {}) {
+  const m = createMatch({ home: byNumber(right ? 19 : 14), away: byNumber(right ? 14 : 19), difficulty: 'first', rng: mulberry32(1), twoPlayer: true });
+  const step = (inL = NO_INPUT, inR = NO_INPUT) => stepMatch(m, inL, DT, inR);
+  for (let i = 0, n = Math.round((MATCH.GOAL_PAUSE + DT) / DT); i < n; i++) step();
+  const side = right ? 'R' : 'L', me = m.world.players[side], foe = m.world.players[right ? 'L' : 'R'], d = right ? -1 : 1, b = m.world.ball;
+  const at = v => (right ? FIELD.W - v : v);
+  me.x = at(x); foe.x = at(keeper !== null ? keeper : x >= 400 ? x - 250 : x + 350);   // 뒤에 두거나, 자리가 없으면 공이 머리 위로 넘어가는 앞쪽에
+  me.gauge = 100; step();
+  Object.assign(b, { held: null, x: me.x + d * off, y: ballY, vx: 0, vy: 0 });
+  const kick = inp({ kick: true }); step(right ? NO_INPUT : kick, right ? kick : NO_INPUT);
+  const shot = { deg: Math.atan2(-b.vy, b.vx * d) * 180 / Math.PI, vx: b.vx * d, ax: b.curveAx * d, flight: b.flight, goal: false };
+  for (let i = 0; i < 2.5 / DT && !shot.goal; i++) shot.goal = step().some(e => e.type === 'goal' && e.scorer === side);
+  return shot;
+}
+test('curve: from anywhere on the pitch the shot drops under the bar into an unguarded goal, for either side and for a ball struck in the air', () => {
+  for (let x = 120; x <= 1100; x += 70) assert.equal(curveFrom(x).goal, true, `left player from ${x}`);
+  for (const x of [150, 400, 640, 820, 1000]) assert.equal(curveFrom(x, { right: true }).goal, true, `right player from ${x}`);
+  for (const x of [200, 500, 800, 1000]) assert.equal(curveFrom(x, { ballY: 570, off: 60 }).goal, true, `volley from ${x}`);
+});
+
+test('curve: far out it keeps the 55deg launch and bends in; nearer it slows the launch (never under 350, to clear the kicker\'s own head); inside 190px it is driven low', () => {
+  const far = curveFrom(300), mid = curveFrom(800), close = curveFrom(1000);
+  assert.ok(Math.abs(far.deg - 55) < 1 && far.ax > 250, JSON.stringify(far));
+  assert.ok(mid.vx >= 350 - 1e-9 && mid.vx < 602 && mid.deg > 55 && mid.deg < 70 && mid.ax < far.ax, JSON.stringify(mid));
+  assert.ok(Math.abs(close.deg - 20) < 1 && close.flight === 'curve', JSON.stringify(close));
+});
+
+test('curve: it is still a shot to defend — an opponent standing on the goal line keeps it out', () => {
+  assert.equal(curveFrom(400, { keeper: 1150 }).goal, false);
+  assert.equal(curveFrom(640, { keeper: 1150 }).goal, false);
 });
 
 // 2026-11-13 형준 "슬라이딩이 잘 안나오는데, 그냥 필살기를 바꾸면 좋겠다" → "오프사이드 트랩… 이거 해보자": 상대가 1.5초 그 자리에 선다.

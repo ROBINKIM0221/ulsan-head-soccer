@@ -6,11 +6,11 @@ const P = (number, name, position, role, special) =>
   ({ number, name, position, role, special, img: `img/${number}.jpg` });
 
 export const PLAYERS = [
-  P(10, '이동경', 'MF', 'attack', { id: 'laser', name: '레이저 슛', kind: 'oneshot', duration: 6,
+  P(10, '이동경', 'MF', 'attack', { id: 'laser', name: '레이저 슛', kind: 'oneshot', duration: 6, gaugeRate: 0.45,   // 2026-11-13: 골문 조준(2026-11-01) 뒤 AI 끼리 슛의 98%가 골, 승률 82% → 형준에게 알리고 "게이지를 천천히 차게"를 추천, "ㄱㄱ". 0.45배면 경기당 3.7번 → 1.5번 (0.5배는 승률표에서 66%로 기준 65%를 넘었다)
     desc: '상대를 뚫고 날아가는 직선 슛' }),
   P(11, '에릭', 'FW', 'attack', { id: 'sprint', name: '스프린트', kind: 'buff', duration: 6,
     desc: '속도 2배, 킥 강화' }),
-  P(14, '이진현', 'MF', 'attack', { id: 'curve', name: '커브 슛', kind: 'oneshot', duration: 6,   // 2026-11-13 형준 "커브슛도 너무 발동이 잘 안되는것 같아": 게이지 0.45배 → 기본. 0.45배는 상대를 늘 통과해 거의 확정골이던 때의 값(2026-10-31)이고, 지금은 AI 끼리 슛의 22%만 골이라 경기당 1.5번 → 3.8번 터져도 승률 50%
+  P(14, '이진현', 'MF', 'attack', { id: 'curve', name: '커브 슛', kind: 'oneshot', duration: 6,   // 2026-11-13 형준 "커브슛도 너무 발동이 잘 안되는것 같아": 게이지 0.45배 → 기본. 0.45배는 상대를 늘 통과해 거의 확정골이던 때의 값(2026-10-31)이고, 그때 AI 끼리 슛의 22%만 골이라 경기당 1.5번 → 3.8번 터져도 승률 50%. 같은 날 조준을 넣은 뒤(sim/specials.js curve)는 슛의 46%가 골, 승률 58%
     desc: '상대 머리 위로 휘어 들어가는 슛' }),
   P(15, '정승현', 'DF', 'defend', { id: 'highjump', name: '높이뛰기', kind: 'buff', duration: 8, gaugeRate: 2.0,   // 밸런스 2026-10-31 (AI 끼리 20%). 2026-11-02 형준 "게이지 속도 좀만 줄여줘": 2.6→2.0
     desc: '점프 높이 상승, 헤딩 세기 2배. 부딪힌 상대는 미끄러짐' }),
