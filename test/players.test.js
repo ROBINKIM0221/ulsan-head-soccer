@@ -32,7 +32,7 @@ test('roles and special ids match spec', () => {
   assert.equal(byNumber(24).special.duration, 6);     // 2026-11-01 형준: "이규성 자석 1초 줄여줘" 8→7, 2026-11-12 "이규성 6초로 바꿔줘" 7→6
   assert.equal(byNumber(15).special.gaugeRate, 2.0);  // 2026-11-02 형준: "정승현 게이지 속도 좀만 줄여줘" 2.6→2.0 (경기의 91% 발동 중이던 것)
   assert.equal(byNumber(10).special.gaugeRate, 0.45);   // 2026-11-13: 레이저가 AI 끼리 슛의 98% 골·승률 82% 라 알리고 추천, 형준 "ㄱㄱ" → 게이지 0.45배 (0.5배는 승률표 66%)
-  assert.equal(byNumber(14).special.gaugeRate, undefined);   // 2026-11-13 형준 "커브슛도 너무 발동이 잘 안되는것 같아": 0.45배 → 기본 속도
+  assert.equal(byNumber(14).special.gaugeRate, 0.7);   // 2026-11-13 형준 "커브슛도 너무 발동이 잘 안되는것 같아": 0.45배 → 기본 속도. 2026-11-14 "레이저슛처럼 무조건 선수를 피해서": 내내 통과가 되며 세져서 0.7배
   assert.equal(byNumber(38).special.id, 'press');
   assert.equal(byNumber(26).special.id, 'spirit');
   assert.equal(byNumber(96).special.id, 'offside');   // 2026-11-13 형준 "슬라이딩이 잘 안나오는데, 그냥 필살기를 바꾸면 좋겠다" → 오프사이드 트랩

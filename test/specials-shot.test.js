@@ -31,7 +31,8 @@ test('laser: next kick flies straight at 1200 with no gravity for .8s and passes
   fire(m);
   assert.equal(L.active.armed, true);
   L.x = 760; R.x = 920; ballAtFoot(m);
-  run(m, DT, inp({ kick: true }));
+  const kickEv = run(m, DT, inp({ kick: true }));
+  assert.deepEqual(kickEv.find(e => e.type === 'shot'), { type: 'shot', side: 'L', flight: 'laser' }, 'the special shot announces itself (effects and sound hang on it)');
   assert.ok(Math.abs(speed(b) - 1200) < 20, `speed ${speed(b)}`);
   assert.equal(b.flight, 'laser'); assert.equal(b.passThrough, 'R'); assert.ok(b.noGravityT > 0.7);
   assert.equal(L.active && L.active.armed, false, 'one-shot consumed');
@@ -85,11 +86,12 @@ test('laser: expires unarmed after 6s without a kick', () => {
   const ev = run(m, 6.1);
   assert.equal(L.active, null);
   assert.ok(ev.some(e => e.type === 'specialEnd' && e.id === 'laser'));
-  ballAtFoot(m); run(m, DT, inp({ kick: true }));
+  ballAtFoot(m); const plain = run(m, DT, inp({ kick: true }));
   assert.ok(Math.abs(speed(m.world.ball) - PHYS.KICK_SPEED) < 10, 'ordinary kick afterwards');
+  assert.ok(!plain.some(e => e.type === 'shot'), 'an ordinary kick is not a special shot');
 });
 
-test('curve: from midfield the next kick leaves at 55deg/1050, passes through the opponent briefly and accelerates toward the goal', () => {
+test('curve: from midfield the next kick leaves at 55deg/1050, accelerates toward the goal and passes through the opponent for the whole flight', () => {
   const m = ready(14); const L = m.world.players.L; const b = m.world.ball;
   fire(m);
   L.x = 400; ballAtFoot(m);
@@ -100,7 +102,7 @@ test('curve: from midfield the next kick leaves at 55deg/1050, passes through th
   const vx0 = b.vx;
   run(m, 0.5);
   assert.ok(b.vx - vx0 > 100, `horizontal gain ${b.vx - vx0}`);    // 가속×0.5 에서 공기 저항을 뺀 만큼
-  assert.equal(b.passThrough, null, 'pass-through only for the first .35s');
+  assert.equal(b.passThrough, 'R', 'still passing through at .5s (it used to stop after .35s)');
   for (let t = 0; t < 4 && b.flight && m.phase !== 'kickoff'; t += DT) run(m, DT);
   assert.equal(b.flight, null); assert.equal(b.curveAx, 0); assert.equal(b.passThrough, null);
 });
@@ -116,9 +118,13 @@ function curveFrom(x, { right = false, keeper = null, ballY = FIELD.GROUND - PHY
   me.x = at(x); foe.x = at(keeper !== null ? keeper : x >= 400 ? x - 250 : x + 350);   // 뒤에 두거나, 자리가 없으면 공이 머리 위로 넘어가는 앞쪽에
   me.gauge = 100; step();
   Object.assign(b, { held: null, x: me.x + d * off, y: ballY, vx: 0, vy: 0 });
-  const kick = inp({ kick: true }); step(right ? NO_INPUT : kick, right ? kick : NO_INPUT);
-  const shot = { deg: Math.atan2(-b.vy, b.vx * d) * 180 / Math.PI, vx: b.vx * d, ax: b.curveAx * d, flight: b.flight, goal: false };
-  for (let i = 0; i < 2.5 / DT && !shot.goal; i++) shot.goal = step().some(e => e.type === 'goal' && e.scorer === side);
+  const kick = inp({ kick: true }), kickEv = step(right ? NO_INPUT : kick, right ? kick : NO_INPUT);
+  const shot = { deg: Math.atan2(-b.vy, b.vx * d) * 180 / Math.PI, vx: b.vx * d, ax: b.curveAx * d, flight: b.flight, goal: false, blocked: false, event: kickEv.find(e => e.type === 'shot') };
+  for (let i = 0; i < 2.5 / DT && !shot.goal; i++) {
+    const ev = step();
+    if (b.flight === 'curve' && ev.some(e => e.type === 'touch' && e.side !== side)) shot.blocked = true;   // 날아가는 공을 상대가 건드렸다
+    shot.goal = ev.some(e => e.type === 'goal' && e.scorer === side);
+  }
   return shot;
 }
 test('curve: from anywhere on the pitch the shot drops under the bar into an unguarded goal, for either side and for a ball struck in the air', () => {
@@ -134,9 +140,16 @@ test('curve: far out it keeps the 55deg launch and bends in; nearer it slows the
   assert.ok(Math.abs(close.deg - 20) < 1 && close.flight === 'curve', JSON.stringify(close));
 });
 
-test('curve: it is still a shot to defend — an opponent standing on the goal line keeps it out', () => {
-  assert.equal(curveFrom(400, { keeper: 1150 }).goal, false);
-  assert.equal(curveFrom(640, { keeper: 1150 }).goal, false);
+// 2026-11-14 형준 "발동이 되도 그 앞에서 잘려버리니까 .. 레이저슛처럼 무조건 선수를 피해서 들어가는걸로 할까?" → 날아가는 내내 상대를 통과한다
+// (전엔 처음 0.35초만: AI 끼리 슛의 18%가 찬 직후 앞에서 끊기고 39%가 골문 앞에서 막혔다)
+test('curve: nobody can cut it out in flight — not an opponent right in front of the kicker, one under the arc, or one standing on the goal line', () => {
+  for (const [x, keeper] of [[400, 480], [400, 800], [400, 1150], [640, 1150], [200, 640], [760, 1150]]) {
+    const s = curveFrom(x, { keeper });
+    assert.equal(s.blocked, false, `from ${x} past an opponent at ${keeper}: touched in flight`);
+    assert.equal(s.goal, true, `from ${x} past an opponent at ${keeper}`);
+  }
+  assert.equal(curveFrom(640, { right: true, keeper: 1150 }).goal, true, 'right player too');
+  assert.deepEqual(curveFrom(400).event, { type: 'shot', side: 'L', flight: 'curve' });
 });
 
 // 2026-11-13 형준 "슬라이딩이 잘 안나오는데, 그냥 필살기를 바꾸면 좋겠다" → "오프사이드 트랩… 이거 해보자": 상대가 1.5초 그 자리에 선다.

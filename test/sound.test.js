@@ -20,6 +20,7 @@ test('match events map to recipes that exist', () => {
     [{ type: 'kick' }, 'swing'], [{ type: 'touch', part: 'foot' }, 'kick'], [{ type: 'touch', part: 'head' }, 'head'],
     [{ type: 'touch', part: 'head', perfect: true }, 'perfect'], [{ type: 'touch', part: 'body' }, 'bounce'],
     [{ type: 'goal', scorer: 'L' }, 'goal'], [{ type: 'special', id: 'laser' }, 'special'], [{ type: 'catch' }, 'catch'],
+    [{ type: 'shot', side: 'L', flight: 'curve' }, 'curve'],   // 2026-11-14 형준 "이팩트도 좀 필요할듯": 커브 슛이 나가는 바람 소리
     [{ type: 'knockdown' }, 'knock'], [{ type: 'knockback' }, 'knock'], [{ type: 'sub' }, 'sub'],
     [{ type: 'phase', phase: 'play' }, 'whistle'], [{ type: 'phase', phase: 'golden' }, 'golden'],
     [{ type: 'phase', phase: 'over' }, 'win', 'win'], [{ type: 'phase', phase: 'over' }, 'lose', 'lose'], [{ type: 'phase', phase: 'over' }, 'over', 'draw'],
@@ -29,7 +30,7 @@ test('match events map to recipes that exist', () => {
     assert.equal(got, want, JSON.stringify(e));
     assert.ok(RECIPES[got], `recipe ${got}`);
   }
-  for (const e of [{ type: 'phase', phase: 'kickoff' }, { type: 'phase', phase: 'goal' }, { type: 'phase', phase: 'sub' }, { type: 'specialEnd' }, { type: 'throw' }]) {
+  for (const e of [{ type: 'phase', phase: 'kickoff' }, { type: 'phase', phase: 'goal' }, { type: 'phase', phase: 'sub' }, { type: 'specialEnd' }, { type: 'throw' }, { type: 'shot', side: 'L', flight: 'laser' }]) {
     assert.equal(eventSound(e, m(null)), null, e.type + ' ' + (e.phase || ''));
   }
 });

@@ -36,9 +36,35 @@ test('reduce motion: no flash, sparks, rings or streaks; the cut-in banner still
   const m = match(), fx = createFx(); fx.reduceMotion = true;
   pushEvents(fx, [{ type: 'goal', scorer: 'L' }, { type: 'touch', part: 'head', perfect: true }, { type: 'special', side: 'L', id: 'laser' }], m);
   updateFx(fx, m, DT);
-  assert.equal(fx.flash, 0); assert.equal(fx.crowd, 0); assert.equal(fx.shake, 0);
+  assert.equal(fx.flash, 0); assert.equal(fx.crowd, 0); assert.equal(fx.shake, 0); assert.equal(fx.net, null);
   assert.equal(fx.sparks.length + fx.rings.length + fx.streak.length + fx.particles.length, 0);
   assert.ok(fx.cutin && fx.pops.some(p => p.text === 'GOAL'), 'information stays');
+});
+
+// 2026-11-14 형준 "이팩트도 좀 필요할듯": 커브 슛이 나가는 순간 금색 충격 고리와 튀는 조각, 날아가는 동안 혜성 꼬리와 금가루. 골이 들어가면 그 골문 그물이 출렁인다
+test('curve shot: a gold burst where it is struck, then a comet tail and gold dust while it flies; the laser keeps its own look', () => {
+  const m = match(), fx = createFx(), b = m.world.ball;
+  Object.assign(b, { x: 500, y: 600, vx: 600, vy: -800, flight: 'curve' });
+  pushEvents(fx, [{ type: 'shot', side: 'L', flight: 'curve' }], m);
+  assert.ok(fx.rings.some(q => q.color === '#FFC72C' && q.r > 100 && q.x === 500), 'big gold ring at the ball');
+  assert.ok(fx.sparks.length >= 10 && fx.sparks.every(q => q.vx < 0), 'pieces fly back from a left-side shot');
+  assert.ok(fx.shake > 0);
+  run(fx, m, 0.1);
+  assert.ok(fx.trail.length >= 10, 'tail points: ' + fx.trail.length);
+  assert.ok(fx.particles.some(q => q.color === '#FFC72C'), 'gold dust');
+  b.flight = null; run(fx, m, 0.6);
+  assert.equal(fx.trail.length, 0, 'the tail fades out after the flight');
+  const laser = createFx(); pushEvents(laser, [{ type: 'shot', side: 'L', flight: 'laser' }], m);
+  assert.equal(laser.sparks.length + laser.rings.length, 0);
+});
+
+test('goal: the net of the goal the ball went into ripples for a moment', () => {
+  const m = match(), fx = createFx();
+  pushEvents(fx, [{ type: 'goal', scorer: 'L' }], m);
+  assert.equal(fx.net.side, 'R', 'L scores into the right goal');
+  run(fx, m, 0.3); assert.ok(fx.net && fx.net.age > 0.2);
+  run(fx, m, 0.5); assert.equal(fx.net, null);
+  pushEvents(fx, [{ type: 'goal', scorer: 'R' }], m); assert.equal(fx.net.side, 'L');
 });
 
 test('touch: a ring where the ball was hit (not for body bumps), gold for a perfect header', () => {

@@ -146,14 +146,16 @@ export function drawCrowdFlashes(ctx, t, k, view = DEFAULT_VIEW) {
 }
 
 // 골대: 그물(옅은 흰 면 + 격자)과 크로스바. 왼쪽/오른쪽.
-export function drawGoals(ctx) {
+// net = { side, k }: 골이 들어간 쪽(side) 그물이 출렁인다. k 는 1 → 0 으로 잦아드는 세기, t 는 시간(초). 그물 줄이 가운데가 휘는 곡선이 되어 앞뒤로 흔들린다
+export function drawGoals(ctx, net = null, t = 0) {
   const top = GROUND - FIELD.GOAL_H, d = FIELD.GOAL_DEPTH;
   for (const side of ['L', 'R']) {
     const x0 = side === 'L' ? 0 : W - d, x1 = side === 'L' ? d : W, back = side === 'L' ? 0 : W;
+    const a = net && net.side === side ? 10 * net.k : 0;   // 줄 가운데가 휘는 폭(px). 0 이면 곧은 줄
     ctx.fillStyle = 'rgba(255,255,255,.1)'; ctx.fillRect(x0, top, d, FIELD.GOAL_H);
-    ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 1;
-    for (let y = top + 12; y < GROUND; y += 14) { ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke(); }
-    for (let x = x0 + 12; x < x1; x += 14) { ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, GROUND); ctx.stroke(); }
+    ctx.strokeStyle = a ? 'rgba(255,255,255,.75)' : 'rgba(255,255,255,.4)'; ctx.lineWidth = 1;
+    for (let y = top + 12; y < GROUND; y += 14) { ctx.beginPath(); ctx.moveTo(x0, y); ctx.quadraticCurveTo((x0 + x1) / 2, y + a * Math.sin(t * 26 + y * 0.09), x1, y); ctx.stroke(); }
+    for (let x = x0 + 12; x < x1; x += 14) { ctx.beginPath(); ctx.moveTo(x, top); ctx.quadraticCurveTo(x + a * Math.sin(t * 26 + x * 0.13), (top + GROUND) / 2, x, GROUND); ctx.stroke(); }
     ctx.fillStyle = 'rgba(244,247,250,.75)'; ctx.fillRect(back - 2, top - FIELD.BAR_T, 4, FIELD.GOAL_H + FIELD.BAR_T);   // 뒤쪽 기둥
     ctx.fillStyle = '#F4F7FA';
     ctx.fillRect(x0, top - FIELD.BAR_T, d, FIELD.BAR_T);                      // 크로스바(지붕)

@@ -22,7 +22,7 @@ const other = side => (side === 'L' ? 'R' : 'L');
 
 export function createFx() {
   return { particles: [], pops: [], shake: 0, ballRot: 0, lastBallX: null, subBoard: null, ghosts: [], trail: [], party: null,
-    view: DEFAULT_VIEW, flash: 0, crowd: 0, cutin: null, rings: [], sparks: [], streak: [], air: { L: 0, R: 0 }, tick: 0 };
+    view: DEFAULT_VIEW, flash: 0, crowd: 0, cutin: null, rings: [], sparks: [], streak: [], air: { L: 0, R: 0 }, tick: 0, net: null };
 }
 
 function pop(fx, text, x, y, { size = 48, color = GOLD, life = 0.8, rise = 40, glow = false, plate = false } = {}) {
@@ -44,11 +44,21 @@ export function pushEvents(fx, events, match) {
         pop(fx, 'GOAL', FIELD.W / 2, 236 + d, { size: 150, color: GOLD, life: 1.2, rise: 16, glow: true });
         pop(fx, name, FIELD.W / 2, 338 + d, { size: 34, color: WHITE, life: 1.2, rise: 16, plate: true });   // 관중석 흰 글자와 겹치지 않게 남색 판 위에
         fx.shake = 0.35; fx.flash = FLASH; fx.crowd = 1.5;
+        fx.net = { side: other(e.scorer), age: 0, life: 0.7 };   // 공이 꽂힌 골문의 그물이 출렁인다
         const gx = e.scorer === 'L' ? FIELD.W - 50 : 50, dir = e.scorer === 'L' ? -1 : 1;   // 골문에서 금·흰 조각이 튄다
         for (let i = 0; i < 34; i++) fx.sparks.push({ x: gx, y: FIELD.GROUND - 50 - Math.random() * 130, vx: dir * (120 + Math.random() * 520), vy: -260 - Math.random() * 520,
           rot: Math.random() * 6.28, vr: (Math.random() - .5) * 14, color: [GOLD, WHITE, '#6FA6F0'][i % 3], age: 0, life: 0.9 + Math.random() * 0.5 });
         break;
       }
+      case 'shot':   // 커브 슛이 발을 떠나는 순간: 금색·흰색 충격 고리, 뒤로 튀는 조각, 살짝 흔들림. 소리는 eventSound 의 'curve' (2026-11-14 형준 "이팩트도 좀 필요할듯")
+        if (e.flight === 'curve') {
+          fx.rings.push({ x: b.x, y: b.y, age: 0, life: 0.34, r: 124, color: GOLD }, { x: b.x, y: b.y, age: 0, life: 0.22, r: 76, color: WHITE });
+          const back = e.side === 'L' ? -1 : 1;
+          for (let i = 0; i < 14; i++) fx.sparks.push({ x: b.x, y: b.y, vx: back * (60 + Math.random() * 420), vy: -80 - Math.random() * 480,
+            rot: Math.random() * 6.28, vr: (Math.random() - .5) * 16, color: i % 2 ? GOLD : WHITE, age: 0, life: 0.45 + Math.random() * 0.3 });
+          fx.shake = Math.max(fx.shake, 0.15);
+        }
+        break;
       case 'special': {
         fx.cutin = { side: e.side, def: w.players[e.side].def, age: 0, life: 1.1 };   // 얼굴과 필살기 이름이 옆에서 미끄러져 들어오는 띠
         if (e.id === 'giant') fx.shake = 0.3;
@@ -98,8 +108,12 @@ export function updateFx(fx, match, dt) {
       fx.particles.push({ x: p.x + (Math.random() - .5) * 40, y: FIELD.GROUND - 4, vx: (Math.random() - .5) * 120, vy: -40 - Math.random() * 60, r: 4 + Math.random() * 4, life: 0.5, age: 0, color: 'rgba(220,210,180,.9)' });
     }
   }
-  // 커브 슛 궤적 점선
-  if (b.flight === 'curve') fx.trail.push({ x: b.x, y: b.y, age: 0, life: 0.6 });
+  // 커브 슛: 지나온 자리(그릴 때 굵은 금색 혜성 꼬리가 된다)와 흩날리는 금가루
+  if (b.flight === 'curve') {
+    fx.trail.push({ x: b.x, y: b.y, age: 0, life: 0.5 });
+    if (fx.tick % 3 === 0) fx.particles.push({ x: b.x + (Math.random() - .5) * 26, y: b.y + (Math.random() - .5) * 26, vx: (Math.random() - .5) * 90, vy: 30 + Math.random() * 80, r: 2 + Math.random() * 2.5, life: 0.4, age: 0, color: GOLD });
+  }
+  if (fx.net) { fx.net.age += dt; if (fx.net.age >= fx.net.life) fx.net = null; }
   for (const q of fx.trail) q.age += dt;
   fx.trail = fx.trail.filter(q => q.age < q.life);
   // 빠른 공 잔상
@@ -115,7 +129,7 @@ export function updateFx(fx, match, dt) {
   for (const g of fx.ghosts) g.age += dt;
   fx.ghosts = fx.ghosts.filter(g => g.age < g.life);
   if (fx.reduceMotion) {   // 움직임 줄이기: 입자·흔들림·궤적·번쩍임 없음 (컷인 띠는 미끄러지지 않고 그 자리에 뜬다)
-    fx.shake = 0; fx.flash = 0; fx.crowd = 0; fx.particles.length = 0; fx.ghosts.length = 0; fx.trail.length = 0; fx.rings.length = 0; fx.sparks.length = 0; fx.streak.length = 0;
+    fx.shake = 0; fx.flash = 0; fx.crowd = 0; fx.net = null; fx.particles.length = 0; fx.ghosts.length = 0; fx.trail.length = 0; fx.rings.length = 0; fx.sparks.length = 0; fx.streak.length = 0;
   }
 }
 
@@ -317,7 +331,7 @@ export function drawFrame(ctx, match, imgs, fx, t) {
   if (fx.shake > 0) { dx = (Math.random() - .5) * 14 * fx.shake; dy = (Math.random() - .5) * 10 * fx.shake; ctx.translate(dx, dy); }
   drawStadium(ctx, t, view, dx, dy);
   if (fx.crowd > 0) drawCrowdFlashes(ctx, t, Math.min(1, fx.crowd / 0.9), view);
-  drawGoals(ctx);
+  drawGoals(ctx, fx.net && { side: fx.net.side, k: 1 - fx.net.age / fx.net.life }, t);
 
   // 바닥 표시: 오프사이드 판정선과 부심, 압박 그물, 자석 원, 롱스로인 낙하 그림자
   for (const side of ['L', 'R']) {
@@ -363,10 +377,26 @@ export function drawFrame(ctx, match, imgs, fx, t) {
     ctx.save(); ctx.strokeStyle = grad; ctx.lineWidth = 16; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - b.vx / sp * 220, b.y - b.vy / sp * 220); ctx.stroke(); ctx.restore();
   }
-  for (let i = 0; i < fx.trail.length; i += 3) {   // 커브 궤적
-    const q = fx.trail[i];
-    ctx.save(); ctx.globalAlpha = 0.6 * (1 - q.age / q.life); ctx.fillStyle = GOLD;
-    ctx.beginPath(); ctx.arc(q.x, q.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  if (fx.trail.length > 1) {   // 커브 슛 꼬리: 공 쪽이 굵고 밝은 금색 혜성 꼬리 + 밝은 심 (전엔 작은 금색 점선)
+    const tail = fx.trail[0], head = fx.trail.at(-1);
+    ctx.save(); ctx.fillStyle = GOLD;
+    for (let i = 0; i < fx.trail.length; i += 2) {   // 번지는 금빛: 공 쪽으로 갈수록 크고 진하다
+      const q = fx.trail[i], k = 1 - q.age / q.life;
+      ctx.globalAlpha = 0.3 * k; ctx.beginPath(); ctx.arc(q.x, q.y, b.r * (0.25 + 0.95 * k), 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (const [width, rgb, a] of [[16, '255,199,44', .9], [6, '255,246,214', 1]]) {   // 금색 띠 위에 밝은 심. 꼬리 끝으로 갈수록 투명해진다
+      const g = ctx.createLinearGradient(tail.x, tail.y, head.x, head.y);
+      g.addColorStop(0, `rgba(${rgb},0)`); g.addColorStop(1, `rgba(${rgb},${a})`);
+      ctx.strokeStyle = g; ctx.lineWidth = width;
+      ctx.beginPath(); ctx.moveTo(tail.x, tail.y); for (const q of fx.trail) ctx.lineTo(q.x, q.y); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  if (b.flight === 'curve') {   // 공 둘레 금빛
+    const glow = ctx.createRadialGradient(b.x, b.y, b.r * 0.5, b.x, b.y, b.r * 2.7);
+    glow.addColorStop(0, 'rgba(255,199,44,.7)'); glow.addColorStop(1, 'rgba(255,199,44,0)');
+    ctx.save(); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(b.x, b.y, b.r * 2.7, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   }
   for (const q of fx.streak) {   // 빠른 공 잔상
     const k = 1 - q.age / q.life;
@@ -374,6 +404,12 @@ export function drawFrame(ctx, match, imgs, fx, t) {
     ctx.beginPath(); ctx.arc(q.x, q.y, b.r * (0.45 + 0.5 * k), 0, Math.PI * 2); ctx.fill(); ctx.restore();
   }
   drawBall(ctx, b, fx.ballRot);
+  if (b.flight === 'curve') {   // 회전 줄: 공 둘레를 도는 흰 호 둘
+    const spin = fx.reduceMotion ? 0 : t * 18;
+    ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    for (const a of [spin, spin + Math.PI]) { ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 8, a, a + 1.1); ctx.stroke(); }
+    ctx.restore();
+  }
   // 증기·잔디·먼지 입자
   for (const q of fx.particles) {
     ctx.save(); ctx.globalAlpha = 0.8 * (1 - q.age / q.life); ctx.fillStyle = q.color || '#FFFFFF';

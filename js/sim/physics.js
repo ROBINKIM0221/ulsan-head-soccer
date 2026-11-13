@@ -219,7 +219,8 @@ export function stepPhysics(world, inputs, dt, hooks = {}) {
   }
   if (kickers.length) {
     const { side, p } = kickers.sort((a, b) => a.dist - b.dist)[0];
-    if (!(hooks.onKick && hooks.onKick(side))) {
+    if (hooks.onKick && hooks.onKick(side)) events.push({ type: 'shot', side, flight: ball.flight });   // 필살기 슛(레이저·커브)이 나갔다: 연출·효과음용
+    else {
       const a = PHYS.KICK_ANGLE_DEG * Math.PI / 180;
       ball.vx = p.facing * PHYS.KICK_SPEED * p.mods.kickPow * Math.cos(a);
       ball.vy = -PHYS.KICK_SPEED * p.mods.kickPow * Math.sin(a);

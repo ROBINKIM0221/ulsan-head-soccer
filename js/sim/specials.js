@@ -108,17 +108,19 @@ export const SPECIALS = {
     end(m, s) { const b = m.world.ball; if (b.flight === 'laser') { b.flight = null; b.passThrough = null; b.noGravityT = 0; } },
   },
 
-  // 다음 킥: 55°·1050 으로 띄우고 상대 골문 쪽으로 휘어(가로 가속) 크로스바 밑으로 떨어진다. 처음 0.35초만 상대를 통과한다 (밸런스 2026-10-31: 통과가 상시면 승률 97%).
+  // 다음 킥: 55°·1050 으로 띄우고 상대 골문 쪽으로 휘어(가로 가속) 크로스바 밑으로 떨어진다. 날아가는 내내 상대를 통과한다(레이저처럼 못 건드린다. 바닥에 닿으면 끝).
+  // 통과(2026-11-14 형준 "발동이 되도 그 앞에서 잘려버리니까 .. 레이저슛처럼 무조건 선수를 피해서 들어가는걸로 할까?"): 전엔 처음 0.35초만 통과라 AI 끼리 슛의 18%가 찬 직후 앞에서 끊기고 39%가 골문 앞에서 막혔다.
+  // 이제 슛의 72%가 골(나머지는 골라인 앞에 떨어진 뒤 걷어내진다). 그만큼 세져서 게이지는 0.7배(data/players.js). 나가는 순간 physics 가 shot 이벤트를 낸다(연출·소리: render/scene.js, sound.js).
   // 조준(2026-11-13 형준, 슛의 22%만 골이라고 알리자 "ㄱㄱ"): 전엔 가속이 900 고정이라 자기 진영에서 차야 들어가고 중간 거리에서는 크로스바를 넘었다.
   // 이제 띄우는 높이는 그대로 두고, 공 앞끝이 골라인에 닿는 자리에서 내려오는 공의 높이가 CURVE_AIM_Y 가 되도록 가로 초속과 가속을 푼다.
   // 멀면 55° 그대로 떠서 골문 쪽으로 가속해 휘어 들어가고(가속 CURVE_MIN_AX 이상), 가까워질수록 가로 초속을 줄이며, CURVE_MIN_VX 까지 줄이고도 남으면 가속이 음수가 되어 뚝 떨어진다.
   // (초속 하한: 그보다 느리게 띄우면 공이 찬 선수 자기 머리에 맞는다.)
-  // 골라인에서 CURVE_CLOSE 안쪽이면 띄우지 않고 20°로 낮게 깔아 찬다(공중에서 차도 크로스바에 안 걸린다). 막는 법은 그대로: 골문 앞을 지키거나 뛰어서 머리로.
+  // 골라인에서 CURVE_CLOSE 안쪽이면 띄우지 않고 20°로 낮게 깔아 찬다(공중에서 차도 크로스바에 안 걸린다).
   curve: {
     onKick(m, s) {
       const p = me(m, s), b = m.world.ball, d = dir(s);
       if (!p.active.armed) return false;
-      p.active.armed = false; p.active.t = 2.5; p.active.data.left = false; p.active.data.flightT = 0;
+      p.active.armed = false; p.active.t = 2.5; p.active.data.left = false;
       const dist = ((d > 0 ? FIELD.W - FIELD.GOAL_DEPTH - b.r : FIELD.GOAL_DEPTH + b.r) - b.x) * d;   // 공 앞끝이 골라인에 닿는 자리까지
       const close = dist <= CURVE_CLOSE, deg = close ? 20 : 55;
       let vx = CURVE_V * Math.cos(rad(deg)), ax = 900;
@@ -136,11 +138,9 @@ export const SPECIALS = {
       b.flight = 'curve'; b.curveAx = ax * d; b.passThrough = opp(s);
       return true;
     },
-    update(m, s, dt) {
+    update(m, s) {
       const p = me(m, s), b = m.world.ball;
       if (p.active.armed || b.flight !== 'curve') return;
-      p.active.data.flightT += dt;
-      if (p.active.data.flightT > 0.35) b.passThrough = null;   // 머리 위를 넘긴 뒤에는 골문 앞에서 막을 수 있다 (밸런스 2026-10-31: 통과 상시면 97%)
       if (flightOver(b, p.active.data, dir(s))) { SPECIALS.curve.end(m, s); p.active.t = 0; }
     },
     end(m, s) { const b = m.world.ball; if (b.flight === 'curve') { b.flight = null; b.curveAx = 0; b.passThrough = null; } },

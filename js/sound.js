@@ -19,6 +19,7 @@ export const RECIPES = {
   perfect: [T(260, 150, 0.1, 0.3), T(1568, 1568, 0.25, 0.12, 0.02, 'triangle')],   // 완벽 헤딩: 퐁 + 띵
   bounce:  [T(170, 100, 0.08, 0.15)],                                        // 몸에 맞는 툭
   goal:    [N(1.6, 0.5, 0, 1500, 200, 0.25), T(440, 440, 0.2, 0.12, 0, 'square'), T(554, 554, 0.45, 0.12, 0.2, 'square')],   // 함성 + 나팔 두 음
+  curve:   [N(0.42, 0.22, 0, 3200, 500, 0.14), T(380, 1150, 0.34, 0.09, 0, 'triangle')],   // 커브 슛이 나가는 휘익: 부풀어 오르는 바람 + 올라가는 음 (2026-11-14 형준 "이팩트도 좀 필요할듯")
   special: [T(523, 523, 0.09, 0.2, 0, 'triangle'), T(659, 659, 0.09, 0.2, 0.08, 'triangle'), T(784, 784, 0.09, 0.2, 0.16, 'triangle'), T(1046, 1046, 0.3, 0.22, 0.24, 'triangle')],
   catch:   [N(0.08, 0.2, 0, 8000, 2000), T(600, 300, 0.12, 0.15)],
   knock:   [T(320, 70, 0.3, 0.35), N(0.05, 0.2)],
@@ -37,6 +38,7 @@ export function eventSound(e, match) {
     case 'kick': return 'swing';
     case 'touch': return e.part === 'head' ? (e.perfect ? 'perfect' : 'head') : e.part === 'foot' ? 'kick' : 'bounce';
     case 'goal': return 'goal';
+    case 'shot': return e.flight === 'curve' ? 'curve' : null;   // 레이저는 빛줄기뿐, 소리는 킥 소리 그대로
     case 'special': return 'special';
     case 'catch': return 'catch';
     case 'knockdown': case 'knockback': return 'knock';
