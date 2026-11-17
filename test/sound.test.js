@@ -21,7 +21,8 @@ test('match events map to recipes that exist', () => {
     [{ type: 'touch', part: 'head', perfect: true }, 'perfect'], [{ type: 'touch', part: 'body' }, 'bounce'],
     [{ type: 'goal', scorer: 'L' }, 'goal'], [{ type: 'special', id: 'laser' }, 'special'], [{ type: 'catch' }, 'catch'],
     [{ type: 'shot', side: 'L', flight: 'curve' }, 'curve'],   // 커브 슛이 나가는 바람 소리
-    [{ type: 'shot', side: 'L', flight: 'laser', by: 'body' }, 'kick'],   // 몸통에 맞아 나간 레이저는 킥 소리(발로 찼을 땐 터치가 이미 그 소리를 냈다)
+    [{ type: 'shot', side: 'L', flight: 'laser' }, 'laser'], [{ type: 'shot', side: 'L', flight: 'laser', by: 'body' }, 'laser'],   // 레이저 "피융"
+    [{ type: 'special', id: 'train' }, 'specialTrain'], [{ type: 'special', id: 'offside' }, 'specialOffside'], [{ type: 'special', id: 'giant' }, 'specialGiant'],
     [{ type: 'shot', side: 'L', flight: 'curve', by: 'body' }, 'curve'],
     [{ type: 'knockdown' }, 'knock'], [{ type: 'knockback' }, 'knock'], [{ type: 'sub' }, 'sub'],
     [{ type: 'phase', phase: 'play' }, 'whistle'], [{ type: 'phase', phase: 'golden' }, 'golden'],
@@ -32,9 +33,19 @@ test('match events map to recipes that exist', () => {
     assert.equal(got, want, JSON.stringify(e));
     assert.ok(RECIPES[got], `recipe ${got}`);
   }
-  for (const e of [{ type: 'phase', phase: 'kickoff' }, { type: 'phase', phase: 'goal' }, { type: 'phase', phase: 'sub' }, { type: 'specialEnd' }, { type: 'throw' }, { type: 'shot', side: 'L', flight: 'laser' }]) {
+  for (const e of [{ type: 'phase', phase: 'kickoff' }, { type: 'phase', phase: 'goal' }, { type: 'phase', phase: 'sub' }, { type: 'specialEnd' }, { type: 'throw' }, { type: 'shot', side: 'L' }]) {
     assert.equal(eventSound(e, m(null)), null, e.type + ' ' + (e.phase || ''));
   }
+});
+
+// 대포 헤딩 중인 선수의 헤딩은 "쾅", 다른 선수의 헤딩·대포 헤딩 선수의 발차기는 평소 소리
+test('cannon header booms; other touches keep their usual sounds', () => {
+  const withActive = id => ({ result: null, world: { players: { L: { active: id ? { id } : null }, R: { active: null } } } });
+  assert.equal(eventSound({ type: 'touch', side: 'L', part: 'head' }, withActive('cannon')), 'boom');
+  assert.equal(eventSound({ type: 'touch', side: 'L', part: 'foot' }, withActive('cannon')), 'kick');
+  assert.equal(eventSound({ type: 'touch', side: 'R', part: 'head' }, withActive('cannon')), 'head');
+  assert.equal(eventSound({ type: 'touch', side: 'L', part: 'head' }, withActive('sprint')), 'head');
+  for (const name of ['specialTrain', 'specialOffside', 'specialGiant']) assert.deepEqual(RECIPES[name].slice(0, 4), RECIPES.special, name + ' starts with the usual jingle');
 });
 
 test('without an AudioContext (node) sfx is a safe no-op, and the switch persists in memory', () => {

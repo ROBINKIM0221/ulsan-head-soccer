@@ -12,7 +12,7 @@ import { byNumber } from '../data/players.js';
 import { startParty, updateParty, partyView, drawParty } from './party.js';
 import { sfx, eventSound } from '../sound.js';
 
-const GOLD = '#FFC72C', WHITE = '#FFFFFF', NAVY = '#002B6B', MUTED = '#B9CBE8', GLASS = 'rgba(0,27,77,.78)';
+const GOLD = '#FFC72C', WHITE = '#FFFFFF', NAVY = '#002B6B', MUTED = '#B9CBE8', GLASS = 'rgba(0,27,77,.78)', FIRE = '#FF7A1A';
 const UI = '"Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';
 const NUM = 'Teko, "Arial Narrow", sans-serif';
 const FLASH = 0.22;                    // 골 플래시 길이(초)
@@ -41,6 +41,18 @@ export function pushEvents(fx, events, match) {
       case 'touch':
         if (e.perfect) pop(fx, 'PERFECT', b.x, b.y - 60, { size: 40, color: WHITE, life: 0.7 });
         if (e.part !== 'body') fx.rings.push({ x: b.x, y: b.y, age: 0, life: 0.2, r: e.perfect ? 66 : 40, color: e.perfect ? GOLD : WHITE });   // 맞는 순간 퍼지는 고리
+        if (e.part === 'head') {
+          const a = w.players[e.side]?.active;
+          if (a && a.id === 'cannon') {   // 대포 헤딩: 폭발 고리·연기·흔들림, 날아가는 공에 잠깐 불꽃 꼬리
+            fx.rings.push({ x: b.x, y: b.y, age: 0, life: 0.32, r: 112, color: FIRE }, { x: b.x, y: b.y, age: 0, life: 0.2, r: 70, color: GOLD });
+            for (let i = 0; i < 10; i++) fx.particles.push({ x: b.x, y: b.y, vx: (Math.random() - .5) * 260, vy: -60 - Math.random() * 160, r: 8 + Math.random() * 8, life: 0.6, age: 0, color: 'rgba(95,95,100,.7)' });
+            pop(fx, 'BOOM', b.x, b.y - 70, { size: 46, color: FIRE, life: 0.7 });
+            fx.shake = Math.max(fx.shake, 0.2); fx.fire = 0.6;
+          } else if (a && a.id === 'highjump') {   // 제공권 장악: 2배 헤딩이 꽂히는 순간 큰 금색 고리와 조각
+            fx.rings.push({ x: b.x, y: b.y, age: 0, life: 0.3, r: 100, color: GOLD });
+            for (let i = 0; i < 8; i++) fx.sparks.push({ x: b.x, y: b.y, vx: (Math.random() - .5) * 420, vy: -120 - Math.random() * 360, rot: Math.random() * 6.28, vr: (Math.random() - .5) * 14, color: i % 2 ? GOLD : WHITE, age: 0, life: 0.45 });
+          }
+        }
         break;
       case 'goal': {
         const name = byNumber(match.used[e.scorer].at(-1).number).name;
@@ -105,7 +117,14 @@ export function updateFx(fx, match, dt) {
       if (charging || Math.random() < 0.5) fx.particles.push({ x: c.x + (Math.random() - .5) * 8, y: c.y, vx: (charging ? -p.facing * 90 : -p.facing * 15) + (Math.random() - .5) * 40, vy: (charging ? -200 : -110) - Math.random() * 70, r: (charging ? 8 : 5) + Math.random() * 6, life: charging ? 0.9 : 0.8, age: 0, back: true });
       if (charging && Math.random() < 0.6) fx.particles.push({ x: p.x + p.facing * 30 * p.scale, y: FIELD.GROUND - 14, vx: -p.facing * (80 + Math.random() * 80), vy: -20 - Math.random() * 30, r: 5 + Math.random() * 4, life: 0.4, age: 0 });
     }
-    if (p.active.id === 'sprint') { fx.ghostTick = (fx.ghostTick || 0) + 1; if (fx.ghostTick % 8 === 0) fx.ghosts.push({ x: p.x, y: p.y, scale: p.scale, facing: p.facing, def: p.def, age: 0, life: 0.3, side }); }
+    if (p.active.id === 'sprint') {
+      fx.ghostTick = (fx.ghostTick || 0) + 1; if (fx.ghostTick % 8 === 0) fx.ghosts.push({ x: p.x, y: p.y, scale: p.scale, facing: p.facing, def: p.def, age: 0, life: 0.3, side });
+      const run = Math.sign(p.vx);   // 빠르게 달리면 발 뒤로 흙먼지
+      if (p.onGround && Math.abs(p.vx) > 300 && Math.random() < 0.7) fx.particles.push({ x: p.x - run * 22, y: FIELD.GROUND - 4, vx: -run * (60 + Math.random() * 100), vy: -30 - Math.random() * 50, r: 3 + Math.random() * 4, life: 0.35, age: 0, color: 'rgba(220,210,180,.85)' });
+    }
+    if (p.active.id === 'spirit' && Math.random() < (Math.abs(p.vx) > 100 ? 0.8 : 0.35)) {   // 투지 폭발: 몸에서 피어오르는 불씨
+      fx.particles.push({ x: p.x + (Math.random() - .5) * 60 * p.scale, y: p.y - 10 - Math.random() * 70, vx: -Math.sign(p.vx) * 40 + (Math.random() - .5) * 40, vy: -120 - Math.random() * 90, r: 2 + Math.random() * 2.5, life: 0.5, age: 0, color: Math.random() < 0.5 ? FIRE : GOLD });
+    }
     // 높이뛰기: 땅을 박차는 순간 발밑 먼지
     if (p.active.id === 'highjump' && !p.onGround && p.vy < -600 && Math.random() < 0.6) {
       fx.particles.push({ x: p.x + (Math.random() - .5) * 40, y: FIELD.GROUND - 4, vx: (Math.random() - .5) * 120, vy: -40 - Math.random() * 60, r: 4 + Math.random() * 4, life: 0.5, age: 0, color: 'rgba(220,210,180,.9)' });
@@ -115,6 +134,10 @@ export function updateFx(fx, match, dt) {
   if (b.flight === 'curve') {
     fx.trail.push({ x: b.x, y: b.y, age: 0, life: 0.5 });
     if (fx.tick % 3 === 0) fx.particles.push({ x: b.x + (Math.random() - .5) * 26, y: b.y + (Math.random() - .5) * 26, vx: (Math.random() - .5) * 90, vy: 30 + Math.random() * 80, r: 2 + Math.random() * 2.5, life: 0.4, age: 0, color: GOLD });
+  }
+  if (fx.fire > 0) {   // 대포 헤딩 뒤 날아가는 공의 불꽃
+    fx.fire -= dt;
+    fx.particles.push({ x: b.x + (Math.random() - .5) * 16, y: b.y + (Math.random() - .5) * 16, vx: -b.vx * 0.1 + (Math.random() - .5) * 60, vy: -b.vy * 0.1 - 40, r: 6 + Math.random() * 6, life: 0.3, age: 0, color: Math.random() < 0.6 ? FIRE : GOLD });
   }
   if (fx.net) { fx.net.age += dt; if (fx.net.age >= fx.net.life) fx.net = null; }
   for (const q of fx.trail) q.age += dt;
@@ -132,7 +155,7 @@ export function updateFx(fx, match, dt) {
   for (const g of fx.ghosts) g.age += dt;
   fx.ghosts = fx.ghosts.filter(g => g.age < g.life);
   if (fx.reduceMotion) {   // 움직임 줄이기: 입자·흔들림·궤적·번쩍임 없음 (컷인 띠는 미끄러지지 않고 그 자리에 뜬다)
-    fx.shake = 0; fx.flash = 0; fx.crowd = 0; fx.net = null; fx.particles.length = 0; fx.ghosts.length = 0; fx.trail.length = 0; fx.rings.length = 0; fx.sparks.length = 0; fx.streak.length = 0;
+    fx.shake = 0; fx.flash = 0; fx.crowd = 0; fx.net = null; fx.fire = 0; fx.particles.length = 0; fx.ghosts.length = 0; fx.trail.length = 0; fx.rings.length = 0; fx.sparks.length = 0; fx.streak.length = 0;
   }
 }
 
@@ -397,6 +420,27 @@ export function drawFrame(ctx, match, imgs, fx, t) {
     if (p.mods.magnet) {
       ctx.save(); ctx.setLineDash([10, 10]); ctx.lineDashOffset = -t * 60; ctx.strokeStyle = 'rgba(255,199,44,.8)'; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.arc(p.x + p.facing * 40, p.y - 30, 400, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+      // 끌어당기는 중(sim/specials.js magnet 과 같은 조건): 공과 발 앞을 잇는 금색 줄, 가까울수록 진하다
+      const tx = p.x + (side === 'L' ? 1 : -1) * 40, ty = p.y - 30, dist = Math.hypot(tx - b.x, ty - b.y);
+      const mine = b.lastTouch && b.lastTouch.side === side && w.t - b.lastTouch.t < 0.4;
+      if (!b.flight && !b.held && !b.attached && !mine && dist < 400) {
+        ctx.save(); ctx.setLineDash([14, 8]); ctx.lineDashOffset = t * 90; ctx.lineCap = 'round';
+        ctx.strokeStyle = `rgba(255,199,44,${0.35 + 0.6 * (1 - dist / 400)})`; ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(tx, ty); ctx.stroke(); ctx.restore();
+      }
+    }
+    if (p.active && p.active.id === 'spirit') {   // 투지 폭발: 몸 둘레에 일렁이는 붉은 기운
+      const h = headCenter(p), k = fx.reduceMotion ? 0.5 : 0.5 + 0.5 * Math.sin(t * 14), top = h.y - h.r - 10;
+      const cy = (top + p.y) / 2, ry = (p.y - top) / 2 + 14, rx = h.r * 1.45;
+      const g = ctx.createRadialGradient(p.x, cy, rx * 0.35, p.x, cy, ry);
+      g.addColorStop(0, 'rgba(255,90,20,0)'); g.addColorStop(0.62, `rgba(255,110,30,${0.28 + 0.14 * k})`); g.addColorStop(1, 'rgba(255,60,20,0)');
+      ctx.save(); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(p.x, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    }
+    if (p.active && p.active.id === 'sprint' && Math.abs(p.vx) > 300) {   // 스프린트: 몸 뒤로 속도선
+      const run = Math.sign(p.vx), h = headCenter(p);
+      ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineCap = 'round'; ctx.lineWidth = 4;
+      for (const [y, len] of [[h.y, 70], [p.y - 50, 95], [p.y - 18, 60]]) { ctx.beginPath(); ctx.moveTo(p.x - run * 45, y); ctx.lineTo(p.x - run * (45 + len), y); ctx.stroke(); }
+      ctx.restore();
     }
     if (p.active && p.active.id === 'longthrow' && p.active.data.phase === 'fly') {
       ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.28)';
@@ -418,6 +462,15 @@ export function drawFrame(ctx, match, imgs, fx, t) {
   // 선수 (공에 가까운 쪽을 위에)
   const order = Math.abs(b.x - w.players.L.x) < Math.abs(b.x - w.players.R.x) ? ['R', 'L'] : ['L', 'R'];
   for (const side of order) { const p = views[side]; drawPlayer(ctx, p, imgs[p.def.number], { kit: wornKit(match.kits[side], p.def), t, cheer: !!fx.party && side === fx.party.side }); }
+  for (const side of ['L', 'R']) {   // 압박에 걸린 선수: 머리 양옆으로 흘러내리는 땀방울
+    const p = w.players[side]; if (!p.mods.press || fx.party) continue;
+    const h = headCenter(p);
+    for (const [dx, ph] of [[-0.95, 0], [0.95, 0.5]]) {
+      const k = fx.reduceMotion ? 0.3 : (t * 1.4 + ph) % 1, x = h.x + dx * h.r, y = h.y - h.r * 0.25 + k * 26;
+      ctx.save(); ctx.globalAlpha = 1 - k * 0.7; ctx.fillStyle = '#8FD3FF'; ctx.strokeStyle = WHITE; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x, y - 13); ctx.bezierCurveTo(x + 9, y - 2, x + 7, y + 7, x, y + 7); ctx.bezierCurveTo(x - 7, y + 7, x - 9, y - 2, x, y - 13); ctx.fill(); ctx.stroke(); ctx.restore();
+    }
+  }
   // 레이저 빛줄기
   if (b.flight === 'laser') {
     const sp = Math.hypot(b.vx, b.vy) || 1;

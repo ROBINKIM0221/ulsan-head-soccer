@@ -30,16 +30,30 @@ export const RECIPES = {
   win:     [...FINAL, N(4.0, 0.45, 0.3, 1800, 150, 0.6), T(523, 523, 0.12, 0.12, 1.47, 'square'), T(659, 659, 0.12, 0.12, 1.59, 'square'), T(784, 784, 0.12, 0.12, 1.71, 'square'), T(1046, 1046, 0.6, 0.14, 1.83, 'square')],   // 휘슬 + 관중 함성 + 팡파르
   lose:    [...FINAL, T(466, 466, 0.4, 0.14, 1.47, 'sawtooth'), T(440, 440, 0.4, 0.14, 1.87, 'sawtooth'), T(415, 415, 0.4, 0.14, 2.27, 'sawtooth'), T(392, 330, 1.1, 0.14, 2.67, 'sawtooth')],   // 휘슬 + 아쉬운 트롬본 네 음(반음씩 내려가다 마지막은 축 처짐)
   tick:    [T(1300, 1300, 0.04, 0.1)],                                       // 버튼
+  laser:   [T(1900, 260, 0.26, 0.13, 0, 'sawtooth'), T(2600, 500, 0.2, 0.07, 0.02, 'square')],   // 레이저 슛 "피융"
+  boom:    [N(0.4, 0.5, 0, 900), T(120, 40, 0.45, 0.5), T(260, 150, 0.1, 0.25)],                   // 대포 헤딩 "쾅": 낮은 폭발 + 헤딩 퐁
 };
+// 필살기 발동 소리: 띠리링 뒤에 몇몇은 제 소리를 붙인다
+const SPECIAL = RECIPES.special, AFTER = 0.34;
+Object.assign(RECIPES, {
+  specialTrain:   [...SPECIAL, T(587, 587, 0.6, 0.1, AFTER, 'sawtooth'), T(740, 740, 0.6, 0.08, AFTER, 'sawtooth'), T(880, 880, 0.6, 0.07, AFTER, 'sawtooth'), N(0.6, 0.08, AFTER, 7000, 2500)],   // 기관차 기적 "뿌우" + 증기
+  specialOffside: [...SPECIAL, W(0.4, AFTER)],                                                     // 부심 휘슬
+  specialGiant:   [...SPECIAL, T(95, 42, 0.4, 0.5, AFTER), N(0.18, 0.3, AFTER, 500)],               // 거인이 내딛는 "쿵"
+});
+const SPECIAL_SOUND = { train: 'specialTrain', offside: 'specialOffside', giant: 'specialGiant' };
 
 // 경기 이벤트 → 효과음 이름 (없으면 null)
 export function eventSound(e, match) {
   switch (e.type) {
     case 'kick': return 'swing';
-    case 'touch': return e.part === 'head' ? (e.perfect ? 'perfect' : 'head') : e.part === 'foot' ? 'kick' : 'bounce';
+    case 'touch': {
+      const a = match?.world?.players[e.side]?.active;
+      if (e.part === 'head' && a && a.id === 'cannon') return 'boom';
+      return e.part === 'head' ? (e.perfect ? 'perfect' : 'head') : e.part === 'foot' ? 'kick' : 'bounce';
+    }
     case 'goal': return 'goal';
-    case 'shot': return e.flight === 'curve' ? 'curve' : e.by === 'body' ? 'kick' : null;   // 레이저는 빛줄기뿐, 소리는 킥 소리 그대로. 몸통에 맞아 나갔으면 킥 소리가 없었으니 여기서 낸다
-    case 'special': return 'special';
+    case 'shot': return e.flight === 'curve' ? 'curve' : e.flight === 'laser' ? 'laser' : e.by === 'body' ? 'kick' : null;   // 몸통에 맞아 나갔으면 킥 소리가 없었으니 여기서 낸다
+    case 'special': return SPECIAL_SOUND[e.id] || 'special';
     case 'catch': return 'catch';
     case 'knockdown': case 'knockback': return 'knock';
     case 'sub': return 'sub';
