@@ -160,8 +160,8 @@ export function updateFx(fx, match, dt) {
   updateFlames(fx, dt);
   for (const g of fx.ghosts) g.age += dt;
   fx.ghosts = fx.ghosts.filter(g => g.age < g.life);
-  if (fx.reduceMotion) {   // 움직임 줄이기: 입자·흔들림·궤적·번쩍임 없음 (컷인 띠는 미끄러지지 않고 그 자리에 뜬다. 투지 폭발 불꽃은 필살기 그 자체라 남긴다)
-    fx.shake = 0; fx.flash = 0; fx.crowd = 0; fx.net = null; fx.particles.length = 0; fx.ghosts.length = 0; fx.trail.length = 0; fx.rings.length = 0; fx.sparks.length = 0; fx.streak.length = 0;
+  if (fx.reduceMotion) {   // 움직임 줄이기(윈도우 애니메이션 끔 등): 화면 전체가 흔들리고 번쩍이는 것만 뺀다. 필살기 연출은 어느 기기에서나 같게 보인다
+    fx.shake = 0; fx.flash = 0; fx.crowd = 0;
   }
 }
 
@@ -476,7 +476,7 @@ export function drawFrame(ctx, match, imgs, fx, t) {
   // 바닥 표시: 오프사이드 판정선과 부심, 압박 그물, 자석 원, 롱스로인 낙하 그림자
   for (const side of ['L', 'R']) {
     const p = w.players[side];
-    if (p.frozen > 0) { const u = w.players[other(side)]; drawOffside(ctx, p, u.active && u.active.id === 'offside' ? u.def.special.duration - u.active.t : 1, t, view, !!fx.reduceMotion); }
+    if (p.frozen > 0) { const u = w.players[other(side)]; drawOffside(ctx, p, u.active && u.active.id === 'offside' ? u.def.special.duration - u.active.t : 1, t, view, false); }
     if (p.mods.press) {
       ctx.save(); ctx.strokeStyle = 'rgba(0,43,107,.55)'; ctx.lineWidth = 2;
       for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(p.x - 60 + i * 20, p.y - 10); ctx.lineTo(p.x - 40 + i * 20, p.y + 22); ctx.stroke(); ctx.beginPath(); ctx.moveTo(p.x + 60 - i * 20, p.y - 10); ctx.lineTo(p.x + 40 - i * 20, p.y + 22); ctx.stroke(); }
@@ -490,7 +490,7 @@ export function drawFrame(ctx, match, imgs, fx, t) {
     // 슛 필살기(레이저·커브)가 장전된 채 기다리는 중: 발밑에 숨 쉬듯 커졌다 작아지는 금색 고리. 지금 슛을 누르거나 공이 몸통 아래쪽에 닿으면 나간다는 표시다.
     // 시간 제한 없이 오래 기다릴 수 있어서 이름표의 금색 필살기 이름만으로는 잘 안 보인다. 미끄러짐 고리(도는 점선)와 달리 굵은 실선.
     if (p.active && p.active.armed) {
-      const k = fx.reduceMotion ? 0.5 : 0.5 + 0.5 * Math.sin(t * 6), rx = (52 + 5 * k) * p.scale, ry = (13 + 1.5 * k) * p.scale;
+      const k = 0.5 + 0.5 * Math.sin(t * 6), rx = (52 + 5 * k) * p.scale, ry = (13 + 1.5 * k) * p.scale;
       ctx.save();
       ctx.beginPath(); ctx.ellipse(p.x, FIELD.GROUND - 4, rx, ry, 0, 0, Math.PI * 2);
       ctx.fillStyle = `rgba(255,199,44,${0.16 + 0.12 * k})`; ctx.fill();
@@ -532,7 +532,7 @@ export function drawFrame(ctx, match, imgs, fx, t) {
     drawPlayer(ctx, { ...w.players[g.side], x: g.x, y: g.y, active: null, stun: 0, pinned: false, kickAnim: 0 }, imgs[g.def.number], { kit: wornKit(match.kits[g.side], g.def) });
     ctx.restore();
   }
-  drawFlames(ctx, fx, [w.players.L, w.players.R], fx.reduceMotion ? 0 : t);   // 투지 폭발 불꽃: 선수 뒤
+  drawFlames(ctx, fx, [w.players.L, w.players.R], t);   // 투지 폭발 불꽃: 선수 뒤
   const puff = q => { ctx.save(); ctx.globalAlpha = 0.8 * (1 - q.age / q.life); ctx.fillStyle = q.color || '#FFFFFF'; ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, Math.PI * 2); ctx.fill(); ctx.restore(); };
   for (const q of fx.particles) if (q.back) puff(q);   // 굴뚝 연기는 선수 뒤로 지나가 얼굴을 가리지 않는다
   // 선수 (공에 가까운 쪽을 위에)
@@ -542,7 +542,7 @@ export function drawFrame(ctx, match, imgs, fx, t) {
     const p = w.players[side]; if (!p.mods.press || fx.party) continue;
     const h = headCenter(p);
     for (const [dx, ph] of [[-0.95, 0], [0.95, 0.5]]) {
-      const k = fx.reduceMotion ? 0.3 : (t * 1.4 + ph) % 1, x = h.x + dx * h.r, y = h.y - h.r * 0.25 + k * 26;
+      const k = (t * 1.4 + ph) % 1, x = h.x + dx * h.r, y = h.y - h.r * 0.25 + k * 26;
       ctx.save(); ctx.globalAlpha = 1 - k * 0.7; ctx.fillStyle = '#8FD3FF'; ctx.strokeStyle = WHITE; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(x, y - 13); ctx.bezierCurveTo(x + 9, y - 2, x + 7, y + 7, x, y + 7); ctx.bezierCurveTo(x - 7, y + 7, x - 9, y - 2, x, y - 13); ctx.fill(); ctx.stroke(); ctx.restore();
     }
@@ -583,7 +583,7 @@ export function drawFrame(ctx, match, imgs, fx, t) {
   }
   if (fx.cannonball) drawCannonball(ctx, b, t); else drawBall(ctx, b, fx.ballRot);
   if (b.flight === 'curve') {   // 회전 줄: 공 둘레를 도는 흰 호 둘
-    const spin = fx.reduceMotion ? 0 : t * 18;
+    const spin = t * 18;
     ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
     for (const a of [spin, spin + Math.PI]) { ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 8, a, a + 1.1); ctx.stroke(); }
     ctx.restore();
@@ -603,10 +603,10 @@ export function drawFrame(ctx, match, imgs, fx, t) {
   if (fx.flash > 0) {   // 골 플래시
     ctx.save(); ctx.globalAlpha = 0.42 * (fx.flash / FLASH); ctx.fillStyle = WHITE; fillScreen(ctx, view); ctx.restore();
   }
-  drawHud(ctx, match, t, view, !!fx.reduceMotion);
+  drawHud(ctx, match, t, view, false);
   if (b.y + b.r < view.top) drawBallMarker(ctx, b.x, view.top);   // 위가 잘린 화면에서 공이 화면 위로 나갔다 (천장은 논리 y=0 그대로)
   if (fx.subBoard) drawSubBoard(ctx, fx.subBoard, view);
-  if (fx.cutin) drawCutin(ctx, fx.cutin, imgs, view, !!fx.reduceMotion);
+  if (fx.cutin) drawCutin(ctx, fx.cutin, imgs, view, false);
   // 글자 팝
   for (const p of fx.pops) {
     const k = p.age / p.life, a = k < 0.15 ? k / 0.15 : k > 0.7 ? (1 - k) / 0.3 : 1;

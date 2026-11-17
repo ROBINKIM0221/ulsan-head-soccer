@@ -64,12 +64,13 @@ test('special: a cut-in banner for the side that fired, gone after about a secon
   run(fx, m, 0.8); assert.equal(fx.cutin, null);
 });
 
-test('reduce motion: no flash, sparks, rings or streaks; the cut-in banner still shows (it just does not slide)', () => {
+// 움직임 줄이기(윈도우 애니메이션 끔 등): 화면 전체가 흔들리고 번쩍이는 것만 빠지고, 고리·조각 같은 연출은 어느 기기에서나 같게 남는다
+test('reduce motion: no screen shake, goal flash or crowd flashes; rings, sparks and the cut-in still show', () => {
   const m = match(), fx = createFx(); fx.reduceMotion = true;
   pushEvents(fx, [{ type: 'goal', scorer: 'L' }, { type: 'touch', part: 'head', perfect: true }, { type: 'special', side: 'L', id: 'laser' }], m);
   updateFx(fx, m, DT);
-  assert.equal(fx.flash, 0); assert.equal(fx.crowd, 0); assert.equal(fx.shake, 0); assert.equal(fx.net, null);
-  assert.equal(fx.sparks.length + fx.rings.length + fx.streak.length + fx.particles.length, 0);
+  assert.equal(fx.flash, 0); assert.equal(fx.crowd, 0); assert.equal(fx.shake, 0);
+  assert.ok(fx.sparks.length > 0 && fx.rings.length > 0, 'effects stay');
   assert.ok(fx.cutin && fx.pops.some(p => p.text === 'GOAL'), 'information stays');
 });
 

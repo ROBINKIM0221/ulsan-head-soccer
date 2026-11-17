@@ -24,6 +24,12 @@ jobs:
       - if: github.repository != 'ROBINKIM0221/ulsan-head-soccer'
         run: |
           sed -i -e 's#<head>#<head><meta name="robots" content="noindex">#' -e '/og:url/d' index.html
+      # 올릴 때마다 코드 주소에 버전(?v=커밋)을 붙인다: 브라우저가 10분 동안 들고 있는 예전 파일과 새 파일이 섞이지 않고, 새로 고침하면 바로 새 버전이 열린다
+      - run: |
+          V=${GITHUB_SHA::7}
+          find js -name '*.js' ! -path 'js/vendor/*' -exec sed -i -E "s#((from |import\(|import )['\"]\.\.?/[^'\"]+\.js)(['\"])#\1?v=$V\3#g" {} +
+          sed -i -E "s#(src=\"js/main\.js)\"#\1?v=$V\"#; s#(href=\"css/style\.css)\"#\1?v=$V\"#" index.html
+          grep -c "?v=$V" index.html js/main.js
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .
