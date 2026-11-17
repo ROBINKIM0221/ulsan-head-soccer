@@ -27,5 +27,5 @@ test('specialLine: a timed special ends with its duration in seconds; one-shots 
   assert.ok(specialLine(byNumber(24).special).endsWith(' (6초)'));
   assert.equal(specialLine(byNumber(10).special), byNumber(10).special.desc);
   assert.equal(specialLine(byNumber(14).special), byNumber(14).special.desc);
-  assert.equal(specialLine(byNumber(96).special), '부심 깃발이 올라가고 상대는 그 자리에 정지 (1.5초)');
+  assert.equal(specialLine(byNumber(96).special), '부심 깃발이 올라가고 상대는 그 자리에 정지 (2.5초)');
 });

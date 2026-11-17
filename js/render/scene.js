@@ -382,6 +382,31 @@ export function drawBackdrop(ctx, view = DEFAULT_VIEW, t = 0) {
   ctx.restore();
 }
 
+// 선수 뒤 불꽃: 몸을 둘러싼 타원 위에서 혀 모양 불꽃 아홉 개가 바깥 위로 솟고, 길이가 제각각 일렁인다. 바깥은 붉은 주황, 안쪽은 노랑.
+function drawFlames(ctx, p, t) {
+  const h = headCenter(p), cx = p.x, top = h.y - h.r, cy = (top + p.y) / 2, rx = h.r * 0.95, ry = (p.y - top) / 2;
+  const tongue = (a, len, w, inner) => {
+    const bx = cx + Math.sin(a) * rx, by = cy - Math.cos(a) * ry;            // 타원 위 뿌리
+    const dx = Math.sin(a) * 0.55, dy = -1, n = Math.hypot(dx, dy);           // 바깥 위로
+    const tx = bx + dx / n * len + Math.sin(t * 11 + a * 5) * w * 0.4, ty = by + dy / n * len;
+    const g = ctx.createLinearGradient(bx, by, tx, ty);
+    if (inner) { g.addColorStop(0, 'rgba(255,240,150,.95)'); g.addColorStop(1, 'rgba(255,200,60,0)'); }
+    else { g.addColorStop(0, 'rgba(255,150,40,.9)'); g.addColorStop(0.6, 'rgba(255,80,20,.75)'); g.addColorStop(1, 'rgba(220,30,10,0)'); }
+    ctx.fillStyle = g; ctx.beginPath();
+    ctx.moveTo(bx - w, by + w * 0.6);
+    ctx.quadraticCurveTo(bx - w * 1.1, (by + ty) / 2, tx, ty);
+    ctx.quadraticCurveTo(bx + w * 1.1, (by + ty) / 2, bx + w, by + w * 0.6);
+    ctx.closePath(); ctx.fill();
+  };
+  ctx.save();
+  for (const inner of [false, true]) for (let i = 0; i < 9; i++) {
+    const a = (i - 4) * 0.42, flick = Math.sin(t * 9 + i * 1.7) * 0.5 + Math.sin(t * 15 + i) * 0.25;
+    const len = h.r * (inner ? 0.55 : 0.95) * (1 + 0.35 * flick) * (1.15 - Math.abs(a) * 0.25);
+    tongue(a, len, h.r * (inner ? 0.2 : 0.3), inner);
+  }
+  ctx.restore();
+}
+
 export function drawFrame(ctx, match, imgs, fx, t) {
   const w = match.world, b = w.ball, view = fx.view || DEFAULT_VIEW;
   ctx.save();
@@ -429,13 +454,7 @@ export function drawFrame(ctx, match, imgs, fx, t) {
         ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(tx, ty); ctx.stroke(); ctx.restore();
       }
     }
-    if (p.active && p.active.id === 'spirit') {   // 투지 폭발: 몸 둘레에 일렁이는 붉은 기운
-      const h = headCenter(p), k = fx.reduceMotion ? 0.5 : 0.5 + 0.5 * Math.sin(t * 14), top = h.y - h.r - 10;
-      const cy = (top + p.y) / 2, ry = (p.y - top) / 2 + 14, rx = h.r * 1.45;
-      const g = ctx.createRadialGradient(p.x, cy, rx * 0.35, p.x, cy, ry);
-      g.addColorStop(0, 'rgba(255,90,20,0)'); g.addColorStop(0.62, `rgba(255,110,30,${0.28 + 0.14 * k})`); g.addColorStop(1, 'rgba(255,60,20,0)');
-      ctx.save(); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(p.x, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-    }
+    if (p.active && p.active.id === 'spirit') drawFlames(ctx, p, fx.reduceMotion ? 0 : t);   // 투지 폭발: 몸 뒤로 타오르는 불꽃
     if (p.active && p.active.id === 'sprint' && Math.abs(p.vx) > 300) {   // 스프린트: 몸 뒤로 속도선
       const run = Math.sign(p.vx), h = headCenter(p);
       ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineCap = 'round'; ctx.lineWidth = 4;

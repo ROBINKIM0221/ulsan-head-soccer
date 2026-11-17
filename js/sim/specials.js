@@ -30,7 +30,7 @@ function shootOnBody(m, s, info, special) {
 // 몸싸움 미끄러짐(거인·높이뛰기·투지): 발동 중 몸이 닿은 상대는 0.8초 넘어지고 320px/s 로 밀린다. 한 번 넘어뜨리면 1.5초 동안은 다시 안 건드린다.
 // 기관차에 붙들린 상대는 제외.
 const SLIP = 0.8, SLIP_COOL = 1.5;
-const CURVE_V = 1050, CURVE_CLOSE = 190, CURVE_AIM_Y = 480, CURVE_MIN_AX = 250, CURVE_MIN_VX = 350;   // 커브 슛 조준 (curve.onKick)
+const CURVE_V = 1050, CURVE_CLOSE = 300, CURVE_AIM_Y = 480, CURVE_MIN_AX = 250, CURVE_MIN_VX = 350;   // 커브 슛 조준 (curve.onKick)
 export const SLIP_SPECIALS = ['giant', 'highjump', 'spirit'];   // 화면이 발밑 고리로 '지금 닿으면 미끄러진다'를 보여 주는 데 쓴다
 function slipOnContact(m, s, dt) {
   const p = me(m, s), o = me(m, opp(s)), d = p.active.data;
@@ -106,10 +106,11 @@ export const SPECIALS = {
       const p = me(m, s), b = m.world.ball;
       if (!p.active.armed) return false;
       p.active.armed = false; p.active.t = 0.8;
-      const gx = dir(s) > 0 ? FIELD.W : 0, ty = FIELD.GROUND - 30 - m.rng() * (FIELD.GOAL_H - 60);
-      const ang = Math.atan2(ty - b.y, gx - b.x) + rad((m.rng() - 0.5) * 4);
+      const gx = dir(s) > 0 ? FIELD.W : 0, ty = FIELD.GROUND - 40 - m.rng() * (FIELD.GOAL_H - 90);   // 크로스바·바닥에서 한 뼘씩 떨어진 곳
+      const ang = Math.atan2(ty - b.y, gx - b.x) + rad((m.rng() - 0.5) * 2);
       b.vx = 1200 * Math.cos(ang); b.vy = 1200 * Math.sin(ang);
-      b.noGravityT = 0.8; b.passThrough = opp(s); b.flight = 'laser';
+      b.noGravityT = Math.max(0.8, Math.abs(gx - b.x) / 1200 + 0.15);   // 자기 골문 앞에서 쏴도 골문까지 힘이 빠지지 않는다
+      b.passThrough = opp(s); b.flight = 'laser'; p.active.t = b.noGravityT;
       return true;
     },
     onBallTouch(m, s, info) { return shootOnBody(m, s, info, SPECIALS.laser); },
@@ -135,7 +136,12 @@ export const SPECIALS = {
       if (!p.active.armed) return false;
       p.active.armed = false; p.active.t = 2.5; p.active.data.left = false;
       const dist = ((d > 0 ? FIELD.W - FIELD.GOAL_DEPTH - b.r : FIELD.GOAL_DEPTH + b.r) - b.x) * d;   // 공 앞끝이 골라인에 닿는 자리까지
-      const close = dist <= CURVE_CLOSE, deg = close ? 20 : 55;
+      const close = dist <= CURVE_CLOSE;
+      let deg = 55;
+      if (close) {   // 골문 가운데 높이를 겨눈다(떨어지는 만큼 조금 위로). 바닥 공은 20° 그대로, 높이 뜬 공은 아래로 꽂는다(20°로 차면 크로스바를 넘는다)
+        const t = (dist + 20) / CURVE_V, ty = FIELD.GROUND - FIELD.GOAL_H / 2 - 0.5 * PHYS.BALL_GRAVITY * t * t;
+        deg = Math.max(-30, Math.min(20, Math.atan2(b.y - ty, dist + 20) * 180 / Math.PI));
+      }
       let vx = CURVE_V * Math.cos(rad(deg)), ax = 900;
       const vy0 = -CURVE_V * Math.sin(rad(deg));
       if (!close) {
@@ -242,7 +248,7 @@ export const SPECIALS = {
     },
   },
 
-  // 오프사이드 트랩 (최석현): 부심 깃발이 올라가고 상대가 1.5초 그 자리에 선다 — 이동·점프·킥 불가, 공중이면 그대로 떨어진다. 몸은 그대로라 공은 맞고 튄다.
+  // 오프사이드 트랩 (최석현): 부심 깃발이 올라가고 상대가 2.5초 그 자리에 선다 — 이동·점프·킥 불가, 공중이면 그대로 떨어진다. 몸은 그대로라 공은 맞고 튄다.
   // 게이지가 차는 순간 공·상대가 어디 있든 효과가 보인다.
   // 묶인 시간은 상대 몸의 frozen 이고 물리가 센다: 킥오프 재배치가 지우고(골을 먹고도 묶여 있지 않게), 최석현이 교체로 나가면 end 가 푼다. 돌진 중인 기관차는 못 세운다.
   offside: {

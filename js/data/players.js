@@ -26,7 +26,7 @@ export const PLAYERS = [
     desc: '상대의 속도와 점프 60%로 감소' }),
   P(55, '토마스', 'DF', 'defend', { id: 'train', name: '기관차 모드', kind: 'buff', duration: 3.0, gaugeRate: 0.75,
     desc: '기차로 변신, 공과 상대를 골문으로 밀어 넣음' }),
-  P(96, '최석현', 'DF', 'defend', { id: 'offside', name: '오프사이드 트랩', kind: 'buff', duration: 1.5,
+  P(96, '최석현', 'DF', 'defend', { id: 'offside', name: '오프사이드 트랩', kind: 'buff', duration: 2.5,
     desc: '부심 깃발이 올라가고 상대는 그 자리에 정지' }),
   P(99, '야고', 'FW', 'attack', { id: 'cannon', name: '대포 헤딩', kind: 'buff', duration: 7,
     desc: '헤딩 세기 2배. 맞은 상대는 뒤로 날아감' }),

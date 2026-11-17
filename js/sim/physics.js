@@ -198,6 +198,7 @@ export function stepPhysics(world, inputs, dt, hooks = {}) {
     let pushed = 0;
     for (const side of byDistance(world, ball)) {
       if (ball.passThrough === side) continue;
+      if (ball.flight === 'curve' || ball.flight === 'laser') continue;   // 날아가는 필살기 슛은 찬 선수도 통과한다(공중에서 띄운 감아차기가 자기 머리에 맞지 않게)
       if (collidePlayer(world, world.players[side], ball, events, hooks)) pushed++;
     }
     if (pushed === 2 && !ball.flight) { ball.vy = Math.min(ball.vy, -350); ball.vx *= 0.3; }   // 두 선수 사이에 끼면 옆으로 튀지 않고 위로 빠져나온다 (방금 필살기 슛이 나간 공은 그대로 보낸다)

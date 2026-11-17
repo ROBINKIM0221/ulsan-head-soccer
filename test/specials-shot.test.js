@@ -5,6 +5,7 @@ import { headCenter, footPoint, resetKickoff } from '../js/sim/physics.js';
 import { createMatch, stepMatch, substitute } from '../js/sim/match.js';
 import { mulberry32 } from '../js/sim/rng.js';
 import { byNumber } from '../js/data/players.js';
+import { SPECIALS } from '../js/sim/specials.js';
 
 const inp = o => ({ ...NO_INPUT, ...o });
 function ready(homeNo, awayNo = 19) {
@@ -214,17 +215,39 @@ test('curve: nobody can cut it out in flight — not an opponent right in front 
   assert.deepEqual(curveFrom(400).event, { type: 'shot', side: 'L', flight: 'curve' });
 });
 
-// 오프사이드 트랩: 상대가 1.5초 그 자리에 선다.
+// 슛 성공률: 어디서 어떤 높이로 차도 상대 AI 가 지키는 골문에 들어간다
+// (레이저는 먼 데서도 골문까지 힘이 남고, 감아차기는 찬 선수 머리에 걸리지 않으며, 골문 가까이 높은 공은 아래로 꽂는다)
+function shootFrom(no, x, y) {
+  const m = createMatch({ home: byNumber(no), away: byNumber(21), difficulty: 'first', rng: mulberry32(3) });
+  for (let i = 0, n = Math.round((MATCH.GOAL_PAUSE + DT) / DT); i < n; i++) stepMatch(m, NO_INPUT, DT);
+  const L = m.world.players.L, R = m.world.players.R;
+  L.x = Math.max(60, x - 60); R.x = 1150; L.gauge = 100; run(m, DT, inp({ special: true }));
+  Object.assign(m.world.ball, { held: null, attached: null, x, y, vx: 0, vy: 0 });
+  assert.ok(SPECIALS[L.active.id].onKick(m, 'L'), 'armed shot goes off');   // 높이 뜬 공도 그 자리에서 찬 것처럼(점프해서 찬 공)
+  for (let i = 0; i < 3 / DT; i++) {
+    const ev = stepMatch(m, NO_INPUT, DT);
+    if (ev.some(e => e.type === 'goal' && e.scorer === 'L')) return true;
+    if (ev.some(e => e.type === 'touch' && e.side === 'R')) return false;
+  }
+  return false;
+}
+test('shot specials score from anywhere at any height against a defending keeper', () => {
+  for (const no of [10, 14]) for (const y of [FIELD.GROUND - PHYS.BALL_R, FIELD.GROUND - 70, FIELD.GROUND - 200]) for (const x of [150, 250, 640, 900, 950, 1050]) {
+    assert.equal(shootFrom(no, x, y), true, `${no === 10 ? 'laser' : 'curve'} from x ${x}, y ${y}`);
+  }
+});
+
+// 오프사이드 트랩: 상대가 2.5초 그 자리에 선다.
 // (어디서 터져도 효과가 난다.)
 const twoP = (homeNo, awayNo) => { const m = ready(homeNo, awayNo); m.twoPlayer = true; return m; };   // 오른쪽 입력을 직접 준다
 const both = (m, seconds, inR) => { const ev = []; for (let i = 0, n = Math.round(seconds / DT); i < n; i++) ev.push(...stepMatch(m, NO_INPUT, DT, inR)); return ev; };
-test('offside trap: wherever the opponent is, they stand still for 1.5s (no move, jump or kick), then play on', () => {
+test('offside trap: wherever the opponent is, they stand still for 2.5s (no move, jump or kick), then play on', () => {
   const m = twoP(96, 10); const L = m.world.players.L, R = m.world.players.R;
   L.x = 200; R.x = 900;                                   // 멀리 떨어져 있어도 걸린다
   const ev = fire(m);
   assert.ok(ev.some(e => e.type === 'special' && e.side === 'L' && e.id === 'offside'));
   const mash = inp({ left: true, jump: true, kick: true });
-  const frozenEv = both(m, 1.4, mash);
+  const frozenEv = both(m, 2.4, mash);
   assert.equal(R.x, 900); assert.equal(R.onGround, true, 'did not jump');
   assert.ok(!frozenEv.some(e => e.type === 'kick' && e.side === 'R'), 'did not kick');
   assert.ok(R.frozen > 0 && L.active && L.active.id === 'offside');
