@@ -63,11 +63,41 @@ test('catch: the held ball stays over the head, is pulled back, then swings forw
   for (let i = 0; !b.held && i < 200; i++) run(m, DT);
   assert.ok(b.held, 'caught');
   const d = L.active.data, dx = () => b.x - headCenter(L).x;
-  run(m, 0.1); assert.ok(Math.abs(dx()) < 1, 'over the head at ' + d.holdT.toFixed(2) + 's: ' + dx());
+  run(m, 0.1); assert.ok(Math.abs(dx()) < Math.abs(d.from.dx) / 4, 'brought from the catch point toward the head at ' + d.holdT.toFixed(2) + 's: ' + dx());
   run(m, 0.15); assert.ok(dx() < -12, 'pulled back at ' + d.holdT.toFixed(2) + 's: ' + dx());
   run(m, 0.13); assert.ok(dx() > 12, 'swung forward at ' + d.holdT.toFixed(2) + 's: ' + dx());
   run(m, 0.05); assert.equal(b.held, null); assert.ok(b.vx > 0, 'thrown forward');
   assert.ok(d.threw >= 0 && d.threw < 0.1, 'follow-through timer: ' + d.threw);
+});
+
+// 다리 쪽으로 오는 낮은 공(바닥에 구르는 공 포함)도 잡는다. 잡은 자리에서 0.15초 만에 머리 위로 끌어올린 뒤 같은 순서로 던진다
+test('catch: a low ball rolling at the legs toward its own goal is caught, lifted over the head, then thrown', () => {
+  const m = ready(21); const L = m.world.players.L; const b = m.world.ball;
+  L.x = 400; fire(m);
+  Object.assign(b, { held: null, x: L.x + 150, y: FIELD.GROUND - PHYS.BALL_R, vx: -600, vy: 0 });
+  const ev = run(m, 0.2);
+  assert.ok(ev.some(e => e.type === 'catch' && e.side === 'L'), 'catch event');
+  assert.ok(L.active.data.from.dy > 100, 'caught low: ' + L.active.data.from.dy);
+  run(m, 0.05);
+  const h = headCenter(L);
+  assert.ok(b.held && b.y < h.y - h.r, 'lifted over the head');
+  const ev2 = run(m, 0.3);
+  assert.ok(ev2.some(e => e.type === 'throw'), 'thrown'); assert.ok(b.vx > 0);
+});
+
+test('catch: a low ball moving away from its own goal is not caught', () => {
+  const m = ready(21); const L = m.world.players.L; const b = m.world.ball;
+  L.x = 400; fire(m);
+  Object.assign(b, { held: null, x: L.x + 40, y: FIELD.GROUND - PHYS.BALL_R, vx: 600, vy: 0 });
+  const ev = run(m, 0.2);
+  assert.equal(ev.filter(e => e.type === 'catch').length, 0);
+});
+
+test('holdOffset with a catch point: starts there and reaches the spot over the head by .15s', () => {
+  const from = { dx: 60, dy: 180 };
+  assert.deepEqual(holdOffset(0, 1, from), from);
+  const mid = holdOffset(0.075, 1, from); assert.ok(mid.dy > 0 && mid.dy < 180 / 2, 'eases out fast: ' + mid.dy);
+  const end = holdOffset(0.15, 1, from); assert.ok(Math.abs(end.dx) < 1e-9 && Math.abs(end.dy) < 1e-9, JSON.stringify(end));
 });
 
 test('catch ignores a laser-flight ball', () => {

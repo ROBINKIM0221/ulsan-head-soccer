@@ -5,7 +5,7 @@
 import { FIELD, PHYS } from '../sim/constants.js';
 import { headCenter, footPoint } from '../sim/physics.js';
 import { drawStadium, drawGoals, drawPosts, drawCrowdFlashes, DEFAULT_VIEW, TOUCHLINE_Y } from './stadium.js';
-import { drawPlayer, drawBall, drawShadow, drawPlayerShadow } from './characters.js';
+import { drawPlayer, drawBall, drawShadow, drawPlayerShadow, trainChimney } from './characters.js';
 import { wornKit } from '../data/kits.js';
 import { SLIP_SPECIALS } from '../sim/specials.js';
 import { byNumber } from '../data/players.js';
@@ -68,7 +68,7 @@ export function pushEvents(fx, events, match) {
         if (e.id === 'offside') pop(fx, 'OFFSIDE', w.players[other(e.side)].x, 296, { size: 50, color: GOLD, life: 1.1, rise: 14 });   // 깃발(drawOffside) 위에 뜬다
         break;
       }
-      case 'catch': pop(fx, 'CATCH', headCenter(w.players[e.side]).x, 380, { size: 40, color: WHITE }); break;
+      case 'catch': pop(fx, 'CATCH', headCenter(w.players[e.side]).x, 380, { size: 40, color: WHITE }); fx.rings.push({ x: b.x, y: b.y, age: 0, life: 0.25, r: 58, color: WHITE }); break;   // 장갑에 꽂히는 순간
       case 'knockdown': case 'knockback': { const h = headCenter(w.players[e.side]); pop(fx, '!', h.x, h.y - h.r - 20, { size: 56, color: WHITE, life: 0.6 }); break; }
       case 'sub': fx.subBoard = { out: e.out, in: e.in, t: 0.8 }; break;
       case 'phase':
@@ -100,10 +100,10 @@ export function updateFx(fx, match, dt) {
     if (p.onGround && fx.air[side] > 0.25) for (let i = 0; i < 5; i++) fx.particles.push({ x: p.x + (Math.random() - .5) * 50, y: FIELD.GROUND - 2, vx: (Math.random() - .5) * 150, vy: -30 - Math.random() * 50, r: 3 + Math.random() * 3, life: 0.35, age: 0, color: 'rgba(236,242,226,.85)' });
     fx.air[side] = p.onGround ? 0 : fx.air[side] + dt;
     if (!p.active) continue;
-    if (p.active.id === 'train' && p.active.data.charging) {
-      fx.particles.push({ x: p.x - p.facing * 40 * p.scale, y: p.y - 110 * p.scale, vx: -p.facing * 60 + (Math.random() - .5) * 40, vy: -120 - Math.random() * 60, r: 6 + Math.random() * 6, life: 0.9, age: 0 });
-    } else if (p.active.id === 'train') {
-      if (Math.random() < 0.5) fx.particles.push({ x: p.x - p.facing * 30 * p.scale, y: p.y - 110 * p.scale, vx: (Math.random() - .5) * 40, vy: -100, r: 5 + Math.random() * 5, life: 0.8, age: 0 });
+    if (p.active.id === 'train') {   // 굴뚝 연기: 돌진 중엔 뭉게뭉게 뒤로 흩날리고, 바퀴 옆으로 증기를 뿜는다
+      const c = trainChimney(p), charging = p.active.data.charging;
+      if (charging || Math.random() < 0.5) fx.particles.push({ x: c.x + (Math.random() - .5) * 8, y: c.y, vx: (charging ? -p.facing * 90 : -p.facing * 15) + (Math.random() - .5) * 40, vy: (charging ? -200 : -110) - Math.random() * 70, r: (charging ? 8 : 5) + Math.random() * 6, life: charging ? 0.9 : 0.8, age: 0, back: true });
+      if (charging && Math.random() < 0.6) fx.particles.push({ x: p.x + p.facing * 30 * p.scale, y: FIELD.GROUND - 14, vx: -p.facing * (80 + Math.random() * 80), vy: -20 - Math.random() * 30, r: 5 + Math.random() * 4, life: 0.4, age: 0 });
     }
     if (p.active.id === 'sprint') { fx.ghostTick = (fx.ghostTick || 0) + 1; if (fx.ghostTick % 8 === 0) fx.ghosts.push({ x: p.x, y: p.y, scale: p.scale, facing: p.facing, def: p.def, age: 0, life: 0.3, side }); }
     // 높이뛰기: 땅을 박차는 순간 발밑 먼지
@@ -413,6 +413,8 @@ export function drawFrame(ctx, match, imgs, fx, t) {
     drawPlayer(ctx, { ...w.players[g.side], x: g.x, y: g.y, active: null, stun: 0, pinned: false, kickAnim: 0 }, imgs[g.def.number], { kit: wornKit(match.kits[g.side], g.def) });
     ctx.restore();
   }
+  const puff = q => { ctx.save(); ctx.globalAlpha = 0.8 * (1 - q.age / q.life); ctx.fillStyle = q.color || '#FFFFFF'; ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, Math.PI * 2); ctx.fill(); ctx.restore(); };
+  for (const q of fx.particles) if (q.back) puff(q);   // 굴뚝 연기는 선수 뒤로 지나가 얼굴을 가리지 않는다
   // 선수 (공에 가까운 쪽을 위에)
   const order = Math.abs(b.x - w.players.L.x) < Math.abs(b.x - w.players.R.x) ? ['R', 'L'] : ['L', 'R'];
   for (const side of order) { const p = views[side]; drawPlayer(ctx, p, imgs[p.def.number], { kit: wornKit(match.kits[side], p.def), t, cheer: !!fx.party && side === fx.party.side }); }
@@ -458,10 +460,7 @@ export function drawFrame(ctx, match, imgs, fx, t) {
     ctx.restore();
   }
   // 증기·잔디·먼지 입자
-  for (const q of fx.particles) {
-    ctx.save(); ctx.globalAlpha = 0.8 * (1 - q.age / q.life); ctx.fillStyle = q.color || '#FFFFFF';
-    ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-  }
+  for (const q of fx.particles) if (!q.back) puff(q);
   for (const q of fx.rings) {   // 맞는 순간 퍼지는 고리
     const k = q.age / q.life;
     ctx.save(); ctx.globalAlpha = 0.85 * (1 - k); ctx.strokeStyle = q.color; ctx.lineWidth = 5 * (1 - k) + 1;

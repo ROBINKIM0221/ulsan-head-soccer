@@ -83,25 +83,86 @@ function drawBody(ctx, b, rect, kit, t = 0, cheer = false) {
   ctx.fillText(String(b.def.number), cx, torsoTop + torsoH * 0.58);
 }
 
-// 일반 파란 증기기관차: 보일러·굴뚝·운전실·바퀴 둘. 실제 캐릭터와 무관한 모양.
-function drawTrain(ctx, b, rect) {
-  const s = b.scale, f = b.facing;
-  const w = rect.w * 1.9, h = rect.h * 1.05, x = b.x - w / 2, y = rect.y + rect.h - h;
-  ctx.fillStyle = '#2A2F36';
-  ctx.fillRect(x - 4 * s, y + h - 10 * s, w + 8 * s, 8 * s);
-  ctx.fillStyle = BLUE;
-  roundRect(ctx, x, y + 10 * s, w * 0.62, h - 20 * s, 12 * s); ctx.fill();
-  const cabX = f > 0 ? x : x + w * 0.62;
-  ctx.fillStyle = NAVY; roundRect(ctx, cabX, y, w * 0.38, h - 10 * s, 6 * s); ctx.fill();
-  ctx.fillStyle = '#CFE3FF'; ctx.fillRect(cabX + 8 * s, y + 8 * s, w * 0.38 - 16 * s, 16 * s);
-  const chimX = f > 0 ? x + w * 0.62 - 16 * s : x + w * 0.38 + 4 * s;
-  ctx.fillStyle = '#2A2F36'; ctx.fillRect(chimX, y - 6 * s, 12 * s, 20 * s);
-  ctx.fillStyle = GOLD; ctx.fillRect(x, y + h / 2 - 2 * s, w, 4 * s);
-  for (const cx of [x + w * 0.22, x + w * 0.72]) {
-    ctx.fillStyle = DARK; ctx.beginPath(); ctx.arc(cx, y + h - 6 * s, 13 * s, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(cx, y + h - 6 * s, 5 * s, 0, Math.PI * 2); ctx.fill();
+// 파란 증기기관차(실제 캐릭터와 무관한 모양). 앞이 +x 인 로컬 좌표(원점 = 발밑)에서 그리고 facing 으로 뒤집는다.
+// 뒤쪽 운전실 위로 머리가 나오고, 앞쪽에 굴뚝·전조등·배장기. 바퀴와 연결봉은 달린 거리만큼 돈다.
+const trainDims = b => { const W = PHYS.BODY_W * b.scale, H = PHYS.BODY_H * b.scale; return { L: W * 2.2, H, R: H * 0.19 }; };
+export function trainChimney(b) {   // 연기가 나오는 굴뚝 끝 (화면 좌표)
+  const { L, H } = trainDims(b);
+  return { x: b.x + b.facing * L * 0.43, y: b.y - H * 1.1 };
+}
+function drawTrain(ctx, b) {
+  const s = b.scale, f = b.facing, { L, H, R } = trainDims(b);
+  const d = (b.active && b.active.data) || {}, charging = !!d.charging;
+  const moving = Math.abs(b.vx) > 20 || charging;
+  const bob = moving ? Math.sin(b.x * 0.12) * 1.5 * s : 0;
+  const spin = b.x / R * f;                                    // 바퀴 회전각 = 달린 거리 / 반지름
+  ctx.save(); ctx.translate(b.x, b.y + bob); ctx.scale(f, 1);
+  ctx.lineJoin = 'round';
+  const line = (w = 2) => { ctx.strokeStyle = 'rgba(10,20,40,.75)'; ctx.lineWidth = w * s; ctx.stroke(); };
+  const plate = -R * 1.55;                                     // 발판(차대 윗면) 높이
+  // 돌진 중: 뒤로 흩어지는 속도선
+  if (charging) {
+    ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineCap = 'round';
+    for (const [y, len] of [[-H * 0.85, 0.5], [-H * 0.55, 0.75], [-H * 0.25, 0.55]]) {
+      ctx.lineWidth = 4 * s; ctx.beginPath(); ctx.moveTo(-L * 0.55, y); ctx.lineTo(-L * (0.55 + len), y); ctx.stroke();
+    }
   }
-  ctx.fillStyle = '#FFF4B0'; ctx.beginPath(); ctx.arc(f > 0 ? x + w - 4 * s : x + 4 * s, y + h / 2, 5 * s, 0, Math.PI * 2); ctx.fill();
+  // 차대와 배장기
+  ctx.fillStyle = '#1E2733'; roundRect(ctx, -L * 0.47, plate, L * 0.98, R * 0.45, 3 * s); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(L * 0.48, plate + R * 0.3); ctx.lineTo(L * 0.63, -2 * s); ctx.lineTo(L * 0.44, -2 * s); ctx.closePath();
+  ctx.fillStyle = GOLD; ctx.fill(); line(2);
+  ctx.strokeStyle = 'rgba(120,80,0,.6)'; ctx.lineWidth = 2 * s;
+  for (const k of [0.25, 0.5, 0.75]) { ctx.beginPath(); ctx.moveTo(L * (0.46 + 0.02 * k), plate + R * 0.35); ctx.lineTo(L * (0.46 + 0.15 * k), -3 * s); ctx.stroke(); }
+  // 보일러(둥근 원통처럼 위가 밝다)
+  const bTop = -H * 0.8, bBot = plate;
+  const g = ctx.createLinearGradient(0, bTop, 0, bBot);
+  g.addColorStop(0, '#5E9BEA'); g.addColorStop(0.35, BLUE); g.addColorStop(1, '#00296B');
+  ctx.fillStyle = g; roundRect(ctx, -L * 0.12, bTop, L * 0.6, bBot - bTop, (bBot - bTop) * 0.45); ctx.fill(); line(2);
+  ctx.fillStyle = '#122A52'; roundRect(ctx, L * 0.4, bTop + 2 * s, L * 0.08, bBot - bTop - 4 * s, 8 * s); ctx.fill();   // 연기실(앞머리)
+  ctx.fillStyle = GOLD;
+  for (const x of [0.05, 0.2, 0.36]) ctx.fillRect(L * x, bTop + 2 * s, 4 * s, bBot - bTop - 4 * s);                      // 금색 띠
+  ctx.fillStyle = 'rgba(255,255,255,.35)'; roundRect(ctx, -L * 0.05, bTop + 5 * s, L * 0.42, 4 * s, 2 * s); ctx.fill();   // 윗면 광택
+  // 증기 돔(금색)과 굴뚝(끝이 벌어진 검은 굴뚝)
+  ctx.fillStyle = GOLD; ctx.beginPath(); ctx.ellipse(L * 0.13, bTop + 1 * s, 9 * s, 9 * s, 0, Math.PI, 0); ctx.fill(); line(1.5);
+  const cx = L * 0.43, cTop = -H * 1.1;   // 연기실 위: 머리 앞쪽 끝이라 연기가 얼굴을 덜 가린다
+  ctx.beginPath(); ctx.moveTo(cx - 6 * s, bTop + 2 * s); ctx.lineTo(cx - 7 * s, cTop + 6 * s); ctx.lineTo(cx - 11 * s, cTop); ctx.lineTo(cx + 11 * s, cTop); ctx.lineTo(cx + 7 * s, cTop + 6 * s); ctx.lineTo(cx + 6 * s, bTop + 2 * s); ctx.closePath();
+  ctx.fillStyle = '#23272E'; ctx.fill(); line(1.5);
+  ctx.fillStyle = GOLD; ctx.fillRect(cx - 11 * s, cTop, 22 * s, 3 * s);
+  // 전조등: 돌진 중엔 앞으로 빛이 퍼진다
+  const lx = L * 0.5, ly = bTop + 12 * s;
+  if (charging) {
+    const lg = ctx.createRadialGradient(lx, ly, 2 * s, lx, ly, 60 * s); lg.addColorStop(0, 'rgba(255,244,176,.75)'); lg.addColorStop(1, 'rgba(255,244,176,0)');
+    ctx.fillStyle = lg; ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(lx + 70 * s, ly - 26 * s); ctx.lineTo(lx + 70 * s, ly + 26 * s); ctx.closePath(); ctx.fill();
+  }
+  ctx.fillStyle = '#23272E'; roundRect(ctx, lx - 7 * s, ly - 6 * s, 12 * s, 12 * s, 3 * s); ctx.fill();
+  ctx.fillStyle = '#FFF4B0'; ctx.beginPath(); ctx.arc(lx, ly, 4 * s, 0, Math.PI * 2); ctx.fill();
+  // 운전실: 지붕이 앞뒤로 조금 나오고, 옆창과 번호판
+  const cabL = -L * 0.47, cabR = -L * 0.1, cabTop = -H * 0.98;
+  ctx.fillStyle = NAVY; roundRect(ctx, cabL, cabTop, cabR - cabL, plate - cabTop, 5 * s); ctx.fill(); line(2);
+  ctx.fillStyle = '#0F1C33'; roundRect(ctx, cabL - 4 * s, cabTop - 5 * s, cabR - cabL + 8 * s, 7 * s, 3 * s); ctx.fill();
+  ctx.fillStyle = '#CFE3FF'; roundRect(ctx, cabL + 7 * s, cabTop + 9 * s, (cabR - cabL) * 0.42, H * 0.22, 3 * s); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.fillRect(cabL + 10 * s, cabTop + 12 * s, 3 * s, H * 0.14);
+  const px = (cabL + cabR) / 2 + 6 * s, py = plate - H * 0.2;
+  ctx.fillStyle = GOLD; roundRect(ctx, px - 13 * s, py - 10 * s, 26 * s, 20 * s, 4 * s); ctx.fill();
+  // 바퀴 셋과 연결봉
+  const wy = -R, wheels = [-L * 0.3, L * 0.03, L * 0.3];
+  for (const wx of wheels) {
+    ctx.fillStyle = '#171C24'; ctx.beginPath(); ctx.arc(wx, wy, R, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = BLUE; ctx.beginPath(); ctx.arc(wx, wy, R * 0.72, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#CFE3FF'; ctx.lineWidth = 2 * s;
+    for (let k = 0; k < 4; k++) { const a = spin + k * Math.PI / 4; ctx.beginPath(); ctx.moveTo(wx - Math.cos(a) * R * 0.7, wy - Math.sin(a) * R * 0.7); ctx.lineTo(wx + Math.cos(a) * R * 0.7, wy + Math.sin(a) * R * 0.7); ctx.stroke(); }
+    ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(wx, wy, R * 0.22, 0, Math.PI * 2); ctx.fill();
+  }
+  const pin = a => [Math.cos(a) * R * 0.48, Math.sin(a) * R * 0.48];
+  const [rx, ry] = pin(spin);
+  ctx.strokeStyle = '#D9DEE6'; ctx.lineWidth = 4 * s; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(wheels[0] + rx, wy + ry); ctx.lineTo(wheels[2] + rx, wy + ry); ctx.stroke();
+  ctx.fillStyle = '#D9DEE6'; for (const wx of wheels) { ctx.beginPath(); ctx.arc(wx + rx, wy + ry, 3 * s, 0, Math.PI * 2); ctx.fill(); }
+  ctx.restore();
+  // 번호판 숫자(뒤집히지 않게 밖에서 쓴다)
+  ctx.fillStyle = NAVY; ctx.font = `600 ${Math.round(19 * s)}px Teko, "Arial Narrow", sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(String(b.def.number), b.x + f * px, b.y + bob + py + 1 * s);
 }
 
 function drawHead(ctx, b, art, circle) {
@@ -142,14 +203,31 @@ export function drawPlayer(ctx, b, art, { kit = KITS[0], circle = false, t = 0, 
   if (b.stun > 0 || b.pinned) {   // 넘어짐·비틀거림: 몸 전체를 기울인다
     const ang = b.pinned ? -b.facing * 0.35 : -b.facing * Math.min(1, b.stun) * 0.9;
     ctx.translate(b.x, b.y); ctx.rotate(ang); ctx.translate(-b.x, -b.y);
+  } else if (isCatch) {           // 던지기: 뒤로 젖혔다가 앞으로 숙이며 던진다
+    const ang = catchLean(b.active.data || {}, b.side === 'L' ? 1 : -1);
+    ctx.translate(b.x, b.y); ctx.rotate(ang); ctx.translate(-b.x, -b.y);
   }
+  const holding = isCatch && b.active.data && b.active.data.holding;
   const useCut = !circle && art && art.cut;
   if (useCut) drawHead(ctx, b, art, false);          // 컷아웃은 몸이 어깨를 덮도록 먼저
-  if (isTrain) drawTrain(ctx, b, rect);
+  if (isTrain) drawTrain(ctx, b);
   else drawBody(ctx, b, rect, kit, t, cheer);
   if (!useCut) drawHead(ctx, b, art, true);
-  if (isCatch) drawGloves(ctx, b, h, kit);
+  if (isCatch && !holding) drawGloves(ctx, b, h, kit);
   ctx.restore();
+  if (holding) drawGloves(ctx, b, h, kit);            // 쥔 공은 sim 좌표 그대로라 몸 기울기 밖에서 감싼다
+}
+
+// 선방 캐치의 몸 기울기(라디안, +는 던지는 쪽으로): 끌어올리는 동안 0 → 뒤로 젖힘 → 던지며 앞으로 → 던진 뒤 0.3초에 걸쳐 바로 선다
+function catchLean(d, dirX) {
+  if (d.holding) {
+    const t = d.holdT || 0;
+    if (t < 0.15) return 0;
+    if (t < 0.3) return -dirX * 0.14 * (t - 0.15) / 0.15;
+    return dirX * (-0.14 + 0.32 * Math.min(1, (t - 0.3) / 0.1));
+  }
+  if (d.threw !== undefined && d.threw < 0.3) return dirX * 0.18 * (1 - d.threw / 0.3);
+  return 0;
 }
 
 // 골키퍼 장갑 하나: 손가락 넷 + 안쪽으로 벌린 엄지 + 손바닥 + 유니폼 트림 색 손목 밴드. 로컬 좌표는 손가락이 위, 엄지가 -x 쪽.
@@ -169,10 +247,18 @@ function drawGlove(ctx, x, y, rot, s, inward, band) {
 function drawGloves(ctx, b, h, kit) {
   const s = b.scale, d = b.active.data || {}, dirX = b.side === 'L' ? 1 : -1, band = kit.trim;
   if (d.holding) {
-    const o = holdOffset(d.holdT || 0, dirX), bx = h.x + o.dx, by = h.y - h.r - PHYS.BALL_R - 4 + o.dy;
-    drawGlove(ctx, bx - (PHYS.BALL_R + 7) * s, by + 6 * s, 0.35, s, 1, band);
-    drawGlove(ctx, bx + (PHYS.BALL_R + 7) * s, by + 6 * s, -0.35, s, -1, band);
+    const t = d.holdT || 0, o = holdOffset(t, dirX, d.from), bx = h.x + o.dx, by = h.y - h.r - PHYS.BALL_R - 4 + o.dy;
+    const squeeze = t < 0.08 ? 1 - t / 0.08 : 0;                 // 잡는 순간 장갑이 공을 꽉 누른다
+    const gap = (PHYS.BALL_R + 7 - 4 * squeeze) * s, tilt = 0.35 + 0.25 * squeeze;
+    drawGlove(ctx, bx - gap, by + 6 * s, tilt, s, 1, band);
+    drawGlove(ctx, bx + gap, by + 6 * s, -tilt, s, -1, band);
   } else if (d.threw !== undefined && d.threw < 0.3) {
+    if (d.threw < 0.2) {   // 팔을 휘두른 자취: 머리 뒤 위에서 앞 위로 반원
+      ctx.save(); ctx.globalAlpha = 0.65 * (1 - d.threw / 0.2);
+      ctx.strokeStyle = WHITE; ctx.lineWidth = 9 * s; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.arc(h.x, h.y, h.r + 30 * s, dirX > 0 ? -Math.PI * 0.85 : -Math.PI * 0.15, dirX > 0 ? -Math.PI * 0.2 : -Math.PI * 0.8, dirX < 0); ctx.stroke();
+      ctx.restore();
+    }
     drawGlove(ctx, h.x + dirX * (h.r + 26 * s), h.y - h.r - 18 * s, dirX * 1.0, s, -dirX, band);   // 앞손: 던진 방향으로 쭉
     drawGlove(ctx, h.x - dirX * (h.r + 8 * s), h.y + 6 * s, -dirX * 0.3, s, dirX, band);           // 뒷손은 내려서 균형
   } else {
