@@ -106,6 +106,24 @@ test('touch: a ring where the ball was hit (not for body bumps), gold for a perf
   assert.equal(fx.rings[1].color, '#FFC72C');
 });
 
+// 대포 헤딩(야고): 헤딩 순간 공이 대포알이 되고(글자는 띄우지 않는다), 누가 건드리거나 땅에 닿으면 축구공으로 돌아온다
+test('cannon header: the ball becomes a cannonball (no BOOM text) until someone touches it or it lands', () => {
+  const m = match(), fx = createFx(), b = m.world.ball;
+  m.world.players.R.active = { id: 'cannon', t: 5, data: {} };
+  Object.assign(b, { x: 700, y: 300, vx: -900, vy: -200 });
+  pushEvents(fx, [{ type: 'touch', side: 'R', part: 'head' }], m);
+  assert.ok(fx.cannonball, 'cannonball after the header');
+  assert.ok(!fx.pops.some(p => p.text === 'BOOM'), 'no BOOM text');
+  run(fx, m, 0.2); assert.ok(fx.cannonball, 'still a cannonball in flight');
+  pushEvents(fx, [{ type: 'touch', side: 'L', part: 'head' }], m);
+  assert.equal(fx.cannonball, null, 'back to a football once touched');
+  pushEvents(fx, [{ type: 'touch', side: 'R', part: 'head' }], m);
+  b.y = FIELD.GROUND - b.r; run(fx, m, DT);
+  assert.equal(fx.cannonball, null, 'back to a football when it lands');
+  m.world.players.R.active = null; pushEvents(fx, [{ type: 'touch', side: 'R', part: 'head' }], m);
+  assert.ok(!fx.cannonball, 'an ordinary header does nothing');
+});
+
 // 폭 맞춤: 위가 잘린 화면(view.top > 0)은 HUD 가 그만큼 내려오므로 가운데 큰 글자도 0.6배만큼 내리고, 색종이는 보이는 화면 맨 위에서 떨어진다
 test('cropped view: centre pops sit lower by 0.6 x the cropped top, and confetti starts at the visible top edge', () => {
   const m = match(), fx = createFx(); fx.view = { s: 1, ox: 0, oy: 0, bleedX: 0, top: 90, bottom: 675 };

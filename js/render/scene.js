@@ -41,13 +41,13 @@ export function pushEvents(fx, events, match) {
       case 'touch':
         if (e.perfect) pop(fx, 'PERFECT', b.x, b.y - 60, { size: 40, color: WHITE, life: 0.7 });
         if (e.part !== 'body') fx.rings.push({ x: b.x, y: b.y, age: 0, life: 0.2, r: e.perfect ? 66 : 40, color: e.perfect ? GOLD : WHITE });   // 맞는 순간 퍼지는 고리
+        fx.cannonball = null;   // 누가 건드리면 대포알은 다시 축구공
         if (e.part === 'head') {
           const a = w.players[e.side]?.active;
-          if (a && a.id === 'cannon') {   // 대포 헤딩: 폭발 고리·연기·흔들림, 날아가는 공에 잠깐 불꽃 꼬리
+          if (a && a.id === 'cannon') {   // 대포 헤딩: 폭발 고리·연기·흔들림, 공은 도화선이 타는 대포알이 되어 날아간다
             fx.rings.push({ x: b.x, y: b.y, age: 0, life: 0.32, r: 112, color: FIRE }, { x: b.x, y: b.y, age: 0, life: 0.2, r: 70, color: GOLD });
             for (let i = 0; i < 10; i++) fx.particles.push({ x: b.x, y: b.y, vx: (Math.random() - .5) * 260, vy: -60 - Math.random() * 160, r: 8 + Math.random() * 8, life: 0.6, age: 0, color: 'rgba(95,95,100,.7)' });
-            pop(fx, 'BOOM', b.x, b.y - 70, { size: 46, color: FIRE, life: 0.7 });
-            fx.shake = Math.max(fx.shake, 0.2); fx.fire = 0.6;
+            fx.shake = Math.max(fx.shake, 0.2); fx.cannonball = { t: 0 };
           } else if (a && a.id === 'highjump') {   // 제공권 장악: 2배 헤딩이 꽂히는 순간 큰 금색 고리와 조각
             fx.rings.push({ x: b.x, y: b.y, age: 0, life: 0.3, r: 100, color: GOLD });
             for (let i = 0; i < 8; i++) fx.sparks.push({ x: b.x, y: b.y, vx: (Math.random() - .5) * 420, vy: -120 - Math.random() * 360, rot: Math.random() * 6.28, vr: (Math.random() - .5) * 14, color: i % 2 ? GOLD : WHITE, age: 0, life: 0.45 });
@@ -58,7 +58,7 @@ export function pushEvents(fx, events, match) {
         const name = byNumber(match.used[e.scorer].at(-1).number).name;
         pop(fx, 'GOAL', FIELD.W / 2, 236 + d, { size: 150, color: GOLD, life: 1.2, rise: 16, glow: true });
         pop(fx, name, FIELD.W / 2, 338 + d, { size: 34, color: WHITE, life: 1.2, rise: 16, plate: true });   // 관중석 흰 글자와 겹치지 않게 남색 판 위에
-        fx.shake = 0.35; fx.flash = FLASH; fx.crowd = 1.5;
+        fx.shake = 0.35; fx.flash = FLASH; fx.crowd = 1.5; fx.cannonball = null;
         fx.net = { side: other(e.scorer), age: 0, life: 0.7 };   // 공이 꽂힌 골문의 그물이 출렁인다
         const gx = e.scorer === 'L' ? FIELD.W - 50 : 50, dir = e.scorer === 'L' ? -1 : 1;   // 골문에서 금·흰 조각이 튄다
         for (let i = 0; i < 34; i++) fx.sparks.push({ x: gx, y: FIELD.GROUND - 50 - Math.random() * 130, vx: dir * (120 + Math.random() * 520), vy: -260 - Math.random() * 520,
@@ -135,9 +135,13 @@ export function updateFx(fx, match, dt) {
     fx.trail.push({ x: b.x, y: b.y, age: 0, life: 0.5 });
     if (fx.tick % 3 === 0) fx.particles.push({ x: b.x + (Math.random() - .5) * 26, y: b.y + (Math.random() - .5) * 26, vx: (Math.random() - .5) * 90, vy: 30 + Math.random() * 80, r: 2 + Math.random() * 2.5, life: 0.4, age: 0, color: GOLD });
   }
-  if (fx.fire > 0) {   // 대포 헤딩 뒤 날아가는 공의 불꽃
-    fx.fire -= dt;
-    fx.particles.push({ x: b.x + (Math.random() - .5) * 16, y: b.y + (Math.random() - .5) * 16, vx: -b.vx * 0.1 + (Math.random() - .5) * 60, vy: -b.vy * 0.1 - 40, r: 6 + Math.random() * 6, life: 0.3, age: 0, color: Math.random() < 0.6 ? FIRE : GOLD });
+  if (fx.cannonball) {   // 대포알: 땅에 닿거나 2.5초가 지나면 축구공으로. 날아가는 동안 도화선 끝에서 불티가 튄다
+    fx.cannonball.t += dt;
+    if (fx.cannonball.t > 2.5 || b.y >= FIELD.GROUND - b.r - 1 || b.held) fx.cannonball = null;
+    else {
+      const f = fuseTip(b);
+      for (let i = 0; i < 2; i++) fx.particles.push({ x: f.x, y: f.y, vx: (Math.random() - .5) * 160, vy: -40 - Math.random() * 120, r: 1.5 + Math.random() * 2, life: 0.25, age: 0, color: Math.random() < 0.5 ? GOLD : FIRE });
+    }
   }
   if (fx.net) { fx.net.age += dt; if (fx.net.age >= fx.net.life) fx.net = null; }
   for (const q of fx.trail) q.age += dt;
@@ -155,7 +159,7 @@ export function updateFx(fx, match, dt) {
   for (const g of fx.ghosts) g.age += dt;
   fx.ghosts = fx.ghosts.filter(g => g.age < g.life);
   if (fx.reduceMotion) {   // 움직임 줄이기: 입자·흔들림·궤적·번쩍임 없음 (컷인 띠는 미끄러지지 않고 그 자리에 뜬다)
-    fx.shake = 0; fx.flash = 0; fx.crowd = 0; fx.net = null; fx.fire = 0; fx.particles.length = 0; fx.ghosts.length = 0; fx.trail.length = 0; fx.rings.length = 0; fx.sparks.length = 0; fx.streak.length = 0;
+    fx.shake = 0; fx.flash = 0; fx.crowd = 0; fx.net = null; fx.particles.length = 0; fx.ghosts.length = 0; fx.trail.length = 0; fx.rings.length = 0; fx.sparks.length = 0; fx.streak.length = 0;
   }
 }
 
@@ -382,6 +386,28 @@ export function drawBackdrop(ctx, view = DEFAULT_VIEW, t = 0) {
   ctx.restore();
 }
 
+// 대포알: 날아가는 반대쪽(꽁무니)으로 도화선이 나와 있다. fuseTip 은 그 끝(불티가 나오는 자리)
+function fuseTip(b) {
+  const sp = Math.hypot(b.vx, b.vy) || 1, ux = b.vx / sp, uy = b.vy / sp;
+  return { x: b.x - ux * (b.r + 18), y: b.y - uy * (b.r + 18) - 8, ux, uy };
+}
+function drawCannonball(ctx, b, t) {
+  const r = b.r, f = fuseTip(b);
+  ctx.save();
+  ctx.strokeStyle = '#D9B27A'; ctx.lineWidth = 4; ctx.lineCap = 'round';   // 도화선
+  ctx.beginPath(); ctx.moveTo(b.x - f.ux * r * 0.85, b.y - f.uy * r * 0.85); ctx.quadraticCurveTo(b.x - f.ux * (r + 6) + 5, b.y - f.uy * (r + 6) - 8, f.x, f.y); ctx.stroke();
+  const g = ctx.createRadialGradient(b.x - r * 0.35, b.y - r * 0.4, r * 0.1, b.x, b.y, r);
+  g.addColorStop(0, '#9AA0AA'); g.addColorStop(0.45, '#40454E'); g.addColorStop(1, '#101215');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.ellipse(b.x - r * 0.38, b.y - r * 0.42, r * 0.22, r * 0.13, -0.6, 0, Math.PI * 2); ctx.fill();
+  const k = 0.75 + 0.25 * Math.sin(t * 40);   // 도화선 끝 불꽃: 반짝이는 네 갈래 별
+  ctx.translate(f.x, f.y); ctx.fillStyle = GOLD; ctx.beginPath();
+  for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, rr = (i % 2 ? 4 : 12) * k; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+  ctx.closePath(); ctx.fill(); ctx.fillStyle = WHITE; ctx.beginPath(); ctx.arc(0, 0, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
 // 선수 뒤 불꽃: 몸을 둘러싼 타원 위에서 혀 모양 불꽃 아홉 개가 바깥 위로 솟고, 길이가 제각각 일렁인다. 바깥은 붉은 주황, 안쪽은 노랑.
 function drawFlames(ctx, p, t) {
   const h = headCenter(p), cx = p.x, top = h.y - h.r, cy = (top + p.y) / 2, rx = h.r * 0.95, ry = (p.y - top) / 2;
@@ -524,7 +550,7 @@ export function drawFrame(ctx, match, imgs, fx, t) {
     ctx.save(); ctx.globalAlpha = 0.3 * k; ctx.fillStyle = WHITE;
     ctx.beginPath(); ctx.arc(q.x, q.y, b.r * (0.45 + 0.5 * k), 0, Math.PI * 2); ctx.fill(); ctx.restore();
   }
-  drawBall(ctx, b, fx.ballRot);
+  if (fx.cannonball) drawCannonball(ctx, b, t); else drawBall(ctx, b, fx.ballRot);
   if (b.flight === 'curve') {   // 회전 줄: 공 둘레를 도는 흰 호 둘
     const spin = fx.reduceMotion ? 0 : t * 18;
     ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
