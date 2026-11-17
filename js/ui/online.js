@@ -15,7 +15,7 @@ const FAIL = {
   unreachable: ['연결하지 못했어요', '두 기기 사이에 길을 찾지 못했어요. 와이파이를 바꾸거나 잠시 뒤 다시 해 주세요.'],
   unsupported: ['이 브라우저에서는 온라인 대전을 할 수 없어요', '크롬이나 사파리로 열어 주세요.'],
   network: ['연결하지 못했어요', '인터넷 연결을 확인해 주세요.'],
-  server: ['지금은 온라인 대전에 들어갈 수 없어요', '연결을 이어 주는 서버가 붐비거나 잠시 멈췄어요. 잠시 뒤 다시 해 주세요. 1인·2인 대전은 지금도 할 수 있어요.'],
+  server: ['지금은 온라인 대전에 들어갈 수 없어요', '연결을 이어 주는 서버가 잠시 멈췄어요. 잠시 뒤 다시 해 주세요. 1인·2인 대전은 지금도 할 수 있어요.'],
 };
 const rand = n => { const abc = 'abcdefghjkmnpqrstuvwxyz23456789', a = new Uint32Array(n); crypto.getRandomValues(a); return [...a].map(v => abc[v % abc.length]).join(''); };
 const stored = (store, key, make) => { try { let v = store.getItem(key); if (!v) { v = make(); store.setItem(key, v); } return v; } catch { return make(); } };   // 사생활 모드 등
