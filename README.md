@@ -59,3 +59,5 @@ npm test
 - 숫자 글꼴 Teko (SIL OFL, `fonts/OFL-Teko.txt`), PeerJS 1.5.5 (MIT)
 
 선수 사진 출처: 울산 HD FC 공식 홈페이지 (uhdfc.com)
+
+이 저장소의 코드와 그림은 무단 복제·배포를 금지합니다.

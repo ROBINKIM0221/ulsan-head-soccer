@@ -131,6 +131,9 @@ body {
   overflow-y: auto;
 }
 #overlay[hidden] { display: none; }
+/* 저작권 안내: 시트(선택·결과·메뉴)가 떠 있을 때 오른쪽 아래 구석에 작게. 경기 중과 촬영용 화면에서는 숨긴다 */
+.legal { display: none; position: absolute; right: 10px; bottom: 6px; margin: 0; font-size: 11px; line-height: 1.3; color: rgba(185,203,232,.55); pointer-events: none; }
+#stage.sheet-open:not(.shoot) .legal { display: block; }
 
 
 /* ---------- 시트 공통 ---------- */
