@@ -20,6 +20,7 @@ const shoot = shootFit(params.get('shoot'));   // 촬영용 화면(?shoot=1 은 
 const shootMode = ['cam', 'top'].includes(params.get('shoot')) ? params.get('shoot') : null;   // 촬영용 화면의 다른 배치. cam: 선수 창을 위 양쪽에(필살기 띠만 두 창 사이로). top: 두 선수를 위 가운데에(점수판이 받침대로). ui/orientation.js
 stage.classList.toggle('shoot-top', shootMode === 'top');   // CSS: 교체 버튼을 받침대 옆으로, 메뉴 버튼을 왼쪽 아래 구석으로
 stage.classList.toggle('shoot', shoot > 0 || !!shootMode);     // CSS: 키 안내를 빼고 경기 중 마우스 화살표를 숨긴다
+if (shoot > 0 || shootMode) byNumber(14).special.gaugeRate /= 0.9;   // 촬영용 화면에서만: 이진현 감아차기는 게이지를 0.9배만 채워도 터진다
 const pill = stage.appendChild(Object.assign(document.createElement('div'), { className: 'net-pill', hidden: true }));   // 온라인: 상대가 자리를 비웠을 때의 알림
 
 // 사진 한 장. 실패하면 0.4초·1.2초 뒤 두 번 더 받아 본다(느린 폰 통신에서 컷아웃이 빠져 동그란 사진으로 나오던 것). 끝내 안 되면 null
