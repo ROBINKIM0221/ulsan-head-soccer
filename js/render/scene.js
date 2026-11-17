@@ -37,7 +37,7 @@ function pop(fx, text, x, y, { size = 48, color = GOLD, life = 0.8, rise = 40, g
 export function pushEvents(fx, events, match) {
   const w = match.world, b = w.ball, d = popDrop(fx.view);
   for (const e of events) {
-    const snd = eventSound(e, match); if (snd) sfx(snd);
+    const snd = eventSound(e, match); if (snd && !fx.silent) sfx(snd);   // fx.silent: 관전 링크로 보는 쪽은 소리를 내지 않는다
     switch (e.type) {
       case 'touch':
         if (e.perfect) pop(fx, 'PERFECT', b.x, b.y - 60, { size: 40, color: WHITE, life: 0.7 });

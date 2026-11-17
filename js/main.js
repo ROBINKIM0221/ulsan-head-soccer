@@ -67,6 +67,7 @@ export function startMatch(home, away, difficulty, { kit, kitR = null, onSubRequ
   fx.reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   fx.view = game.view;
   game.match = match; game.fx = fx; game.net = net; game.leave = onQuit; game.menuOpen = false;
+  if (game.cast) game.cast.begin();   // 관전 링크로 보는 기기들에 새 경기를 알린다
   if (net) { const me = match.world.players[net.side]; fx.pops.push({ text: '나', x: me.x, y: me.y - 240, size: 34, color: '#FFFFFF', life: 2.8, age: 0, rise: 10, glow: false, plate: true }); }   // 내 선수가 어느 쪽인지(들어온 쪽은 오른쪽)
   game.input.setEnabled(true); game.input.setTwoPlayer(twoPlayer && !net);   // 온라인(net)은 각자 자기 기기에서 1인용 조작
   stage.classList.toggle('two', twoPlayer && !net);   // CSS: 터치 패드 숨기고 2인용 키 안내
@@ -79,6 +80,7 @@ export function startMatch(home, away, difficulty, { kit, kitR = null, onSubRequ
       : stepMatch(match, game.input.read('L'), dt, twoPlayer ? game.input.read('R') : undefined);
     pushEvents(fx, events, match);
     updateFx(fx, match, dt);
+    if (game.cast) game.cast.frame(match, events);
     for (const e of events) {
       if (e.type === 'phase' && e.phase === 'sub') { game.input.setEnabled(false); game.loop.stop(); onSubRequest?.(match); }   // 선택하는 동안 루프도 쉰다
       if (e.type === 'phase' && e.phase === 'over' && !overNotified) {
@@ -96,6 +98,43 @@ export function startMatch(home, away, difficulty, { kit, kitR = null, onSubRequ
   game.loop.start();
   window.__debug = { match, get world() { return match.world; }, fx, get loop() { return game.loop; }, get net() { return game.net; }, get countdown() { return game.countdown; }, sounds: soundLog, get audio() { return audioState(); } };   // 콘솔·검사 스크립트용
   return match;
+}
+
+// 관전 링크로 보는 쪽(?watch=코드): 선택 화면·조작·소리 없이, 경기하는 기기(?cast=코드)가 보내는 상태를 그대로 그린다.
+// 새 경기(mid 가 바뀜)면 연출을 새로 시작한다. 선수를 고르는 동안은 마지막 장면 위에 알림만 띄운다
+function startWatch(code, watchCast) {
+  stage.classList.add('watch');   // CSS: 터치 버튼·메뉴·교체·키 안내를 숨긴다
+  game.input.setEnabled(false);
+  let match = null, fx = null, mid = null, latest = null, events = [], idle = false, linked = false;
+  const status = () => (!linked ? '아이패드 화면을 기다리는 중…' : idle || !match ? '선수를 고르는 중이에요' : '');
+  watchCast(code, {
+    state: s => { latest = s; events.push(...s.e); idle = false; },
+    idle: () => { idle = true; },
+    link: on => { linked = on; },
+  });
+  const step = dt => {
+    if (latest) {
+      const s = latest; latest = null;
+      if (s.mid !== mid || !match) {
+        mid = s.mid; events = s.e.slice();
+        match = createMatch({ home: byNumber(s.k.L), away: byNumber(s.k.R), twoPlayer: s.k.two });
+        fx = createFx(); fx.silent = true; fx.view = game.view;   // 소리는 끈다: 촬영 현장에서 게임 소리가 겹치지 않게
+        fx.reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        game.match = match; game.fx = fx;
+      }
+      match.world = s.w; Object.assign(match, s.m);
+      match.kits = s.k.kits; match.twoPlayer = s.k.two;
+      if (match.used.L.at(-1).number !== s.k.L) match.used.L.push(byNumber(s.k.L));   // 교체
+      if (match.used.R.at(-1).number !== s.k.R) match.used.R.push(byNumber(s.k.R));
+    }
+    if (match) { const ev = events; events = []; pushEvents(fx, ev, match); updateFx(fx, match, dt); }
+    const text = status();
+    if (pill.textContent !== text) { pill.textContent = text; pill.hidden = !text; }
+  };
+  const render = () => { if (match) drawFrame(ctx, match, game.imgs, fx, performance.now() / 1000); else drawBackdrop(ctx, game.view); };
+  game.loop = createLoop({ step, render });
+  game.loop.start();
+  window.__debug = { get match() { return match; }, get fx() { return fx; }, get loop() { return game.loop; }, watch: { get linked() { return linked; }, get idle() { return idle; }, get mid() { return mid; } } };   // 검사 스크립트용
 }
 
 // 온라인: 한쪽이 자리를 비우면(다른 앱·메뉴) 둘 다 멈춘다. 기다리는 쪽에는 알림과 남은 시간, 돌아오면 양쪽에 3·2·1 (세는 건 방 만든 쪽)
@@ -177,12 +216,16 @@ async function boot() {
   if (document.fonts && document.fonts.load) document.fonts.load('700 20px "Barlow Condensed"').catch(() => {});   // 점수판 글씨: 캔버스는 쓰기 전에 받아 두어야 한다(매 장면 다시 그리니 기다리지는 않는다)
   [game.imgs] = await Promise.all([loadImages(), teko]);
   pauseOnHide();
+  const castCode = params.get('cast'), watchCode = params.get('watch');
+  const cast = castCode || watchCode ? await import('./net/cast.js') : null;   // 관전 링크: 경기하는 쪽 ?cast=코드, 보는 쪽 ?watch=코드
+  if (castCode) game.cast = cast.startCast(castCode);
 
   const { runFlow, showResult, showSubSelect, hideOverlay, showPause } = await import('./ui/screens.js');
   const { createOnline } = await import('./ui/online.js');
   game.ui = { showPause, hideOverlay };
   menuBtn.addEventListener('click', pauseMatch);
   window.addEventListener('keydown', e => { if (e.key === 'Escape') pauseMatch(); });   // 시트가 떠 있을 때의 Esc 는 시트가 먼저 먹는다
+  if (watchCode) { hideOverlay(); startWatch(watchCode, cast.watchCast); return; }
   const dbg = params.get('debug');
   if (dbg === '1' || dbg === 'result' || dbg === 'sub') {
     // 선택 화면 없이 바로: 이동경 vs 야고 (1군). ?special=1 이면 L 게이지 100 으로 시작, &kit=third 로 유니폼, &two=1 이면 2인 대전
@@ -203,7 +246,7 @@ async function boot() {
     return;
   }
   // onIdle: 선택 화면으로 돌아갈 때 지난 경기의 마지막 장면을 지우고 빈 경기장을 배경으로
-  const onIdle = () => { if (game.loop) game.loop.stop(); game.match = null; game.net = null; game.menuOpen = false; pill.hidden = true; pill.textContent = ''; repaint(); };
+  const onIdle = () => { if (game.loop) game.loop.stop(); game.match = null; game.net = null; game.menuOpen = false; pill.hidden = true; pill.textContent = ''; repaint(); if (game.cast) game.cast.idle(); };
   // 온라인 대전: 선택 화면의 "온라인"이나 초대 링크(?room=방 번호)로 들어간다. &lag=ms(가짜 지연)·&predict=0(앞서 계산 끔)·&netstat=1(핑 띠)은 점검용
   const online = createOnline({ imgs: game.imgs, startMatch, onIdle, stage, lag: Number(params.get('lag') || 0), predict: params.get('predict') !== '0',
     stat: params.has('netstat') });

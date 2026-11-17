@@ -108,6 +108,8 @@ body {
 /* 촬영용 화면(?shoot=1): 화면 아래 가운데는 편집 때 선수 화면이 들어갈 자리라 키 안내를 빼고, 녹화에 찍히지 않게 경기 중에는 마우스 화살표를 숨긴다(시트가 뜨면 다시 보인다) */
 #stage.shoot .keys { display: none; }
 #stage.shoot:not(.sheet-open) { cursor: none; }
+#stage.watch .pad, #stage.watch .sub, #stage.watch .keys { display: none !important; }   /* 관전 링크로 보는 쪽: 조작 없이 화면만 */
+#stage.watch { cursor: default; }
 #stage.shoot #overlay { top: var(--ot, 0px); bottom: auto; height: var(--oh); }   /* 아래 띠 배치: 시트(선택·VS·결과)도 발밑 선 위쪽에만, 아래 빈 잔디는 늘 비워 둔다. 그 밖의 촬영용 화면은 16:9 틀 전체 */
 /* ?shoot=top: 위 가운데는 두 선수 자리라, 점수판 옆에 있던 교체 버튼은 오른쪽 이름표 밑(논리 x 962, y 96)으로 내리고,
    메뉴 버튼은 화면 왼쪽 아래 구석으로 보낸다(구석은 경기 장면도 자막 자리도 안 가린다) */
