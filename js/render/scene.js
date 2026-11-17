@@ -25,7 +25,7 @@ const popDrop = view => drop(view) + (view.topBox ? view.topBox.bar.y + view.top
 
 export function createFx() {
   return { particles: [], pops: [], shake: 0, ballRot: 0, lastBallX: null, subBoard: null, ghosts: [], trail: [], party: null,
-    view: DEFAULT_VIEW, flash: 0, crowd: 0, cutin: null, rings: [], sparks: [], streak: [], air: { L: 0, R: 0 }, tick: 0, net: null };
+    view: DEFAULT_VIEW, flash: 0, crowd: 0, cutin: null, rings: [], sparks: [], streak: [], flames: [], air: { L: 0, R: 0 }, tick: 0, net: null };
 }
 
 function pop(fx, text, x, y, { size = 48, color = GOLD, life = 0.8, rise = 40, glow = false, plate = false } = {}) {
@@ -122,7 +122,8 @@ export function updateFx(fx, match, dt) {
       const run = Math.sign(p.vx);   // 빠르게 달리면 발 뒤로 흙먼지
       if (p.onGround && Math.abs(p.vx) > 300 && Math.random() < 0.7) fx.particles.push({ x: p.x - run * 22, y: FIELD.GROUND - 4, vx: -run * (60 + Math.random() * 100), vy: -30 - Math.random() * 50, r: 3 + Math.random() * 4, life: 0.35, age: 0, color: 'rgba(220,210,180,.85)' });
     }
-    if (p.active.id === 'spirit' && Math.random() < (Math.abs(p.vx) > 100 ? 0.8 : 0.35)) {   // 투지 폭발: 몸에서 피어오르는 불씨
+    if (p.active.id === 'spirit') spawnFlames(fx, p, side, dt);
+    if (p.active.id === 'spirit' && Math.random() < (Math.abs(p.vx) > 100 ? 0.5 : 0.25)) {   // 투지 폭발: 불길 위로 튀는 불씨
       fx.particles.push({ x: p.x + (Math.random() - .5) * 60 * p.scale, y: p.y - 10 - Math.random() * 70, vx: -Math.sign(p.vx) * 40 + (Math.random() - .5) * 40, vy: -120 - Math.random() * 90, r: 2 + Math.random() * 2.5, life: 0.5, age: 0, color: Math.random() < 0.5 ? FIRE : GOLD });
     }
     // 높이뛰기: 땅을 박차는 순간 발밑 먼지
@@ -156,10 +157,11 @@ export function updateFx(fx, match, dt) {
   fx.sparks = fx.sparks.filter(q => q.age < q.life && q.y < FIELD.GROUND + 6);
   for (const q of fx.particles) { q.age += dt; q.x += q.vx * dt; q.y += q.vy * dt; q.r += 8 * dt; }
   fx.particles = fx.particles.filter(q => q.age < q.life);
+  updateFlames(fx, dt);
   for (const g of fx.ghosts) g.age += dt;
   fx.ghosts = fx.ghosts.filter(g => g.age < g.life);
   if (fx.reduceMotion) {   // 움직임 줄이기: 입자·흔들림·궤적·번쩍임 없음 (컷인 띠는 미끄러지지 않고 그 자리에 뜬다)
-    fx.shake = 0; fx.flash = 0; fx.crowd = 0; fx.net = null; fx.particles.length = 0; fx.ghosts.length = 0; fx.trail.length = 0; fx.rings.length = 0; fx.sparks.length = 0; fx.streak.length = 0;
+    fx.shake = 0; fx.flash = 0; fx.crowd = 0; fx.net = null; fx.particles.length = 0; fx.flames.length = 0; fx.ghosts.length = 0; fx.trail.length = 0; fx.rings.length = 0; fx.sparks.length = 0; fx.streak.length = 0;
   }
 }
 
@@ -408,28 +410,57 @@ function drawCannonball(ctx, b, t) {
   ctx.restore();
 }
 
-// 선수 뒤 불꽃: 몸을 둘러싼 타원 위에서 혀 모양 불꽃 아홉 개가 바깥 위로 솟고, 길이가 제각각 일렁인다. 바깥은 붉은 주황, 안쪽은 노랑.
-function drawFlames(ctx, p, t) {
-  const h = headCenter(p), cx = p.x, top = h.y - h.r, cy = (top + p.y) / 2, rx = h.r * 0.95, ry = (p.y - top) / 2;
-  const tongue = (a, len, w, inner) => {
-    const bx = cx + Math.sin(a) * rx, by = cy - Math.cos(a) * ry;            // 타원 위 뿌리
-    const dx = Math.sin(a) * 0.55, dy = -1, n = Math.hypot(dx, dy);           // 바깥 위로
-    const tx = bx + dx / n * len + Math.sin(t * 11 + a * 5) * w * 0.4, ty = by + dy / n * len;
-    const g = ctx.createLinearGradient(bx, by, tx, ty);
-    if (inner) { g.addColorStop(0, 'rgba(255,240,150,.95)'); g.addColorStop(1, 'rgba(255,200,60,0)'); }
-    else { g.addColorStop(0, 'rgba(255,150,40,.9)'); g.addColorStop(0.6, 'rgba(255,80,20,.75)'); g.addColorStop(1, 'rgba(220,30,10,0)'); }
-    ctx.fillStyle = g; ctx.beginPath();
-    ctx.moveTo(bx - w, by + w * 0.6);
-    ctx.quadraticCurveTo(bx - w * 1.1, (by + ty) / 2, tx, ty);
-    ctx.quadraticCurveTo(bx + w * 1.1, (by + ty) / 2, bx + w, by + w * 0.6);
-    ctx.closePath(); ctx.fill();
-  };
-  ctx.save();
-  for (const inner of [false, true]) for (let i = 0; i < 9; i++) {
-    const a = (i - 4) * 0.42, flick = Math.sin(t * 9 + i * 1.7) * 0.5 + Math.sin(t * 15 + i) * 0.25;
-    const len = h.r * (inner ? 0.55 : 0.95) * (1 + 0.35 * flick) * (1.15 - Math.abs(a) * 0.25);
-    tongue(a, len, h.r * (inner ? 0.2 : 0.3), inner);
+// 투지 폭발 불꽃: 몸 윤곽(타원)에서 작은 불덩이가 계속 피어올라 노랑 → 주황 → 빨강으로 식으며 작아지고 사라진다.
+// 불덩이 하나는 미리 만든 부드러운 원(색마다 한 장)을 늘려 찍는다(그라데이션을 매번 만들지 않게).
+const FLAME_RATE = 260;   // 초당 불덩이 수(선수 하나)
+function spawnFlames(fx, p, side, dt) {
+  const h = headCenter(p), top = h.y - h.r, cy = (top + p.y) / 2, rx = h.r * 0.9, ry = (p.y - top) / 2;
+  const acc = fx.flameAcc || (fx.flameAcc = { L: 0, R: 0 });
+  acc[side] += FLAME_RATE * dt;
+  for (; acc[side] >= 1; acc[side]--) {
+    const a = (Math.random() * 2 - 1) * Math.PI * 0.8;          // 발밑(아래 36°)은 빼고 몸 둘레 어디서나
+    const x = p.x + Math.sin(a) * rx * (0.75 + Math.random() * 0.2), y = cy - Math.cos(a) * ry * (0.75 + Math.random() * 0.2);
+    const size = (12 + Math.random() * 12) * p.scale * (Math.abs(a) < 0.9 ? 1.15 : 0.9);   // 머리 위쪽 불길이 더 크다
+    fx.flames.push({ x, y, vx: Math.sin(a) * 45 + (Math.random() - .5) * 30 - p.vx * 0.25, vy: -170 - Math.random() * 110, size, age: 0, life: 0.38 + Math.random() * 0.22, seed: Math.random() * 6.28 });
   }
+}
+function updateFlames(fx, dt) {
+  for (const q of fx.flames) { q.age += dt; q.x += (q.vx + Math.sin(q.age * 18 + q.seed) * 40) * dt; q.y += q.vy * dt; q.vy *= 0.985; }
+  fx.flames = fx.flames.filter(q => q.age < q.life);
+}
+let flameSprites = null;
+function sprites() {
+  if (flameSprites || typeof document === 'undefined') return flameSprites;
+  flameSprites = ['255,245,190', '255,206,60', '255,120,20', '215,40,12'].map(rgb => {   // 흰 빛, 노랑, 주황, 빨강
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, `rgba(${rgb},1)`); gr.addColorStop(0.5, `rgba(${rgb},.8)`); gr.addColorStop(1, `rgba(${rgb},0)`);
+    g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return c;
+  });
+  return flameSprites;
+}
+// 밝은 잔디 위에서는 더해 그리면(lighter) 노랗게 번져 전기처럼 보인다 → 보통으로 겹쳐 그리되 층을 나눈다:
+// 식은 불덩이(빨강, 크고 옅게)를 먼저, 주황을 그 위에, 갓 나온 노란 심을 맨 위에 작게. 심만 살짝 더해 그려 빛나게 한다.
+function drawFlames(ctx, fx, players, t) {
+  const S = sprites(); if (!S || !fx.flames.length) return;
+  ctx.save();
+  for (const p of players) {   // 몸 뒤 붉은 열기: 불덩이들을 하나로 묶어 준다
+    if (!p.active || p.active.id !== 'spirit') continue;
+    const h = headCenter(p), top = h.y - h.r, cy = (top + p.y) / 2, k = 0.85 + 0.15 * Math.sin(t * 13);
+    ctx.globalAlpha = 0.45 * k; ctx.drawImage(S[3], p.x - h.r * 1.5, cy - (p.y - top) * 0.72, h.r * 3, (p.y - top) * 1.4);
+  }
+  const layer = (from, to, img, grow, alpha) => {
+    for (const q of fx.flames) {
+      const u = q.age / q.life; if (u < from || u >= to) continue;
+      const s = q.size * grow(u);
+      ctx.globalAlpha = alpha(u); ctx.drawImage(S[img], q.x - s, q.y - s * 1.35, s * 2, s * 2.7);   // 위로 길쭉한 불덩이
+    }
+  };
+  layer(0.55, 1, 3, u => 1.25 - 0.6 * u, u => 0.85 * (1 - u) / 0.45);         // 빨강: 꼭대기 쪽, 사라지며 옅어진다
+  layer(0.2, 0.75, 2, u => 1.15 - 0.3 * u, () => 0.9);                       // 주황
+  layer(0, 0.4, 1, u => 0.7 + 0.5 * u, () => 0.95);                          // 노랑 심
+  ctx.globalCompositeOperation = 'lighter';
+  layer(0, 0.25, 0, () => 0.45, () => 0.5);                                  // 하얀 빛: 갓 나온 심에만 살짝
   ctx.restore();
 }
 
@@ -480,7 +511,6 @@ export function drawFrame(ctx, match, imgs, fx, t) {
         ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(tx, ty); ctx.stroke(); ctx.restore();
       }
     }
-    if (p.active && p.active.id === 'spirit') drawFlames(ctx, p, fx.reduceMotion ? 0 : t);   // 투지 폭발: 몸 뒤로 타오르는 불꽃
     if (p.active && p.active.id === 'sprint' && Math.abs(p.vx) > 300) {   // 스프린트: 몸 뒤로 속도선
       const run = Math.sign(p.vx), h = headCenter(p);
       ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineCap = 'round'; ctx.lineWidth = 4;
@@ -502,6 +532,7 @@ export function drawFrame(ctx, match, imgs, fx, t) {
     drawPlayer(ctx, { ...w.players[g.side], x: g.x, y: g.y, active: null, stun: 0, pinned: false, kickAnim: 0 }, imgs[g.def.number], { kit: wornKit(match.kits[g.side], g.def) });
     ctx.restore();
   }
+  drawFlames(ctx, fx, [w.players.L, w.players.R], fx.reduceMotion ? 0 : t);   // 투지 폭발 불꽃: 선수 뒤
   const puff = q => { ctx.save(); ctx.globalAlpha = 0.8 * (1 - q.age / q.life); ctx.fillStyle = q.color || '#FFFFFF'; ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, Math.PI * 2); ctx.fill(); ctx.restore(); };
   for (const q of fx.particles) if (q.back) puff(q);   // 굴뚝 연기는 선수 뒤로 지나가 얼굴을 가리지 않는다
   // 선수 (공에 가까운 쪽을 위에)
