@@ -6,13 +6,16 @@ import { encode } from './predict.js';
 import { VERSION } from './room.js';
 
 const PREFIX = 'uhdfc-hs1-';
-const WHY = { 'unavailable-id': 'taken', 'browser-incompatible': 'unsupported' };   // 그 밖의 오류는 'network'
+const WHY = { 'unavailable-id': 'taken', 'browser-incompatible': 'unsupported' };
+// 중개 서버와의 연결 오류: 내 인터넷이 꺼진 게 아니면 서버 쪽(동시 접속 한도로 거절, 멈춤) 탓이라 팬에게 그렇게 알린다
+const whyOf = type => WHY[type] || (navigator.onLine === false ? 'network' : 'server');
 const KNOCK_MS = 3000, JOIN_LIMIT_MS = 30000;   // 들어가는 쪽: 3초마다 다시 두드리고, 30초 안에 못 들어가면 그만둔다
+const OPEN_LIMIT_MS = 20000;                    // 중개 서버가 이 안에 답하지 않으면 그만둔다("방을 여는 중"에 멈추지 않게)
 
 // code: 방 번호. id: 이 브라우저의 표(같은 사람이 다시 들어오는 걸 알아보려고). lag: 점검용, 보내는 메시지를 그만큼(ms) 늦춘다
 export function createLink({ room, code, id, lag = 0 }) {
   const host = room.host;
-  let peer = null, conn = null, ready = false, closed = false, tries = 0, timers = [], pongs = 0, knockT = null, joinStart = 0, noRoom = false;
+  let peer = null, conn = null, ready = false, closed = false, tries = 0, timers = [], pongs = 0, knockT = null, joinStart = 0, noRoom = false, openT = null;
   const stat = { rtt: null, n: 0, sum: 0, max: 0, route: '?', detail: '' };   // 핑(지금·평균·최대)과 경로(직접/중계): 점검용 화면 아래 띠
   const link = { stat, lastHeard: 0, get open() { return ready && !!conn && conn.open; }, send, close };
 
@@ -23,7 +26,7 @@ export function createLink({ room, code, id, lag = 0 }) {
   function fail(why) { if (closed) return; shut(); room.linkState('failed', why); }
   // later: 작별 인사가 나갈 틈을 주고 끊는다
   function shut(later = false) {
-    closed = true; ready = false; clearTimeout(knockT); timers.forEach(clearInterval); timers = []; removeEventListener('pagehide', close);
+    closed = true; ready = false; clearTimeout(knockT); clearTimeout(openT); timers.forEach(clearInterval); timers = []; removeEventListener('pagehide', close);
     const p = peer; if (p && !p.destroyed) { if (later) setTimeout(() => p.destroy(), 300); else p.destroy(); }
   }
   function close() { if (closed) return; if (link.open) direct(conn, { t: 'bye' }); shut(true); }   // 창을 닫을 때도 부른다: 상대가 갑자기 사라지면 닫혔다는 신호가 1분 넘게 안 올 수 있어서 말로 알린다
@@ -94,6 +97,7 @@ export function createLink({ room, code, id, lag = 0 }) {
   function start() {
     const p = peer = host ? new window.Peer(PREFIX + code) : new window.Peer();
     p.on('open', () => {
+      clearTimeout(openT);
       if (link.open) return;   // 경기 중에 중개 서버에만 다시 붙은 것
       if (host) room.linkState('waiting');
       else if (!joinStart) { joinStart = performance.now(); room.linkState('joining'); knock(); }
@@ -105,11 +109,12 @@ export function createLink({ room, code, id, lag = 0 }) {
       if (closed) return;
       if (host && e.type === 'unavailable-id' && tries++ < 6) { p.destroy(); setTimeout(() => { if (!closed) start(); }, 1500); }   // 새로 고침 직후엔 전 연결이 아직 방 번호를 쥐고 있다
       else if (!host && e.type === 'peer-unavailable') { noRoom = true; if (!link.open) room.linkState('joining', 'no-room'); }       // 아직 방이 안 보인다: knock 이 계속 두드린다
-      else if (!link.open) fail(WHY[e.type] || 'network');   // 경기 중 중개 서버와만 끊긴 것은 넘어간다
+      else if (!link.open) fail(whyOf(e.type));   // 경기 중 중개 서버와만 끊긴 것은 넘어간다
     });
   }
   room.linkState('opening');
   addEventListener('pagehide', close);
+  openT = setTimeout(() => { if (!(peer && peer.open)) fail(whyOf()); }, OPEN_LIMIT_MS);
   start();
   return link;
 }
