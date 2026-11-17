@@ -73,6 +73,14 @@ test('reduce motion: no flash, sparks, rings or streaks; the cut-in banner still
   assert.ok(fx.cutin && fx.pops.some(p => p.text === 'GOAL'), 'information stays');
 });
 
+// 투지 폭발 불꽃은 필살기 그 자체라 움직임 줄이기에서도 남는다(윈도우 "애니메이션 표시"를 끄면 크롬이 움직임 줄이기로 알린다)
+test('reduce motion: the spirit flames still burn (they are the special itself)', () => {
+  const m = match(), fx = createFx(); fx.reduceMotion = true;
+  m.world.players.L.active = { id: 'spirit', t: 5, data: {} };
+  for (let i = 0; i < 10; i++) updateFx(fx, m, DT);
+  assert.ok(fx.flames.length > 10, 'flames: ' + fx.flames.length);
+});
+
 // 커브 슛이 나가는 순간 금색 충격 고리와 튀는 조각, 날아가는 동안 혜성 꼬리와 금가루. 골이 들어가면 그 골문 그물이 출렁인다
 test('curve shot: a gold burst where it is struck, then a comet tail and gold dust while it flies; the laser keeps its own look', () => {
   const m = match(), fx = createFx(), b = m.world.ball;
