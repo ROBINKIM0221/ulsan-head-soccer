@@ -20,7 +20,7 @@ const CUT_CENTER_Y = 0.44;             // 컷아웃 그림에서 머리 중심�
 const drop = view => Math.max(0, view.top) * 0.6;   // 위가 잘린 화면: HUD 가 내려온 만큼(top) 그 아래 가운데 글자·컷인·교체 보드도 조금 내린다
 const other = side => (side === 'L' ? 'R' : 'L');
 
-// 가운데 글자(GOAL·KICK OFF·골든골·교체 보드)를 내리는 양. 촬영용 화면 ?shoot=top(view.topBox)에서는 위 가운데가 두 선수 자리라, 점수 받침대 밑으로 더 내린다
+// 가운데 글자(GOAL·KICK OFF·골든골·교체 보드)를 내리는 양. 촬영용 화면 ?shoot=top(view.topBox)에서는 위 가운데가 두 선수 자리라, 그 밑 기준선(bar) 아래로 더 내린다
 const popDrop = view => drop(view) + (view.topBox ? view.topBox.bar.y + view.topBox.bar.h - 158 : 0);
 
 export function createFx() {
@@ -234,21 +234,23 @@ function drawClock(ctx, match, still, cx, y) {
   }
 }
 
-// 촬영용 화면 ?shoot=top: 위 가운데는 편집 때 두 선수(배경을 뺀 영상)가 들어갈 자리라, 점수판을 그 밑에 까는 낮고 긴 받침대로 그린다.
-// 선수 영상의 잘린 가슴 선을 받침대 위 금색 선에 맞추면 점수판 뒤에 앉은 것처럼 보인다. 양 끝에 유니폼 색과 점수, 가운데에 남은 시간
-function drawScoreBar(ctx, match, still, bar) {
-  const { x, y, w, h } = bar, my = y + h / 2 + 3;
-  rr(ctx, x, y, w, h, 14); ctx.fillStyle = 'rgba(0,27,77,.62)'; ctx.fill();   // 비쳐 보이게: 받침대 높이(논리 y 270~314)는 뛰어오른 선수 머리가 23%, 공이 10% 있는 자리다(모의 132판)
-  ctx.fillStyle = GOLD; ctx.fillRect(x + 14, y, w - 28, 3);
-  ctx.textBaseline = 'middle';
-  for (const [side, edge, dir] of [['L', x + 16, 1], ['R', x + w - 16, -1]]) {
-    const kit = wornKit(match.kits[side], match.used[side].at(-1));
-    rr(ctx, dir > 0 ? edge : edge - 8, y + 10, 8, h - 18, 4); ctx.fillStyle = kit.jersey; ctx.fill();
-    ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.stroke();
-    ctx.fillStyle = WHITE; ctx.font = `600 46px ${NUM}`; ctx.textAlign = dir > 0 ? 'left' : 'right';
-    ctx.fillText(String(match.scores[side]), edge + dir * 22, my);
+// 촬영용 화면 ?shoot=top: 위 가운데(논리 x 400~880)는 편집 때 두 선수(배경을 뺀 영상)가 들어갈 자리라 비워 둔다.
+// 경기장 위쪽 한가운데에 점수판을 두면 공이 뜨는 자리라 플레이에 걸린다 → 점수는 이름표와 선수 자리 사이 빈틈(양쪽 82)에 하나씩, 남은 시간은 왼쪽 이름표 밑에 작은 알약으로
+export const SCORE_SIDE_W = 74;
+export const scoreSideX = side => (side === 'R' ? FIELD.W - 14 - PLATE_W - 4 - SCORE_SIDE_W : 14 + PLATE_W + 4);
+function drawScoreSides(ctx, match, still) {
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+  for (const side of ['L', 'R']) {
+    const x = scoreSideX(side), y = 12, w = SCORE_SIDE_W, kit = wornKit(match.kits[side], match.used[side].at(-1));
+    rr(ctx, x, y, w, PLATE_H, 16); ctx.fillStyle = GLASS; ctx.fill();
+    ctx.save(); rr(ctx, x, y, w, PLATE_H, 16); ctx.clip();   // 아래 끝에 입은 유니폼 색: 어느 점수가 누구 것인지
+    ctx.fillStyle = kit.jersey; ctx.fillRect(x, y + PLATE_H - 8, w, 8); ctx.fillStyle = kit.trim; ctx.fillRect(x, y + PLATE_H - 11, w, 3);
+    ctx.restore();
+    ctx.fillStyle = WHITE; ctx.font = `600 58px ${NUM}`; ctx.fillText(String(match.scores[side]), x + w / 2, y + PLATE_H / 2 - 2);
   }
-  drawClock(ctx, match, still, x + w / 2, my);
+  const pw = match.phase === 'golden' ? 150 : 96, ph = 36, px = 14, py = 12 + PLATE_H + 6;
+  rr(ctx, px, py, pw, ph, ph / 2); ctx.fillStyle = GLASS; ctx.fill();
+  drawClock(ctx, match, still, px + pw / 2, py + ph / 2 + 2);
 }
 
 // HUD 는 늘 화면 맨 위: 위 여백이 있으면 그만큼 올리고(top < 0), 위가 잘렸으면 그만큼 내린다(top > 0). 점수판 옆 DOM 버튼도 화면 맨 위 기준이다 (css .sub)
@@ -258,7 +260,7 @@ function drawHud(ctx, match, t, view, still) {
     const def = match.used[side].at(-1);
     drawNamePlate(ctx, side, def, match.world.players[side], wornKit(match.kits[side], def), t);
   }
-  if (view.topBox) drawScoreBar(ctx, match, still, view.topBox.bar); else drawScoreboard(ctx, match, still);
+  if (view.topBox) drawScoreSides(ctx, match, still); else drawScoreboard(ctx, match, still);
   ctx.restore();
 }
 

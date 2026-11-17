@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createMatch } from '../js/sim/match.js';
 import { byNumber } from '../js/data/players.js';
-import { createFx, pushEvents, updateFx, cutinPlace } from '../js/render/scene.js';
+import { createFx, pushEvents, updateFx, cutinPlace, scoreSideX, SCORE_SIDE_W } from '../js/render/scene.js';
 import { SHOOT_CAMS, SHOOT_TOP } from '../js/ui/orientation.js';
 import { FIELD, DT } from '../js/sim/constants.js';
 
@@ -113,6 +113,14 @@ test('touch: a ring where the ball was hit (not for body bumps), gold for a perf
   pushEvents(fx, [{ type: 'touch', part: 'foot' }, { type: 'touch', part: 'body' }, { type: 'touch', part: 'head', perfect: true }], m);
   assert.equal(fx.rings.length, 2);
   assert.equal(fx.rings[1].color, '#FFC72C');
+});
+
+// 촬영용 화면 ?shoot=top: 점수는 이름표(양 끝 14~318, 962~1266)와 위 가운데 선수 자리(400~880) 사이 빈틈에 하나씩 들어간다
+test('shoot=top: each score sits in the gap between its name plate and the players\' box, clear of both', () => {
+  const L = scoreSideX('L'), R = scoreSideX('R');
+  assert.ok(L >= 318 && L + SCORE_SIDE_W <= SHOOT_TOP.x, 'left score ' + L);
+  assert.ok(R >= SHOOT_TOP.x + SHOOT_TOP.w && R + SCORE_SIDE_W <= FIELD.W - 318, 'right score ' + R);
+  assert.equal(L - 318, FIELD.W - 318 - (R + SCORE_SIDE_W), 'mirrored');
 });
 
 // 대포 헤딩(야고): 헤딩 순간 공이 대포알이 되고(글자는 띄우지 않는다), 누가 건드리거나 땅에 닿으면 축구공으로 돌아온다

@@ -50,7 +50,7 @@ export function shootFit(v) {
 export const SHOOT_CAMS = { dx: 306, dy: 0 };
 
 // 촬영용 화면 "두 선수를 위 가운데에"(?shoot=top): 편집 때 화면 위 가운데(논리 x 400~880, y 0~270 = 1920×1080 에서 720×405)에 두 선수를 배경을 뺀 영상으로 얹는다.
-// 그 자리에 있던 점수판은 선수들 밑에 까는 받침대(bar)로 바뀐다(render/scene.js drawScoreBar). 가운데 글자는 받침대 밑으로, 필살기 띠는 선수 자리 앞에서 끊는다.
+// 그 자리에 있던 점수판은 양쪽 이름표 옆으로 나뉜다(render/scene.js drawScoreSides). 가운데 글자(GOAL 등)는 bar(선수 자리 밑 기준선) 밑으로, 필살기 띠는 선수 자리 앞에서 끊는다.
 // 선택·VS·결과 화면은 평소 그대로다(받침대 밑에 밀어 넣으면 작게 눌리고 스크롤 막대가 생긴다)
 export const SHOOT_TOP = { x: 400, w: 480, bar: { x: 388, y: 270, w: 504, h: 44 } };
 

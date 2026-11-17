@@ -107,10 +107,10 @@ body {
 #stage.shoot .keys { display: none; }
 #stage.shoot:not(.sheet-open) { cursor: none; }
 #stage.shoot #overlay { top: var(--ot, 0px); bottom: auto; height: var(--oh); }   /* 아래 띠 배치: 시트(선택·VS·결과)도 발밑 선 위쪽에만, 아래 빈 잔디는 늘 비워 둔다. 그 밖의 촬영용 화면은 16:9 틀 전체 */
-/* ?shoot=top: 위 가운데는 두 선수 자리라, 점수판 옆에 있던 교체 버튼은 점수 받침대(논리 y 270~314) 오른쪽 옆으로 내리고,
-   메뉴 버튼은 화면 왼쪽 아래 구석으로 보낸다(받침대 옆은 선수들·점수 바로 곁이라 걸린다. 구석은 경기 장면도 자막 자리도 안 가린다) */
+/* ?shoot=top: 위 가운데는 두 선수 자리라, 점수판 옆에 있던 교체 버튼은 오른쪽 이름표 밑(논리 x 962, y 96)으로 내리고,
+   메뉴 버튼은 화면 왼쪽 아래 구석으로 보낸다(구석은 경기 장면도 자막 자리도 안 가린다) */
 #stage.shoot .sub { top: calc(var(--fy, 0px) + 14px * var(--k, 1)); }   /* 세로로 긴 화면(아이패드): 버튼도 16:9 틀 기준 */
-#stage.shoot-top .sub { top: calc(var(--fy, 0px) + 277px * var(--k, 1)); left: calc(50% + 264px * var(--k, 1)); }
+#stage.shoot-top .sub { top: calc(var(--fy, 0px) + 96px * var(--k, 1)); left: calc(50% + 322px * var(--k, 1)); }
 #stage.shoot-top .sub.menu { top: auto; bottom: calc(var(--fy, 0px) + 14px * var(--k, 1)); right: auto; left: calc(14px * var(--k, 1)); }   /* 세로로 긴 화면(아이패드)에서도 16:9 틀 안 왼쪽 아래 */
 
 /* ---------- 안내·오버레이 ---------- */
