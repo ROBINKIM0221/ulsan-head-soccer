@@ -1,0 +1,31 @@
+# GitHub Pages 배포: 정적 파일을 그대로 올린다
+name: pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      # 이 저장소가 아닌 곳에서 배포될 때는 검색에 잡히지 않게 하고, 공유 카드가 이 사이트 주소를 가리키지 않게 한다
+      - if: github.repository != 'ROBINKIM0221/ulsan-head-soccer'
+        run: |
+          sed -i -e 's#<head>#<head><meta name="robots" content="noindex">#' -e '/og:url/d' index.html
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deployment
+        uses: actions/deploy-pages@v4

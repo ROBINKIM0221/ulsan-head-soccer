@@ -1,0 +1,452 @@
+/* Teko 600 (숫자·VS·GOAL). 라틴 글자만 든 7.8KB 파일을 같이 싣는다 (SIL OFL, fonts/OFL-Teko.txt) */
+@font-face { font-family: Teko; font-style: normal; font-weight: 600; font-display: swap; src: url(../fonts/teko-600-latin.woff2) format('woff2'); }
+
+:root {
+  --blue:  #004098;
+  --navy:  #002B6B;
+  --gold:  #FFC72C;
+  --white: #FFFFFF;
+  --muted: #B9CBE8;
+  --night: #072A66;   /* 캔버스가 그려지기 전·시트 뒤의 바탕 */
+  --ui:  "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --num: Teko, "Arial Narrow", sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--night); overflow: hidden; }
+body {
+  font-family: var(--ui);
+  color: var(--white);
+  touch-action: manipulation;
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* 항상 가로인 무대. 세로 뷰포트면 JS 가 90° 눕힌다 */
+#stage {
+  position: fixed; left: 0; top: 0;
+  background: var(--night);
+  overflow: hidden;
+}
+#game { position: absolute; left: 0; top: 0; display: block; }   /* 무대 전체를 덮는다 (크기는 JS) */
+
+/* ---------- 조작 버튼: 무대(화면) 아래 양 모서리에 반투명 유리처럼 겹친다 ---------- */
+.pad {
+  position: absolute; bottom: max(10px, env(safe-area-inset-bottom));
+  display: flex; align-items: flex-end; gap: 10px;
+}
+.pad.left { left: max(12px, env(safe-area-inset-left)); }
+.pad.right { right: max(12px, env(safe-area-inset-right)); }
+#stage[data-rotated="1"] .pad { bottom: 10px; }
+#stage[data-rotated="1"] .pad.left { left: max(12px, env(safe-area-inset-top)); }        /* 눕힌 상태: 무대 왼쪽이 화면 위(노치) */
+#stage[data-rotated="1"] .pad.right { right: max(12px, env(safe-area-inset-bottom)); }
+#stage.sheet-open .pad, #stage.sheet-open .sub, #stage.sheet-open .keys { visibility: hidden; }   /* 시트 뒤 흐린 배경에 얼룩처럼 비치지 않게 */
+
+.ctl {
+  all: unset;
+  position: relative;
+  --d: clamp(58px, calc(var(--sh, 400px) * .165), 88px);   /* 지름: 무대 높이의 1/6 (작은 폰 58, 태블릿 88) */
+  width: var(--d); height: var(--d); border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(6,30,82,.3);
+  border: 2px solid rgba(255,255,255,.8);
+  box-shadow: 0 3px 12px rgba(0,20,60,.3), inset 0 1px 0 rgba(255,255,255,.28);
+  color: var(--white); font: 800 15px var(--ui);
+  text-shadow: 0 1px 2px rgba(0,0,0,.5);
+  touch-action: none; cursor: pointer;
+  transition: transform .06s, background .06s;
+}
+.ctl .glyph { font-size: calc(var(--d) * .36); }
+.ctl.down, .ctl:active { background: rgba(255,255,255,.42); transform: scale(.93); }
+.ctl:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.ctl.kick { background: rgba(255,199,44,.28); border-color: var(--gold); }
+.ctl.kick.down, .ctl.kick:active { background: rgba(255,199,44,.62); }
+
+/* 점프는 가장 자주 누르니 조금 더 크게 (오른손 엄지 바로 밑, 맨 오른쪽) */
+.ctl.jump { --d: clamp(70px, calc(var(--sh, 400px) * .2), 106px); font-size: 17px; }
+
+/* 교체 버튼: 화면 맨 위 가운데 점수판 옆. 위치·크기가 경기장 배율(--k)을 따라가서 작은 폰에서도 이름표와 겹치지 않는다 */
+.sub {
+  all: unset;
+  position: absolute; top: calc(14px * var(--k, 1)); left: calc(50% + 130px * var(--k, 1));
+  padding: clamp(7px, calc(11px * var(--k, 1)), 12px) clamp(11px, calc(19px * var(--k, 1)), 20px); border-radius: 999px;
+  background: var(--gold); border: 2px solid var(--white);
+  color: var(--navy); font: 800 clamp(12px, calc(17px * var(--k, 1)), 18px) var(--ui); letter-spacing: -.01em; white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  touch-action: manipulation; cursor: pointer;
+}
+.sub::before { content: '⇄ '; font-weight: 900; }
+.sub:disabled { background: rgba(0,27,77,.42); border-color: rgba(255,255,255,.3); color: rgba(255,255,255,.5); cursor: default; box-shadow: none; }   /* 남색 유리: 반투명 금색은 하늘과 섞여 탁하다 */
+.sub:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+/* 메뉴(일시정지) 버튼: 점수판 반대편, 교체와 구분되게 남색 */
+.sub.menu { left: auto; right: calc(50% + 130px * var(--k, 1)); background: rgba(0,27,77,.78); border-color: rgba(255,255,255,.7); color: var(--white); }
+.sub.menu::before { content: 'II '; letter-spacing: .04em; }
+.sub.menu:focus-visible { outline-color: var(--white); }
+
+/* 키보드를 쓰기 시작하면 터치 버튼은 숨기고 캔버스가 넓어진다 */
+#stage.kb .pad { display: none; }
+
+/* 노트북 안내: 마우스 기기에서만 캔버스 아래 가운데에 아주 작은 키캡 */
+.keys { display: none; position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); align-items: center; gap: 6px; padding: 5px 12px 5px 10px; border-radius: 999px; background: rgba(0,27,77,.55); color: rgba(255,255,255,.88); font: 600 10px var(--ui); white-space: nowrap; pointer-events: none; }
+.keys .arrows { display: grid; grid-template-columns: repeat(3, 14px); gap: 2px; }
+.keys .arrows kbd:nth-child(1) { grid-area: 1 / 2; }   /* 역T: ↑ 위 가운데, 아래 ← ↓ → */
+.keys .arrows kbd:nth-child(2) { grid-area: 2 / 1; }
+.keys .arrows kbd:nth-child(3) { grid-area: 2 / 2; opacity: .4; }   /* ↓ 는 안 쓴다 */
+.keys .arrows kbd:nth-child(4) { grid-area: 2 / 3; }
+.keys kbd { display: grid; place-items: center; width: 14px; height: 13px; border-radius: 3px; background: rgba(255,255,255,.92); color: var(--navy); font: 700 9px var(--ui); box-shadow: 0 1.5px 0 rgba(0,43,107,.9); }
+.keys em { font-style: normal; margin-right: 6px; }
+.keys em:last-child { margin-right: 0; }
+@media (hover: hover) and (pointer: fine) { .keys { display: flex; } }
+/* 2인 대전: 터치 패드 없이 키보드만, 안내는 양쪽 키 */
+.keys b { color: var(--gold); font-weight: 800; margin-right: 2px; }
+.keys i { width: 12px; }
+.keys kbd.wide { width: auto; padding: 0 5px; }
+#stage:not(.two) .keys.two, #stage.two .keys.one, #stage.two .pad { display: none; }
+/* 촬영용 화면(?shoot=1): 화면 아래 가운데는 편집 때 선수 화면이 들어갈 자리라 키 안내를 빼고, 녹화에 찍히지 않게 경기 중에는 마우스 화살표를 숨긴다(시트가 뜨면 다시 보인다) */
+#stage.shoot .keys { display: none; }
+#stage.shoot:not(.sheet-open) { cursor: none; }
+#stage.shoot #overlay { top: var(--ot, 0px); bottom: auto; height: var(--oh); }   /* 아래 띠 배치: 시트(선택·VS·결과)도 발밑 선 위쪽에만, 아래 빈 잔디는 늘 비워 둔다. 그 밖의 촬영용 화면은 16:9 틀 전체 */
+/* ?shoot=top: 위 가운데는 두 선수 자리라, 점수판 옆에 있던 교체 버튼은 점수 받침대(논리 y 270~314) 오른쪽 옆으로 내리고,
+   메뉴 버튼은 화면 왼쪽 아래 구석으로 보낸다(받침대 옆은 선수들·점수 바로 곁이라 걸린다. 구석은 경기 장면도 자막 자리도 안 가린다) */
+#stage.shoot .sub { top: calc(var(--fy, 0px) + 14px * var(--k, 1)); }   /* 세로로 긴 화면(아이패드): 버튼도 16:9 틀 기준 */
+#stage.shoot-top .sub { top: calc(var(--fy, 0px) + 277px * var(--k, 1)); left: calc(50% + 264px * var(--k, 1)); }
+#stage.shoot-top .sub.menu { top: auto; bottom: calc(var(--fy, 0px) + 14px * var(--k, 1)); right: auto; left: calc(14px * var(--k, 1)); }   /* 세로로 긴 화면(아이패드)에서도 16:9 틀 안 왼쪽 아래 */
+
+/* ---------- 안내·오버레이 ---------- */
+#hint {
+  position: absolute; left: 50%; top: 18px; transform: translateX(-50%);
+  padding: 8px 16px; border-radius: 999px;
+  background: rgba(0,43,107,.85); color: var(--white); font: 700 14px var(--ui);
+  pointer-events: none; transition: opacity .4s;
+}
+#hint[hidden] { display: none; }
+
+/* 시트 뒤: 흐린 경기장 위에 남색 막 (위쪽이 조금 더 어둡다) */
+#overlay {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  background: linear-gradient(180deg, rgba(3,22,64,.84), rgba(0,36,96,.9));
+  -webkit-backdrop-filter: blur(7px); backdrop-filter: blur(7px);
+  overflow-y: auto;
+}
+#overlay[hidden] { display: none; }
+
+
+/* ---------- 시트 공통 ---------- */
+.sheet { width: min(94%, 900px); max-height: 96%; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.sheet.duel, .sheet.result, .sheet.pause, .sheet.select { zoom: var(--us, 1); }   /* 시트를 화면에 맞춘다: 큰 화면에서는 키우고 낮거나 좁은 화면에서는 줄인다. JS(sheetZoom)가 --us 를 준다 */
+.emblem { display: block; width: 44px; height: 57px; background: url(../img/emblem.png) center / contain no-repeat; flex: none; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-text { display: flex; flex-direction: column; }
+.brand .club { font: 700 12px/1 var(--ui); letter-spacing: .06em; color: var(--muted); margin-bottom: 5px; }
+.brand h1 { margin: 0; display: flex; align-items: baseline; gap: 8px; font-size: 22px; font-weight: 800; letter-spacing: -.02em; line-height: 1; }
+.brand h1 .vs { font: 600 36px/.85 var(--num); color: var(--gold); letter-spacing: .02em; }
+.action {
+  all: unset; box-sizing: border-box;
+  min-width: 150px; padding: 13px 26px; border-radius: 999px;
+  background: var(--gold); color: var(--navy);
+  text-align: center; font: 800 17px var(--ui); cursor: pointer; touch-action: manipulation;
+  transition: transform .1s;
+}
+.action:active { transform: scale(.97); }
+.action:focus-visible { outline: 2px solid rgba(255,255,255,.9); outline-offset: 3px; }
+@media (hover: none) { .action:focus-visible { outline: none; } }   /* 터치 기기: 자동으로 잡힌 포커스 테두리가 버튼을 겹테로 만든다 */
+.action.ghost { background: transparent; color: var(--white); border: 2px solid rgba(255,255,255,.55); }
+.row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+/* ---------- 첫 화면(사진 로딩 중): 엠블럼·제목 아래 금색 바가 왔다 갔다 ---------- */
+/* 크기는 뷰포트 짧은 변(vmin = 무대 높이) 기준: JS 가 data-compact 를 달기 전 첫 그림부터 같은 크기라 덜컹거리지 않는다 */
+.sheet.loading { gap: clamp(16px, 6vmin, 28px); }
+#stage #overlay .sheet.loading .brand { gap: clamp(12px, 4.4vmin, 20px); }
+#stage #overlay .sheet.loading .emblem { display: block; width: clamp(50px, 19vmin, 78px); height: clamp(65px, 24.6vmin, 101px); }
+#stage #overlay .sheet.loading .brand .club { display: block; font-size: clamp(11px, 3.7vmin, 15px); margin-bottom: clamp(5px, 2vmin, 9px); }
+#stage #overlay .sheet.loading .brand h1 { font-size: clamp(22px, 8.4vmin, 34px); gap: clamp(8px, 2.8vmin, 12px); }
+#stage #overlay .sheet.loading .brand h1 .vs { font-size: clamp(40px, 15vmin, 62px); }
+.loading-bar { display: block; width: clamp(150px, 52vmin, 230px); height: 4px; border-radius: 2px; background: rgba(255,255,255,.18); overflow: hidden; }
+.loading-bar::after { content: ''; display: block; width: 40%; height: 100%; border-radius: 2px; background: var(--gold); animation: loading-slide 1s ease-in-out infinite alternate; }
+@keyframes loading-slide { from { transform: translateX(-20%); } to { transform: translateX(270%); } }
+@media (prefers-reduced-motion: reduce) { .loading-bar::after { animation: none; width: 100%; } }
+
+/* ---------- 선수 선택: 왼쪽 반 1P, 오른쪽 반 2P/AI, 가운데 기둥 ---------- */
+.sheet.duel { width: min(97%, 1000px); gap: 6px; }
+.duel-row { display: flex; align-items: flex-start; justify-content: center; gap: 12px; width: 100%; }
+.duel .side { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: left; }
+.duel .side .skill { width: 100%; max-width: 330px; }
+.duel .side .pick { max-width: 330px; }
+.duel .mid { flex: none; width: 150px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 30px; }
+.duel .mid .club { font: 700 11px/1 var(--ui); letter-spacing: .06em; color: var(--muted); }
+.duel .mid .vs { font: 600 64px/.85 var(--num); color: var(--gold); letter-spacing: .02em; }
+.duel .mid .action { min-width: 0; width: 100%; padding: 12px 10px; margin-top: 6px; }
+.duel .card { position: relative; }
+.tag { position: absolute; top: 4px; left: 0; font: 800 12px/1 var(--ui); color: var(--navy); background: var(--white); padding: 4px 9px; border-radius: 999px; }
+.side.R .tag { background: var(--gold); }
+.thumb:disabled { opacity: .25; cursor: default; }
+.duel .two-keys { margin: 0; text-align: center; }
+#stage[data-compact="1"] .duel .mid { width: 120px; padding-top: 10px; gap: 5px; }
+#stage[data-compact="1"] .duel .mid .vs { font-size: 44px; }
+#stage[data-compact="1"] .duel .mid .action { padding: 8px; }
+#stage[data-compact="1"] .duel .side { gap: 3px; }
+#stage[data-tiny="1"] .duel-row { gap: 6px; }
+#stage[data-tiny="1"] .duel .mid { width: 92px; padding-top: 4px; gap: 4px; }
+#stage[data-tiny="1"] .duel .mid .vs { font-size: 34px; }
+#stage[data-tiny="1"] .duel .mid .club { display: none; }
+#stage[data-tiny="1"] .duel .mid .emblem { width: 26px; height: 34px; }
+#stage[data-tiny="1"] .duel .side { gap: 2px; }
+#stage[data-tiny="1"] .duel .two-keys { display: none; }
+#stage[data-tiny="1"] .tag { font-size: 10px; padding: 3px 6px; }
+.duel .pick-label { text-align: center; }
+.sheet.duel:not(.two) .side.R .thumbs { grid-template-columns: repeat(7, 42px); }   /* "?" 랜덤 칸까지 13칸 → 7 + 6 */
+/* 폰 가로: 카드 둘이 나란히라 세로가 모자란다 — 카드 작게(paintCard), 설명·라벨 숨김, 썸네일 작게 */
+#stage[data-compact="1"] .duel .skill-desc, #stage[data-compact="1"] .duel .pick-label { display: none; }
+#stage[data-compact="1"] .duel .skill { padding: 6px 10px 7px 12px; }
+#stage[data-compact="1"] .duel .skill-name { font-size: 16px; }
+#stage[data-compact="1"] .duel .who .name { font-size: 20px; }
+#stage[data-compact="1"] .duel .who .num { font-size: 26px; }
+#stage[data-compact="1"] .duel .thumbs { grid-template-columns: repeat(6, 32px); gap: 5px; }
+#stage[data-compact="1"] .duel .thumb { width: 32px; height: 32px; }
+#stage[data-compact="1"] .sheet.duel:not(.two) .side.R .thumbs { grid-template-columns: repeat(7, 32px); }
+#stage[data-tiny="1"] .duel .thumbs { grid-template-columns: repeat(6, 26px); gap: 4px; }
+#stage[data-tiny="1"] .duel .thumb { width: 26px; height: 26px; }
+#stage[data-tiny="1"] .sheet.duel:not(.two) .side.R .thumbs { grid-template-columns: repeat(7, 26px); }
+#stage[data-tiny="1"] .duel .who .name { font-size: 18px; }
+#stage[data-tiny="1"] .duel .who .num { font-size: 22px; }
+#stage[data-tiny="1"] .duel .skill { padding: 4px 10px 5px 12px; }
+#stage[data-tiny="1"] .duel .skill-name { font-size: 15px; }
+
+/* ---------- 교체 선택 (왼쪽 카드 + 오른쪽 정보) ---------- */
+/* 경기 방식 1인 | 2인: 눌린 쪽이 금색 */
+.mode { display: inline-flex; flex: none; border: 1.5px solid rgba(255,255,255,.4); border-radius: 999px; overflow: hidden; }
+.mode button { all: unset; padding: 3px 10px; font: 700 12px var(--ui); color: var(--muted); white-space: nowrap; cursor: pointer; touch-action: manipulation; }
+.mode button[aria-pressed="true"] { background: var(--gold); color: var(--navy); font-weight: 800; }
+.mode button:focus-visible { outline: 3px solid var(--white); outline-offset: -3px; }
+.two-keys { margin: 4px 0 0; font: 600 12px/1.9 var(--ui); color: var(--muted); }
+.two-keys .grp { display: inline-block; white-space: nowrap; margin-right: 12px; }
+.two-keys b { color: var(--gold); }
+.two-keys kbd { display: inline-grid; place-items: center; min-width: 18px; height: 17px; padding: 0 4px; margin-right: 2px; border-radius: 3px; background: rgba(255,255,255,.92); color: var(--navy); font: 700 10px var(--ui); box-shadow: 0 1.5px 0 rgba(0,43,107,.9); }
+/* 1인·온라인의 키 안내 한 줄: 경기 중 키 안내(.keys)처럼 마우스 기기에서만. 터치 기기는 화면 버튼으로 하니 숨긴다 */
+.two-keys.one { display: none; }
+.two-keys.one .grp { margin-right: 0; }
+@media (hover: hover) and (pointer: fine) { .two-keys.one { display: block; } }
+.action[hidden] { display: none; }   /* .action 의 all: unset 이 hidden 의 기본 스타일(display:none)을 지운다 — 공유 버튼이 hidden 인데도 보였다 */
+.sheet.select { flex-direction: row; align-items: center; justify-content: center; gap: 28px; text-align: left; }
+.sheet.select .col.left { flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.sheet.select .col.right { display: flex; flex-direction: column; gap: 10px; min-width: 0; flex: 1 1 auto; max-width: 520px; }
+.carousel { display: flex; align-items: center; gap: 6px; }
+.arrow {
+  all: unset; width: 40px; height: 64px; display: grid; place-items: center;
+  color: var(--white); font: 800 40px var(--ui); cursor: pointer; opacity: .8; touch-action: manipulation;
+}
+.arrow:active { opacity: 1; transform: scale(1.1); }
+.arrow:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; border-radius: 8px; }
+.card { display: flex; flex-direction: column; align-items: center; gap: 4px; touch-action: none; }   /* 스와이프를 브라우저가 가져가지 않게 */
+.card canvas { display: block; }
+.who { display: flex; align-items: baseline; gap: 8px; }
+.who .name { font-size: 24px; font-weight: 800; }
+.who .num { font: 600 30px var(--num); color: var(--gold); line-height: .9; }
+.who .pos { font-size: 13px; color: var(--muted); font-weight: 600; }
+.skill { background: rgba(255,255,255,.08); border-radius: 14px; padding: 11px 14px 12px 16px; border-left: 4px solid var(--gold); }
+/* 꼬리표와 이름이 한 줄, 그 아래 설명 */
+.skill-head { display: flex; align-items: center; gap: 9px; }
+.skill-tag { flex: none; font: 800 11px/1 var(--ui); color: var(--navy); background: var(--gold); padding: 4px 8px; border-radius: 999px; }
+.skill-name { min-width: 0; font-size: 20px; font-weight: 800; color: var(--white); letter-spacing: -.01em; line-height: 1.15; }
+.skill-desc { margin: 6px 0 0; font-size: 13.5px; line-height: 1.5; color: #DCE6F5; word-break: keep-all; }
+.thumbs { display: grid; grid-template-columns: repeat(6, 42px); gap: 8px; }
+.thumb {
+  all: unset; width: 42px; height: 42px; border-radius: 50%; overflow: hidden; cursor: pointer;
+  border: 2px solid rgba(255,255,255,.35); box-sizing: border-box; touch-action: manipulation;
+}
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb[aria-selected="true"] { border: 3px solid var(--gold); }
+.thumb:focus-visible { outline: 3px solid var(--white); outline-offset: 2px; }
+
+/* 난이도 트랙 (메모리 게임과 같은 모양) */
+.pick { width: 100%; max-width: 420px; }
+.pick-label { margin: 0 0 6px; font-size: 13px; font-weight: 700; }
+.levels { display: grid; grid-template-columns: repeat(5, 1fr); }
+.level { all: unset; position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 5px 0 3px; cursor: pointer; touch-action: manipulation; }
+.level::before { content: ''; position: absolute; top: 10px; left: -50%; width: 100%; height: 2px; background: rgba(255,255,255,.25); }
+.level:first-child::before { display: none; }
+.level.on::before { background: var(--gold); }
+.dot { position: relative; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--muted); background: var(--blue); transition: transform .15s, background .15s; }
+.level.on .dot { background: var(--gold); border-color: var(--gold); }
+.level[aria-pressed="true"] .dot { transform: scale(1.5); box-shadow: 0 0 0 3px rgba(255,199,44,.3); }
+.level:focus-visible .dot { outline: 3px solid var(--white); outline-offset: 4px; }
+.level span { font-size: 12px; font-weight: 600; color: var(--muted); }
+.level[aria-pressed="true"] span { color: var(--white); font-weight: 800; }
+
+/* 유니폼 고르기: 카드 밑에 작은 셔츠들 (셔츠 색 --j, 소매 트림 --t) */
+.kits-pick { width: auto; max-width: none; text-align: center; }
+.kits { display: flex; gap: 4px; justify-content: center; }
+.kit { all: unset; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px 8px 4px; border-radius: 10px; border: 2px solid transparent; cursor: pointer; touch-action: manipulation; }
+.kit[aria-pressed="true"] { border-color: var(--gold); background: rgba(255,255,255,.08); }
+.kit:focus-visible { outline: 3px solid var(--white); outline-offset: 2px; }
+.shirt { display: block; width: 38px; height: 32px; filter: drop-shadow(0 2px 3px rgba(0,16,50,.35)); }
+.kit span { font-size: 12px; font-weight: 600; color: var(--muted); }
+.kit[aria-pressed="true"] span { color: var(--white); font-weight: 800; }
+
+/* 상대 고르기: 난이도 줄 오른쪽 작은 버튼 + 얼굴 목록 모달 */
+.opp { all: unset; display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 4px; white-space: nowrap; border-radius: 999px; border: 1.5px solid rgba(255,255,255,.4); font: 600 12px var(--ui); color: var(--muted); cursor: pointer; touch-action: manipulation; }
+.opp b { color: var(--white); font-weight: 800; }
+.opp.sound { padding: 3px 10px; }
+.opp.sound[aria-pressed="false"] { opacity: .6; text-decoration: line-through; }
+.sheet.pause .opp.sound { margin-top: 4px; }
+.opp:focus-visible { outline: 3px solid var(--white); outline-offset: 2px; }
+.thumb.random { display: grid; place-items: center; background: var(--gold); color: var(--navy); font: 800 20px var(--ui); }
+.thumb.random[aria-selected="true"] { border-color: var(--white); }
+.sub-note { margin: 0; font-size: 13px; color: var(--muted); }
+
+/* 일시정지 */
+.sheet.pause { gap: 18px; }
+.sheet.pause h1 { margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -.02em; }
+
+/* ---------- VS ---------- */
+/* 큰 캐릭터 둘이 금색 사선을 사이에 두고 마주 본다. 사선이 위에서 내려 긋고, 양옆에서 미끄러져 들어오고, VS 가 쾅 찍힌다 */
+.sheet.vs { position: relative; width: 100%; height: 100%; max-height: none; flex-direction: row; align-items: center; justify-content: center; gap: 0; overflow: hidden; }
+.sheet.vs::before { content: ''; position: absolute; left: 50%; top: -12%; width: max(112px, 15%); height: 124%; background: linear-gradient(180deg, #FFD95E, var(--gold) 50%, #F0AE00); box-shadow: 0 0 0 7px rgba(0,22,66,.38); transform: translateX(-50%) skewX(-12deg); animation: vs-slash .3s cubic-bezier(.2,.9,.3,1) both; }
+.vs-side { position: relative; z-index: 1; flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.vs-side.L { padding-right: 7%; animation: vs-in-l .42s cubic-bezier(.2,.9,.3,1) both; }
+.vs-side.R { padding-left: 7%; animation: vs-in-r .42s cubic-bezier(.2,.9,.3,1) both; }
+.vs-side .tag { position: static; margin-bottom: 2px; font-size: calc(13px * var(--us, 1)); }
+.vs-side.R .tag { background: var(--gold); }
+.vs-side canvas { display: block; }
+.vs-cap { display: flex; align-items: baseline; flex-wrap: wrap; justify-content: center; column-gap: 10px; }
+.vs-cap .num { font: 600 calc(56px * var(--us, 1))/.9 var(--num); color: var(--gold); }
+.vs-cap .name { font-size: calc(38px * var(--us, 1)); font-weight: 800; letter-spacing: -.02em; }
+.vs-cap .sk { flex-basis: 100%; margin-top: 5px; text-align: center; font: 700 calc(15px * var(--us, 1))/1.2 var(--ui); color: var(--muted); }
+.vs-mark { position: absolute; z-index: 2; left: 50%; top: 50%; font: 600 calc(150px * var(--us, 1))/.8 var(--num); color: var(--navy); transform: translate(-50%, -46%); animation: vs-slam .42s .16s cubic-bezier(.2,1.5,.4,1) both; }
+@keyframes vs-slash { from { transform: translateX(-50%) skewX(-12deg) scaleY(0); } to { transform: translateX(-50%) skewX(-12deg) scaleY(1); } }
+@keyframes vs-in-l { from { transform: translateX(-70px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes vs-in-r { from { transform: translateX(70px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes vs-slam { from { transform: translate(-50%, -46%) scale(2.4); opacity: 0; } to { transform: translate(-50%, -46%) scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .sheet.vs::before, .vs-side.L, .vs-side.R, .vs-mark { animation: none; } }
+
+/* ---------- 결과 ---------- */
+/* 가운데 판정·점수·선수별 골·버튼, 양옆에 마지막까지 뛴 두 선수(이긴 쪽 만세·폴짝, 진 쪽 풀썩) */
+/* 세 칸: 캐릭터 | 내용 | 캐릭터. 양옆 칸은 남는 폭을 반씩 갖고 캐릭터는 그 폭만큼만 그려진다(좁은 16:9 폰에서 가로로 넘치지 않게) */
+.sheet.result { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; column-gap: 6px; width: min(97%, 1040px); }
+.result-main { grid-column: 2; display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0; }
+.result-fig { display: block; }   /* 폭: JS 가 width 100% + max-width(제 크기)를 준다 */
+.result-fig.L { grid-column: 1; justify-self: end; }
+.result-fig.R { grid-column: 3; justify-self: start; }
+.result-fig.won { animation: fig-hop .44s cubic-bezier(.3,0,.7,1) infinite alternate; }
+.result-fig.lost { filter: saturate(.7) brightness(.92); }
+@keyframes fig-hop { from { transform: translateY(4px); } to { transform: translateY(-16px); } }
+@media (prefers-reduced-motion: reduce) { .result-fig.won { animation: none; } }
+.verdict { margin: 0; font-size: 46px; font-weight: 800; letter-spacing: -.02em; }
+.verdict.win { color: var(--gold); }
+.verdict.lose, .verdict.draw { color: var(--white); }
+.score { margin: 0; display: flex; align-items: baseline; gap: 14px; font: 600 72px var(--num); line-height: .8; }
+.score em { font-style: normal; color: var(--muted); font-size: 48px; }
+/* 결과 줄: 양쪽을 같은 폭 칸에 가운데 맞춰 대칭으로, 선수마다 얼굴·이름·골 수 */
+.lineup { display: flex; justify-content: center; gap: 28px; }
+.lineup .side { width: 200px; display: flex; justify-content: center; align-items: flex-start; gap: 4px; }   /* 양쪽 같은 고정 폭: 한 명이든 두 명이든 가운데 */
+.chip { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 76px; }
+.chip img { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 3px solid var(--white); }
+.side.away .chip img { border-color: var(--muted); }
+.chip b { font-size: 13px; font-weight: 700; color: var(--white); white-space: nowrap; }
+.side.away .chip b { color: var(--muted); }
+.chip .g { font-size: 12px; font-weight: 700; color: var(--gold); line-height: 1; }
+.chip .g em { font: 600 20px/1 var(--num); font-style: normal; margin-right: 1px; }
+.chip .g.none { color: rgba(185,203,232,.6); }
+.sub-arrow { font-style: normal; color: var(--muted); font-size: 18px; margin-top: 18px; }
+
+/* 낮은 가로 화면(폰): 여백을 줄인다. 회전 상태에서는 뷰포트 높이가 아니라 무대 높이가 기준이라 JS 가 data-compact 를 단다 */
+#stage[data-compact="1"] .sheet.select { gap: 16px; }
+#stage[data-compact="1"] .brand h1 { font-size: 18px; }
+#stage[data-compact="1"] .brand h1 .vs { font-size: 30px; }
+#stage[data-compact="1"] .skill { padding: 8px 12px 9px 14px; }
+#stage[data-compact="1"] .skill-name { font-size: 18px; }
+#stage[data-compact="1"] .skill-desc { font-size: 12.5px; }
+#stage[data-compact="1"] .thumbs { grid-template-columns: repeat(6, 36px); gap: 6px; }
+#stage[data-compact="1"] .thumb { width: 36px; height: 36px; }
+#stage[data-compact="1"] .action { padding: 10px 22px; font-size: 15px; min-width: 130px; }
+#stage[data-compact="1"] .shirt { width: 28px; height: 24px; }
+#stage[data-compact="1"] .kit { padding: 4px 7px 3px; }
+#stage[data-compact="1"] .kit span { font-size: 11px; }
+#stage[data-compact="1"] .vs-mark { font-size: 98px; }
+#stage[data-compact="1"] .vs-cap .num { font-size: 38px; }
+#stage[data-compact="1"] .vs-cap .name { font-size: 26px; }
+#stage[data-compact="1"] .vs-cap .sk { font-size: 13px; margin-top: 3px; }
+#stage[data-compact="1"] .verdict { font-size: 34px; }
+#stage[data-compact="1"] .score { font-size: 56px; }
+
+/* 아주 낮은 무대(320px 폭 폰을 눕힌 경우): 모든 것을 한 단계 줄이고 썸네일은 6×2 작게 */
+#stage[data-tiny="1"] .sheet.select { gap: 10px; width: 96%; }
+#stage[data-tiny="1"] .sheet.select .col.right { max-width: 250px; gap: 5px; }
+#stage[data-tiny="1"] .arrow { width: 26px; height: 48px; font-size: 30px; }
+#stage[data-tiny="1"] .who .name { font-size: 18px; }
+#stage[data-tiny="1"] .who .num { font-size: 22px; }
+#stage[data-tiny="1"] .thumbs { grid-template-columns: repeat(6, 26px); gap: 4px; }
+#stage[data-tiny="1"] .thumb { width: 26px; height: 26px; border-width: 1.5px; }
+#stage[data-tiny="1"] .thumb[aria-selected="true"] { border-width: 2px; }
+#stage[data-tiny="1"] .skill-desc { display: none; }
+#stage[data-tiny="1"] .skill { padding: 4px 10px 5px 12px; }
+#stage[data-tiny="1"] .skill-name { font-size: 15px; }
+#stage[data-tiny="1"] .brand h1 { font-size: 15px; }
+#stage[data-tiny="1"] .brand h1 .vs { font-size: 24px; }
+#stage[data-tiny="1"] .brand .club { display: none; }
+#stage[data-tiny="1"] .brand .emblem { width: 26px; height: 34px; }
+#stage[data-tiny="1"] .pick { max-width: 100%; }
+#stage[data-tiny="1"] .pick-label { margin-bottom: 0; font-size: 12px; }
+#stage[data-tiny="1"] .opp { font-size: 11px; padding: 2px 8px 2px 3px; gap: 4px; }
+#stage[data-tiny="1"] .opp.sound { padding: 2px 7px; }
+#stage[data-tiny="1"] .mode button { padding: 3px 7px; }
+#stage[data-tiny="1"] .level { padding: 3px 0 2px; gap: 3px; }
+#stage[data-tiny="1"] .level span { font-size: 10px; letter-spacing: -.02em; }
+#stage[data-tiny="1"] .action { padding: 7px 14px; font-size: 13px; min-width: 0; width: 100%; }
+#stage[data-tiny="1"] .shirt { width: 22px; height: 19px; }
+#stage[data-tiny="1"] .kit { padding: 3px 5px 2px; gap: 2px; border-radius: 7px; }
+#stage[data-tiny="1"] .kit span { font-size: 10px; }
+#stage[data-tiny="1"] .kits-pick .pick-label { margin-bottom: 0; }
+#stage[data-tiny="1"] .sub-note { font-size: 11px; }
+#stage[data-tiny="1"] .sheet.pause h1 { font-size: 22px; }
+#stage[data-tiny="1"] .result-main { gap: 6px; }
+#stage[data-tiny="1"] .sheet.result .emblem { display: none; }
+#stage[data-tiny="1"] .verdict { font-size: 26px; }
+#stage[data-tiny="1"] .score { font-size: 44px; }
+#stage[data-tiny="1"] .score em { font-size: 30px; }
+#stage[data-tiny="1"] .lineup { gap: 16px; }
+#stage[data-tiny="1"] .lineup .side { width: 150px; }
+#stage[data-tiny="1"] .chip { width: 60px; }
+#stage[data-tiny="1"] .chip img { width: 40px; height: 40px; border-width: 2px; }
+#stage[data-tiny="1"] .chip b { font-size: 11px; }
+#stage[data-tiny="1"] .chip .g { font-size: 11px; }
+#stage[data-tiny="1"] .chip .g em { font-size: 16px; }
+#stage[data-tiny="1"] .sub-arrow { margin-top: 12px; font-size: 14px; }
+#stage[data-tiny="1"] .sheet.result .row { gap: 6px; flex-wrap: nowrap; }
+#stage[data-tiny="1"] .sheet.result .action { width: auto; min-width: 0; padding: 7px 12px; font-size: 13px; }
+#stage[data-tiny="1"] .vs-mark { font-size: 80px; }
+#stage[data-tiny="1"] .vs-cap .num { font-size: 32px; }
+#stage[data-tiny="1"] .vs-cap .name { font-size: 22px; }
+#stage[data-tiny="1"] .vs-cap .sk { font-size: 12px; margin-top: 2px; }
+
+/* ---------- 온라인 대전 ---------- */
+/* 경기 방식 단추가 셋(1인·2인·온라인)이라 가운데 기둥에 들어가게 좁힌다 */
+.duel.net .mode button { padding: 3px 8px; }
+#stage[data-compact="1"] .duel.net .mode button { padding: 3px 6px; }
+#stage[data-tiny="1"] .duel.net .mode button { padding: 3px 4px; font-size: 11px; }
+#stage[data-tiny="1"] .duel.net .mid { width: 100px; }
+.action:disabled { opacity: .45; cursor: default; }
+.action:disabled:active { transform: none; }
+/* 로비의 상대 쪽: 친구가 오기 전까지는 초대 상자, 온 뒤엔 친구가 고른 선수(넘기는 화살표 없이)와 준비 상태 */
+.invite { width: 100%; max-width: 330px; margin-top: 34px; padding: 22px 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; border-radius: 16px; background: rgba(255,255,255,.08); text-align: center; }
+.invite-title { margin: 0; font: 800 20px/1.2 var(--ui); }
+.invite-note { margin: 0; font: 600 13px/1.5 var(--ui); color: var(--muted); }
+.invite .action { min-width: 0; width: 100%; max-width: 230px; padding: 11px 14px; font-size: 16px; }
+.invite-link { width: 100%; padding: 7px 9px; border: 0; border-radius: 8px; font: 12px ui-monospace, Menlo, Consolas, monospace; -webkit-user-select: text; user-select: text; }
+.invite-link[hidden] { display: none; }
+.carousel.peek { justify-content: center; }
+.peer-state { margin: 2px 0 0; padding: 5px 14px; border-radius: 999px; background: rgba(255,255,255,.1); font: 700 13px/1.3 var(--ui); color: var(--muted); }
+.peer-state.ready { background: var(--gold); color: var(--navy); }
+#stage[data-compact="1"] .invite { margin-top: 8px; padding: 12px 12px; gap: 7px; }
+#stage[data-compact="1"] .invite-title { font-size: 16px; }
+#stage[data-compact="1"] .invite .action { padding: 8px 12px; font-size: 14px; }
+#stage[data-compact="1"] .peer-state { padding: 3px 12px; font-size: 12px; }
+.sheet.notice .note { margin: 0; max-width: 440px; font: 600 15px/1.55 var(--ui); color: var(--muted); }
+/* 경기 중: 상대가 자리를 비웠을 때의 알림(가운데 위), 점검용 핑 띠(맨 아래) */
+.net-pill { position: absolute; left: 50%; top: 36%; transform: translate(-50%, -50%); padding: 11px 22px; border-radius: 999px; background: rgba(0,27,77,.92); color: var(--white); font: 800 clamp(13px, calc(20px * var(--k, 1)), 20px)/1.3 var(--ui); white-space: nowrap; pointer-events: none; }
+.net-pill[hidden] { display: none; }
+.net-stat { position: absolute; left: 50%; bottom: 3px; transform: translateX(-50%); max-width: 46%; padding: 2px 9px; border-radius: 9px; background: rgba(0,0,0,.5); color: rgba(255,255,255,.92); font: 600 10px/1.35 var(--ui); text-align: center; pointer-events: none; }
+@media (hover: hover) and (pointer: fine) { .net-stat { bottom: 54px; } }   /* 노트북: 키 안내(높이 약 38px) 위로 */
+/* ---------- 온라인 대전 끝 ---------- */

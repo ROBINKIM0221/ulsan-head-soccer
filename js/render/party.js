@@ -1,0 +1,78 @@
+// 세레모니: 이긴 쪽 벤치 선수들이 양옆에서 우르르 달려와 경기장 폭에 고르게 퍼져 서서 저마다 조금씩 엇갈린 박자로 막 뛰며 두 팔을 번쩍 들고, 색종이가 쏟아지고, 하늘에 큰 VAMOS! 하나.
+// 진 쪽은 쓰러져 있다. 사람이 져도 상대 팀이 똑같이 한다. 경기 상태는 건드리지 않고 그릴 때만 바꾼다.
+// 움직임 줄이기 설정은 보지 않는다: 점프·색종이가 세레모니 그 자체다.
+import { FIELD } from '../sim/constants.js';
+import { createPlayer } from '../sim/physics.js';
+import { PLAYERS } from '../data/players.js';
+import { drawPlayer, drawPlayerShadow } from './characters.js';
+import { wornKit } from '../data/kits.js';
+
+export const PARTY_LEN = 4.2;   // 초. 이 뒤에 결과 화면 (모인 뒤 다같이 뛸 시간까지)
+const RUN = 700, HOP = 110, BEAT = 6;   // 달려오는 속도(px/s), 이긴 선수의 점프 높이·박자(rad/s)
+// 외침 없이 화면에 VAMOS! 하나만
+// 선수마다 박자·시작·높이가 조금씩 달라 진짜 무리처럼 엇갈린다
+const hopAt = (t, m = { beat: BEAT, phase: 0, hop: HOP }) => Math.max(0, Math.sin(t * m.beat + m.phase)) * m.hop;
+const COLORS = ['#FFC72C', '#FFFFFF', '#004098'];
+const EDGE = 60, GAP = 70, SPACE = (FIELD.W - 2 * EDGE - 2 * GAP) / 10;   // 가장자리·이긴 선수 양옆을 비우고 남은 폭에 벤치 10명을 고르게 (약 102px)
+
+// bleedX: 경기장 좌우 바깥으로 보이는 폭, top: 화면 위 끝의 논리 y(위 여백이 있으면 음수, 잘렸으면 양수). 벤치 선수들은 보이는 곳 밖에서 달려오고, 색종이는 화면 맨 위에서 떨어진다
+// drop: 큰 글자(VAMOS!·LOSE)를 더 내리는 양. 촬영용 화면 ?shoot=top 은 위 가운데가 두 선수 자리라 점수 받침대 밑으로 내린다 (render/scene.js popDrop)
+export function startParty(match, bleedX = 0, top = 0, drop = 0) {
+  const side = match.result === 'lose' ? 'R' : 'L', { L, R } = match.world.players, star = match.world.players[side];
+  const bench = PLAYERS.filter(p => p.number !== L.def.number && p.number !== R.def.number);
+  // 이긴 선수 왼쪽에 들어갈 자리 수만큼 왼쪽에, 나머지는 오른쪽에 깐다(왼쪽부터 오름차순). 가장자리에 서 있어도 한쪽에 몰려 겹치지 않는다
+  const nLeft = Math.min(10, Math.max(0, Math.round((star.x - EDGE - GAP) / SPACE)));
+  const slots = bench.map((_, j) => j < nLeft ? star.x - GAP - SPACE * (nLeft - j - 0.5) : star.x + GAP + SPACE * (j - nLeft + 0.5));
+  const members = bench.map((def, i) => {
+    const fromLeft = i % 2 === 0, k = Math.floor(i / 2) + 1;   // 번갈아 양쪽에서, 뒤에 올수록 멀리서 출발해 더 바깥 자리에 선다
+    const body = createPlayer(def, side);
+    body.x = fromLeft ? -bleedX - 70 - k * 40 : FIELD.W + bleedX + 70 + k * 40;   // 화면 밖에서 출발 (넓은 폰은 경기장 바깥 여백까지 보인다)
+    body.facing = fromLeft ? 1 : -1;
+    return { body, target: slots[fromLeft ? 5 - k : 4 + k], delay: i * 0.08, arrived: false,
+      beat: 5.4 + (i % 4) * 0.5, phase: (i * 0.9) % 1.5, hop: 90 + (i % 3) * 12 };
+  });
+  return { t: 0, side, members, confetti: [], bleedX, top, drop };
+}
+
+export function updateParty(party, match, dt) {
+  party.t += dt;
+  const star = match.world.players[party.side];
+  for (const m of party.members) {
+    const b = m.body;
+    if (party.t < m.delay) continue;
+    const dx = m.target - b.x;
+    if (Math.abs(dx) > RUN * dt) {   // 달려온다 (vx 가 있어야 다리가 움직인다)
+      b.x += Math.sign(dx) * RUN * dt; b.vx = Math.sign(dx) * RUN; b.facing = Math.sign(dx); b.y = FIELD.GROUND; b.onGround = true;
+    } else {                          // 도착: 자리에 딱 서서 이긴 선수를 보고 뛴다
+      b.x = m.target; b.vx = 0; b.facing = Math.sign(star.x - b.x) || 1; m.arrived = true;
+      const hop = hopAt(party.t, m);
+      b.y = FIELD.GROUND - hop; b.onGround = hop === 0;
+    }
+  }
+  if ((party.side === 'L' || match.twoPlayer) && party.t < PARTY_LEN - 1) {   // 색종이는 사람(L)이 이겼을 때만, 2인이면 누가 이겨도
+    const bx = party.bleedX || 0;
+    for (let i = 0; i < 2; i++) party.confetti.push({ x: -bx + Math.random() * (FIELD.W + 2 * bx), y: (party.top || 0) - 10, vx: (Math.random() - 0.5) * 80, vy: 160 + Math.random() * 200, rot: Math.random() * Math.PI * 2, vr: (Math.random() - 0.5) * 10, color: COLORS[(party.confetti.length + i) % 3], age: 0 });
+  }
+  for (const q of party.confetti) { q.age += dt; q.x += (q.vx + Math.sin(q.age * 4 + q.rot) * 50) * dt; q.y += q.vy * dt; q.rot += q.vr * dt; }
+  party.confetti = party.confetti.filter(q => q.y < FIELD.GROUND + 10);
+}
+
+// 그릴 때의 두 선수: 이긴 쪽은 펄쩍, 진 쪽은 쓰러져 있다
+export const partyView = (party, side, p) => side === party.side
+  ? { ...p, y: FIELD.GROUND - hopAt(party.t), onGround: hopAt(party.t) === 0, kickAnim: 0, stun: 0, pinned: false, active: null }
+  : { ...p, stun: 1, pinned: false, active: null };
+
+export function drawParty(ctx, party, match, imgs, t) {
+  for (const m of party.members) drawPlayerShadow(ctx, m.body, FIELD.GROUND);
+  for (const m of party.members) drawPlayer(ctx, m.body, imgs[m.body.def.number], { kit: wornKit(match.kits[party.side], m.body.def), t, cheer: m.arrived });
+  // 0.3초 뒤 하늘 한가운데 큰 글자가 커지며 나타난다. 이기면 금색 VAMOS! 가 박자에 들썩이고, 지면 회청색 LOSE 가 가만히
+  if (party.t > 0.3) {
+    const won = party.side === 'L' || !!match.twoPlayer, word = won ? 'VAMOS!' : 'LOSE';   // 2인: 둘 다 우리 선수니 늘 VAMOS!
+    const grow = Math.min(1, (party.t - 0.3) / 0.35), k = grow * (won ? 1 + 0.05 * Math.sin(party.t * BEAT) : 1);
+    ctx.save(); ctx.translate(FIELD.W / 2, 250 + Math.max(0, party.top || 0) * 0.6 + (party.drop || 0)); ctx.scale(k, k); ctx.rotate(won ? -0.04 : 0.03);   // 위가 잘린 화면은 HUD 가 내려온 만큼 글자도 조금 내린다
+    ctx.font = '600 170px Teko, "Arial Narrow", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = 16; ctx.lineJoin = 'round'; ctx.strokeStyle = '#002B6B'; ctx.strokeText(word, 0, 0);
+    ctx.fillStyle = won ? '#FFC72C' : '#B7C3D6'; ctx.fillText(word, 0, 0); ctx.restore();
+  }
+  for (const q of party.confetti) { ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.rot); ctx.fillStyle = q.color; ctx.fillRect(-7, -4, 14, 8); ctx.restore(); }
+}
