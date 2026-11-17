@@ -1,5 +1,7 @@
 /* Teko 600 (숫자·VS·GOAL). 라틴 글자만 든 7.8KB 파일을 같이 싣는다 (SIL OFL, fonts/OFL-Teko.txt) */
 @font-face { font-family: Teko; font-style: normal; font-weight: 600; font-display: swap; src: url(../fonts/teko-600-latin.woff2) format('woff2'); }
+/* Barlow Condensed 700 (경기 중 점수판의 점수·시간: 축구 중계 자막 같은 굵고 좁은 글씨). 라틴 글자만 (SIL OFL, fonts/OFL-BarlowCondensed.txt) */
+@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 700; font-display: swap; src: url(../fonts/barlow-condensed-700-latin.woff2) format('woff2'); }
 
 :root {
   --blue:  #004098;

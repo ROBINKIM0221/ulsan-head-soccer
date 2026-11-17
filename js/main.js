@@ -174,6 +174,7 @@ async function boot() {
   for (const ev of ['pointerdown', 'keydown']) window.addEventListener(ev, unlockSound, { capture: true });   // 첫 입력에서 오디오 잠금 해제
   // 선택 카드의 등번호는 캔버스에 한 번만 그리니 Teko 를 잠깐 기다린다 (못 받아도 1.5초 뒤엔 그냥 간다)
   const teko = document.fonts && document.fonts.load ? Promise.race([document.fonts.load('600 20px Teko'), new Promise(r => setTimeout(r, 1500))]).catch(() => {}) : null;
+  if (document.fonts && document.fonts.load) document.fonts.load('700 20px "Barlow Condensed"').catch(() => {});   // 점수판 글씨: 캔버스는 쓰기 전에 받아 두어야 한다(매 장면 다시 그리니 기다리지는 않는다)
   [game.imgs] = await Promise.all([loadImages(), teko]);
   pauseOnHide();
 

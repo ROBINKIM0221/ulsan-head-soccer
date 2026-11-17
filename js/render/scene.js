@@ -15,6 +15,7 @@ import { sfx, eventSound } from '../sound.js';
 const GOLD = '#FFC72C', WHITE = '#FFFFFF', NAVY = '#002B6B', MUTED = '#B9CBE8', GLASS = 'rgba(0,27,77,.78)', FIRE = '#FF7A1A';
 const UI = '"Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';
 const NUM = 'Teko, "Arial Narrow", sans-serif';
+const scoreFont = px => `700 ${px}px "Barlow Condensed", Teko, "Arial Narrow", sans-serif`;   // 점수판 점수·시간: 축구 중계 자막 같은 굵고 좁은 글씨
 const FLASH = 0.22;                    // 골 플래시 길이(초)
 const CUT_CENTER_Y = 0.44;             // 컷아웃 그림에서 머리 중심의 세로 위치 (characters.js 와 같은 값)
 const drop = view => Math.max(0, view.top) * 0.6;   // 위가 잘린 화면: HUD 가 내려온 만큼(top) 그 아래 가운데 글자·컷인·교체 보드도 조금 내린다
@@ -211,9 +212,9 @@ function drawScoreboard(ctx, match, still) {
     ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.stroke();
   }
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillStyle = WHITE; ctx.font = `600 66px ${NUM}`;
-  ctx.fillText(String(match.scores.L), cx - 52, y + 43);
-  ctx.fillText(String(match.scores.R), cx + 52, y + 43);
+  ctx.fillStyle = WHITE; ctx.font = scoreFont(60);
+  ctx.fillText(String(match.scores.L), cx - 52, y + 42);
+  ctx.fillText(String(match.scores.R), cx + 52, y + 42);
   ctx.fillStyle = 'rgba(185,203,232,.7)'; ctx.fillRect(cx - 9, y + 36, 18, 5);
   drawClock(ctx, match, still, cx, y + 81);
 }
@@ -225,11 +226,11 @@ function drawClock(ctx, match, still, cx, y) {
   if (match.phase === 'golden') {
     ctx.fillStyle = GOLD;
     ctx.font = `800 17px ${UI}`; ctx.textAlign = 'right'; ctx.fillText('골든골', cx - 4, y - 2);
-    ctx.font = `600 32px ${NUM}`; ctx.textAlign = 'left'; ctx.fillText(clock, cx + 6, y);
+    ctx.font = scoreFont(30); ctx.textAlign = 'left'; ctx.fillText(clock, cx + 6, y);
   } else {
     // 마지막 10초: 시계가 금색이 되고 초가 바뀔 때마다 살짝 튄다
     const urgent = tt <= 10 && match.phase !== 'over', k = urgent && !still && match.phase === 'play' ? 1 + 0.18 * (tt % 1) ** 2 : 1;
-    ctx.fillStyle = urgent ? GOLD : MUTED; ctx.font = `600 32px ${NUM}`; ctx.textAlign = 'center';
+    ctx.fillStyle = urgent ? GOLD : WHITE; ctx.font = scoreFont(30); ctx.textAlign = 'center';
     ctx.save(); ctx.translate(cx, y); ctx.scale(k, k); ctx.fillText(clock, 0, 0); ctx.restore();
   }
 }
@@ -246,7 +247,7 @@ function drawScoreSides(ctx, match, still) {
     ctx.save(); rr(ctx, x, y, w, PLATE_H, 16); ctx.clip();   // 아래 끝에 입은 유니폼 색: 어느 점수가 누구 것인지
     ctx.fillStyle = kit.jersey; ctx.fillRect(x, y + PLATE_H - 8, w, 8); ctx.fillStyle = kit.trim; ctx.fillRect(x, y + PLATE_H - 11, w, 3);
     ctx.restore();
-    ctx.fillStyle = WHITE; ctx.font = `600 58px ${NUM}`; ctx.fillText(String(match.scores[side]), x + w / 2, y + PLATE_H / 2 - 2);
+    ctx.fillStyle = WHITE; ctx.font = scoreFont(54); ctx.fillText(String(match.scores[side]), x + w / 2, y + PLATE_H / 2 - 3);
   }
   const pw = match.phase === 'golden' ? 150 : 96, ph = 36, px = 14, py = 12 + PLATE_H + 6;
   rr(ctx, px, py, pw, ph, ph / 2); ctx.fillStyle = GLASS; ctx.fill();

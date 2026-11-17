@@ -56,7 +56,7 @@ npm test
 ## 만든 것들
 
 - `js/sim/` 물리·경기 규칙·필살기·AI, `js/render/` 캔버스 그리기, `js/ui/` 입력과 화면 흐름, `js/net/` 온라인 대전
-- 숫자 글꼴 Teko (SIL OFL, `fonts/OFL-Teko.txt`), PeerJS 1.5.5 (MIT)
+- 숫자 글꼴 Teko (SIL OFL, `fonts/OFL-Teko.txt`), 점수판 글꼴 Barlow Condensed (SIL OFL, `fonts/OFL-BarlowCondensed.txt`), PeerJS 1.5.5 (MIT)
 
 선수 사진 출처: 울산 HD FC 공식 홈페이지 (uhdfc.com)
 
